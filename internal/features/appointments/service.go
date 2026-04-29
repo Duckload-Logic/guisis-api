@@ -234,6 +234,13 @@ func (s *Service) GetAppointmentByID(
 	hasNote, _ := s.noteService.HasNoteForAppointment(ctx, id)
 	dto.HasSignificantNote = hasNote
 
+	// Fetch student COR URL
+	userID, _ := s.repo.GetUserIDByAppointmentID(ctx, id)
+	if userID != "" {
+		corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, []string{userID})
+		dto.StudentCORURL = corMap[userID]
+	}
+
 	return dto, nil
 }
 
@@ -291,10 +298,20 @@ func (s *Service) ListAppointments(
 		return nil, err
 	}
 
+	// Batch fetch COR URLs
+	userIDs := make([]string, 0, len(appts))
+	for i := range appts {
+		if appts[i].UserID != "" {
+			userIDs = append(userIDs, appts[i].UserID)
+		}
+	}
+	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, userIDs)
+
 	dtos := make([]AppointmentDTO, 0, len(appts))
 	for i := range appts {
 		dto := AppointmentDTO{
-			ID: appts[i].ID,
+			ID:     appts[i].ID,
+			UserID: appts[i].UserID,
 			User: users.UserResponse{
 				ID:         "",
 				FirstName:  appts[i].UserFirstName,
@@ -318,10 +335,11 @@ func (s *Service) ListAppointments(
 				Name:     appts[i].StatusName,
 				ColorKey: appts[i].StatusColorKey,
 			},
-			UrgencyLevel: appts[i].UrgencyLevel,
-			UrgencyScore: appts[i].UrgencyScore,
-			CreatedAt:    appts[i].CreatedAt,
-			UpdatedAt:    appts[i].UpdatedAt,
+			UrgencyLevel:  appts[i].UrgencyLevel,
+			UrgencyScore:  appts[i].UrgencyScore,
+			StudentCORURL: corMap[appts[i].UserID],
+			CreatedAt:     appts[i].CreatedAt,
+			UpdatedAt:     appts[i].UpdatedAt,
 		}
 
 		hasNote, _ := s.noteService.HasNoteForAppointment(ctx, appts[i].ID)

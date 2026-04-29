@@ -59,6 +59,7 @@ type Appointment struct {
 // AppointmentWithDetailsView represents a denormalized view for listings.
 type AppointmentWithDetailsView struct {
 	ID             string                 `db:"id"               json:"id"`
+	UserID         string                 `db:"user_id"          json:"userId"`
 	IIRID          string                 `db:"iir_id"           json:"iirId"`
 	StudentNumber  string                 `db:"student_number"   json:"studentNumber"`
 	UserFirstName  string                 `db:"user_first_name"  json:"userFirstName"`

@@ -21,6 +21,7 @@ type ListAppointmentsResponse struct {
 
 type AppointmentDTO struct {
 	ID                  string                 `json:"id,omitempty"`
+	UserID              string                 `json:"userId,omitempty"`
 	User                users.UserResponse     `json:"user,omitempty"`
 	IIRID               string                 `json:"iirId,omitempty"`
 	StudentNumber       string                 `json:"studentNumber,omitempty"`
@@ -33,6 +34,7 @@ type AppointmentDTO struct {
 	UrgencyLevel        string                 `json:"urgencyLevel,omitempty"`
 	UrgencyScore        float64                `json:"urgencyScore,omitempty"`
 	HasSignificantNote  bool                   `json:"hasSignificantNote"`
+	StudentCORURL       string                 `json:"studentCorUrl,omitempty"`
 	CreatedAt           time.Time              `json:"createdAt,omitempty"`
 	UpdatedAt           time.Time              `json:"updatedAt,omitempty"`
 }
