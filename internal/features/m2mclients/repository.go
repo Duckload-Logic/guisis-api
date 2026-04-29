@@ -78,16 +78,38 @@ func (r *Repository) DeactivateAllForUser(
 	return err
 }
 
-func (r *Repository) ListActive(
+func (r *Repository) ListClients(
 	ctx context.Context,
+	includeRevoked bool,
 ) ([]M2MClient, error) {
 	var clients []M2MClient
 	query := fmt.Sprintf(`
 		SELECT %s
 		FROM m2m_clients
-		WHERE is_active = 1
 	`, datastore.GetColumns(M2MClient{}))
+
+	if !includeRevoked {
+		query += ` WHERE is_active = 1`
+	}
 
 	err := r.db.SelectContext(ctx, &clients, query)
 	return clients, err
+}
+
+func (r *Repository) DeactivateByID(ctx context.Context, id string) error {
+	query := `UPDATE m2m_clients SET is_active = 0 WHERE id = ?`
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
+}
+
+func (r *Repository) UpdateSecret(ctx context.Context, id string, hashedSecret string) error {
+	query := `UPDATE m2m_clients SET client_secret_hash = ? WHERE id = ?`
+	_, err := r.db.ExecContext(ctx, query, hashedSecret, id)
+	return err
+}
+
+func (r *Repository) VerifyByID(ctx context.Context, id string) error {
+	query := `UPDATE m2m_clients SET is_verified = 1 WHERE id = ?`
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
 }

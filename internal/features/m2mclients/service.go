@@ -58,14 +58,14 @@ func (s *Service) CreateClient(
 	hashedSecret := s.hashSecret(rawSecret)
 
 	client := M2MClient{
-		ID:           uuid.NewString(),
-		UserID:       userID,
-		ClientName:   req.ClientName,
-		ClientID:     clientID,
-		ClientSecret: hashedSecret,
-		IsActive:     true,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		UserID:            userID,
+		ClientName:        req.ClientName,
+		ClientDescription: req.ClientDescription,
+		ClientID:          clientID,
+		ClientSecret:      hashedSecret,
+		IsActive:          true,
+		CreatedAt:         time.Now(),
+		UpdatedAt:         time.Now(),
 	}
 
 	err = s.repo.WithTransaction(ctx, func(tx datastore.DB) error {
@@ -132,25 +132,31 @@ func (s *Service) Authenticate(
 	}, nil
 }
 
-func (s *Service) ListClients(ctx context.Context) ([]M2MClient, error) {
-	return s.repo.ListActive(ctx)
+func (s *Service) ListClients(ctx context.Context, includeRevoked bool) ([]M2MClient, error) {
+	return s.repo.ListClients(ctx, includeRevoked)
 }
 
 func (s *Service) GetClientByUserID(ctx context.Context, userID string) (*M2MClient, error) {
 	return s.repo.GetActiveByUserID(ctx, userID)
 }
 
-func (s *Service) ResetSecret(ctx context.Context, clientID string) (string, error) {
-	// Simplified: return error for now to satisfy routes.
-	return "", fmt.Errorf("not implemented")
+func (s *Service) ResetSecret(ctx context.Context, id string) (string, error) {
+	rawSecret, _ := s.generateRandomString(32)
+	hashedSecret := s.hashSecret(rawSecret)
+
+	err := s.repo.UpdateSecret(ctx, id, hashedSecret)
+	if err != nil {
+		return "", fmt.Errorf("failed to rotate client secret: %w", err)
+	}
+	return rawSecret, nil
 }
 
 func (s *Service) Deactivate(ctx context.Context, id string) error {
-	return fmt.Errorf("not implemented")
+	return s.repo.DeactivateByID(ctx, id)
 }
 
 func (s *Service) Verify(ctx context.Context, id string) error {
-	return fmt.Errorf("not implemented")
+	return s.repo.VerifyByID(ctx, id)
 }
 
 func (s *Service) generateRandomString(n int) (string, error) {
