@@ -59,13 +59,20 @@ func NewService(
 	}
 }
 
+func (s *Service) GetLatestCORsByUserIDs(
+	ctx context.Context,
+	userIDs []string,
+) (map[string]string, error) {
+	return s.repo.GetLatestCORsByUserIDs(ctx, userIDs)
+}
+
 // SubmitCOR uploads a Certificate of Registration and links it to the student.
 func (s *Service) SubmitCOR(
 	ctx context.Context,
 	userID string,
 	fileHeader *multipart.FileHeader,
 ) (string, error) {
-	file, err := s.filesSvc.UploadFile(ctx, fileHeader, "cors/")
+	file, err := s.filesSvc.UploadFile(ctx, fileHeader, "cors")
 	if err != nil {
 		return "", fmt.Errorf("[StudentService] {SubmitCOR Upload}: %w", err)
 	}
@@ -73,6 +80,53 @@ func (s *Service) SubmitCOR(
 	cor := StudentCOR{
 		FileID:    file.ID,
 		StudentID: userID,
+	}
+
+	// Fetch OCR result to set validity
+	ocrResult, err := s.filesSvc.GetOCRResult(ctx, file.ID)
+	if err != nil {
+		// Non-fatal, but we'll use fallback dates
+		fmt.Printf("[StudentService] {SubmitCOR GetOCRResult}: %v\n", err)
+	}
+
+	if ocrResult != nil && ocrResult.StructuredData != "" {
+		var corData struct {
+			StartAcademicYear string `json:"start_academic_year"`
+			EndAcademicYear   string `json:"end_academic_year"`
+			Term              int    `json:"term"`
+		}
+		if err := json.Unmarshal([]byte(ocrResult.StructuredData), &corData); err == nil {
+			// Roughly calculate validity based on term
+			// Term 1: Aug to Dec
+			// Term 2: Jan to May
+			// Term 3/Summer: June to July
+			startYear := time.Now().Year()
+			if corData.StartAcademicYear != "" {
+				fmt.Sscanf(corData.StartAcademicYear, "%d", &startYear)
+			}
+
+			if corData.Term == 1 {
+				cor.ValidFrom = structs.TimeToNullableTime(time.Date(startYear, time.August, 1, 0, 0, 0, 0, time.Local))
+				cor.ValidUntil = structs.TimeToNullableTime(time.Date(startYear, time.December, 31, 23, 59, 59, 0, time.Local))
+			} else if corData.Term == 2 {
+				cor.ValidFrom = structs.TimeToNullableTime(time.Date(startYear+1, time.January, 1, 0, 0, 0, 0, time.Local))
+				cor.ValidUntil = structs.TimeToNullableTime(time.Date(startYear+1, time.May, 31, 23, 59, 59, 0, time.Local))
+			} else {
+				cor.ValidFrom = structs.TimeToNullableTime(time.Now())
+				cor.ValidUntil = structs.TimeToNullableTime(time.Now().AddDate(0, 5, 0)) // Default 5 months
+			}
+		}
+	}
+
+	if !cor.ValidFrom.Valid {
+		cor.ValidFrom = structs.TimeToNullableTime(time.Now())
+		cor.ValidUntil = structs.TimeToNullableTime(time.Now().AddDate(0, 5, 0)) // Default 5 months
+	}
+
+	// Delete existing CORs to enforce 1-to-1 relationship and free up storage
+	oldCORs, _ := s.repo.GetStudentCORsByUserID(ctx, userID)
+	for _, oldCOR := range oldCORs {
+		_ = s.filesSvc.DeleteFile(ctx, oldCOR.FileID)
 	}
 
 	err = s.repo.WithTransaction(ctx, func(tx datastore.DB) error {
@@ -218,7 +272,18 @@ func (s *Service) GetStudentProfile(
 	ctx context.Context,
 	iirID string,
 ) (*ComprehensiveProfileDTO, error) {
+	// Fetch user ID for this IIR
+	iir, err := s.repo.GetStudentIIR(ctx, iirID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch IIR record: %w", err)
+	}
+
 	profile := &ComprehensiveProfileDTO{IIRID: iirID}
+
+	// Fetch COR URL
+	corMap, _ := s.repo.GetLatestCORsByUserIDs(ctx, []string{iir.UserID})
+	profile.StudentCORURL = corMap[iir.UserID]
+
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {

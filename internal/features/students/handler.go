@@ -783,15 +783,59 @@ func (h *Handler) PatchStudentStatusBulk(c *gin.Context) {
 func (h *Handler) PostStudentCOR(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 
-	file, err := c.FormFile("file")
+	file, err := c.FormFile("cor")
 	if err != nil {
-		response.SendFail(c, gin.H{"error": "File is required"})
+		response.SendFail(c, gin.H{"error": "COR file is required (field: cor)"})
 		return
 	}
 
 	fileID, err := h.service.SubmitCOR(c.Request.Context(), userID, file)
 	if err != nil {
 		log.Printf("[PostStudentCOR] {Service Call}: %v", err)
+		response.SendError(
+			c,
+			"Failed to submit COR",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{
+		"fileId":  fileID,
+		"message": "COR submitted and processing successfully",
+	})
+}
+
+func (h *Handler) PostStudentCORByIIRID(c *gin.Context) {
+	iirID := c.Param("iirID")
+	if iirID == "" {
+		response.SendFail(c, gin.H{"error": "Invalid IIR ID format"})
+		return
+	}
+
+	// Resolve UserID from IIRID
+	iir, err := h.service.GetStudentIIR(c.Request.Context(), iirID)
+	if err != nil || iir == nil {
+		log.Printf("[PostStudentCORByIIRID] {Resolve UserID}: %v", err)
+		response.SendError(
+			c,
+			"Student record not found",
+			http.StatusNotFound,
+			nil,
+		)
+		return
+	}
+
+	file, err := c.FormFile("cor")
+	if err != nil {
+		response.SendFail(c, gin.H{"error": "COR file is required (field: cor)"})
+		return
+	}
+
+	fileID, err := h.service.SubmitCOR(c.Request.Context(), iir.UserID, file)
+	if err != nil {
+		log.Printf("[PostStudentCORByIIRID] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to submit COR",
