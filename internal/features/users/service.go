@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
@@ -34,7 +35,16 @@ func (s *Service) GetUserByID(
 	if err != nil {
 		return nil, err
 	}
-	return s.mapToResponse(user), nil
+
+	resp := s.mapToResponse(user)
+	profilePicture, err := s.repo.GetProfilePictureURLByUserID(ctx, userID)
+	if err == nil {
+		resp.ProfilePicture = profilePicture
+	} else if err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 // GetUserByEmail retrieves a user by their email and auth type.
@@ -47,7 +57,16 @@ func (s *Service) GetUserByEmail(
 	if err != nil {
 		return nil, err
 	}
-	return s.mapToResponse(user), nil
+
+	resp := s.mapToResponse(user)
+	profilePicture, err := s.repo.GetProfilePictureURLByUserID(ctx, user.ID)
+	if err == nil {
+		resp.ProfilePicture = profilePicture
+	} else if err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 func (s *Service) GetUserIDsByRole(

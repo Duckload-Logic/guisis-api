@@ -3,16 +3,17 @@ package users
 import "github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 
 type UserResponse struct {
-	ID         string                 `json:"id"`
-	Roles      []Role                 `json:"roles"`
-	FirstName  string                 `json:"firstName"`
-	MiddleName structs.NullableString `json:"middleName,omitempty"`
-	LastName   string                 `json:"lastName"`
-	SuffixName structs.NullableString `json:"suffixName,omitempty"`
-	Email      string                 `json:"email,omitempty"`
-	IsActive   bool                   `json:"isActive"`
-	CreatedAt  string                 `json:"createdAt,omitempty"`
-	UpdatedAt  string                 `json:"updatedAt,omitempty"`
+	ID             string                 `json:"id"`
+	Roles          []Role                 `json:"roles"`
+	FirstName      string                 `json:"firstName"`
+	MiddleName     structs.NullableString `json:"middleName,omitempty"`
+	LastName       string                 `json:"lastName"`
+	SuffixName     structs.NullableString `json:"suffixName,omitempty"`
+	Email          string                 `json:"email,omitempty"`
+	IsActive       bool                   `json:"isActive"`
+	ProfilePicture string                 `json:"profilePicture,omitempty"`
+	CreatedAt      string                 `json:"createdAt,omitempty"`
+	UpdatedAt      string                 `json:"updatedAt,omitempty"`
 }
 
 type CreateUserRequest struct {
@@ -34,7 +35,7 @@ type ListUsersRequest struct {
 }
 
 type ListUsersResponse struct {
-	Users []UserResponse          `json:"users"`
+	Users []UserResponse             `json:"users"`
 	Meta  structs.PaginationMetadata `json:"meta"`
 }
 
