@@ -22,6 +22,7 @@ const (
 const appointmentsBaseQuery = `
 	SELECT
 		a.id,
+		u.id AS user_id,
 		ir.id AS iir_id,
 		spi.student_number AS student_number,
 		u.first_name AS user_first_name,

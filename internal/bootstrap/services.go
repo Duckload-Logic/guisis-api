@@ -51,7 +51,18 @@ func getServices(
 ) *Services {
 	notificationsService := notifications.NewService(repos.NotificationRepo)
 	sessionService := sessions.NewService(redis)
-	userService := users.NewService(repos.UserRepo, sessionService)
+	gotenbergClient := gotenberg.NewClient(cfg.GotenbergURL)
+	pdfService := pdf.NewService(gotenbergClient)
+
+	ocrClient := ocr.NewClient(cfg.AIBaseUrl, "") // Assuming no API key for now
+
+	fileService := files.NewService(
+		repos.FileRepo,
+		fileStorage,
+		ocrClient,
+	)
+
+	userService := users.NewService(repos.UserRepo, sessionService, fileService)
 	systemLogService := logs.NewService(
 		repos.SystemLogRepo,
 		notificationsService,
@@ -75,17 +86,6 @@ func getServices(
 	)
 
 	locationsService := locations.NewService(repos.LocationsRepo)
-
-	gotenbergClient := gotenberg.NewClient(cfg.GotenbergURL)
-	pdfService := pdf.NewService(gotenbergClient)
-
-	ocrClient := ocr.NewClient(cfg.AIBaseUrl, "") // Assuming no API key for now
-
-	fileService := files.NewService(
-		repos.FileRepo,
-		fileStorage,
-		ocrClient,
-	)
 
 	studentService := students.NewService(
 		repos.StudentRepo,

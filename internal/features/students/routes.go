@@ -162,8 +162,13 @@ func RegisterRoutes(
 		studentRoutes.POST("/records/iir", h.PostStudentIIR)
 
 		// COR management
+		studentRoutes.POST("/records/iir/:iirID/cor", h.PostStudentCORByIIRID)
 		studentRoutes.POST("/cors", h.PostStudentCOR)
-		studentRoutes.GET("/cors/user/:userID", userResourceLookup, h.GetStudentCORByUserID)
+		studentRoutes.GET(
+			"/cors/user/:userID",
+			userResourceLookup,
+			h.GetStudentCORByUserID,
+		)
 		studentRoutes.GET("/cors", h.GetStudentCORs)
 	}
 

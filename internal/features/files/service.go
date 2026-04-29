@@ -45,7 +45,7 @@ func (s *Service) GetOCRResult(
 	ctx context.Context,
 	fileID string,
 ) (*OCRResult, error) {
-	return s.repo.GetOCRResultByFileID(ctx, fileID)
+	return s.repo.GetOCRResult(ctx, fileID)
 }
 
 func (s *Service) UploadFile(
@@ -139,7 +139,7 @@ func (s *Service) UploadFiles(
 		fileRecord := File{
 			ID:       fileID,
 			FileName: fh.Filename,
-			FileURL:  "/" + blobPath,
+			FileURL:  "/uploads/" + blobPath,
 			FileType: contentType,
 			FileSize: fh.Size,
 			MimeType: contentType,
@@ -147,45 +147,48 @@ func (s *Service) UploadFiles(
 		filesToCreate = append(filesToCreate, fileRecord)
 
 		switch prefix {
-		case "cors/":
+		case "cors":
 			corResp, err := s.ocrClient.ProcessCOR(
 				ctx,
 				fh.Filename,
 				bytes.NewReader(data),
 			)
 			if err != nil {
-				fmt.Printf("[FileService] {OCR COR Error}: %v\n", err)
-			} else if corResp != nil {
-				marshaled, _ := json.Marshal(corResp)
-				ocrResults = append(ocrResults, OCRResult{
-					FileID:         fileID,
-					StructuredData: string(marshaled),
-					EngineV:        "paddleocr-v4-cor",
-					CreatedAt:      time.Now(),
-				})
+				return nil, fmt.Errorf("this file does not appear to be a valid COR: %w", err)
 			}
-		case "slips/":
-			ocrResp, err := s.ocrClient.ProcessDocument(
-				ctx,
-				fh.Filename,
-				bytes.NewReader(data),
-			)
-			if err != nil {
-				fmt.Printf("[FileService] {OCR Generic Error}: %v\n", err)
-			} else if ocrResp != nil {
-				for i := range ocrResp.Pages {
-					ocrResp.Pages[i].Words = nil
-				}
+			if corResp == nil {
+				return nil, fmt.Errorf("AI service returned empty response for COR")
+			}
 
-				marshaled, _ := json.Marshal(ocrResp)
-				ocrResults = append(ocrResults, OCRResult{
-					FileID:         fileID,
-					RawText:        ocrResp.FullText,
-					StructuredData: string(marshaled),
-					EngineV:        "paddleocr-v4-generic",
-					CreatedAt:      time.Now(),
-				})
-			}
+			marshaled, _ := json.Marshal(corResp)
+			ocrResults = append(ocrResults, OCRResult{
+				FileID:         fileID,
+				StructuredData: string(marshaled),
+				EngineV:        "paddleocr-v4-cor",
+				CreatedAt:      time.Now(),
+			})
+		case "slips":
+			// ocrResp, err := s.ocrClient.ProcessDocument(
+			// 	ctx,
+			// 	fh.Filename,
+			// 	bytes.NewReader(data),
+			// )
+			// if err != nil {
+			// 	fmt.Printf("[FileService] {OCR Generic Error}: %v\n", err)
+			// } else if ocrResp != nil {
+			// 	for i := range ocrResp.Pages {
+			// 		ocrResp.Pages[i].Words = nil
+			// 	}
+
+			// 	marshaled, _ := json.Marshal(ocrResp)
+			// 	ocrResults = append(ocrResults, OCRResult{
+			// 		FileID:         fileID,
+			// 		RawText:        ocrResp.FullText,
+			// 		StructuredData: string(marshaled),
+			// 		EngineV:        "paddleocr-v4-generic",
+			// 		CreatedAt:      time.Now(),
+			// 	})
+			// }
 		}
 	}
 
@@ -223,7 +226,7 @@ func (s *Service) DeleteFile(ctx context.Context, id string) error {
 	}
 
 	err = s.repo.WithTransaction(ctx, func(tx datastore.DB) error {
-		blobPath := strings.TrimPrefix(file.FileURL, "/")
+		blobPath := strings.TrimPrefix(file.FileURL, "/uploads/")
 
 		// Security: Path Traversal Protection
 		if strings.Contains(blobPath, "..") {

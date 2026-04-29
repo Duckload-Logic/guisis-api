@@ -105,4 +105,3 @@ func (r *Repository) Delete(
 	_, err := tx.ExecContext(ctx, query, id)
 	return err
 }
-

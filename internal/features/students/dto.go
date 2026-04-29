@@ -35,10 +35,12 @@ type StudentProfileDTO struct {
 	Section       int                    `json:"section"`
 	YearLevel     int                    `json:"yearLevel"`
 	Status        StudentStatus          `json:"status"`
+	StudentCORURL string                 `json:"studentCorUrl,omitempty"`
 }
 
 type ComprehensiveProfileDTO struct {
-	IIRID   string `json:"iirId,omitempty"`
+	IIRID         string `json:"iirId,omitempty"`
+	StudentCORURL string `json:"studentCorUrl,omitempty"`
 	Student struct {
 		BasicInfo              StudentBasicInfoViewDTO `json:"basicInfo"`
 		StudentPersonalInfoDTO `json:"personalInfo"`

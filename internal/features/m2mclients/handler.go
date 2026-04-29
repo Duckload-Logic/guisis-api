@@ -53,11 +53,18 @@ func (h *Handler) PostM2MTokenRefresh(c *gin.Context) {
 }
 
 func (h *Handler) GetM2MClients(c *gin.Context) {
-	clients, err := h.service.ListClients(c.Request.Context())
+	includeRevoked := c.Query("include_revoked")
+
+	clients, err := h.service.ListClients(c.Request.Context(), includeRevoked == "true")
 	if err != nil {
 		response.SendError(c, err.Error(), http.StatusInternalServerError, nil)
 		return
 	}
+
+	if clients == nil {
+		clients = make([]M2MClient, 0)
+	}
+
 	response.SendSuccess(c, clients)
 }
 

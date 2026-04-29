@@ -388,25 +388,7 @@ func insertPersonalInfo(
 	studentIndex int,
 	emergencyContactID int,
 ) {
-	// Select status based on weights
-	roll := rand.Float32()
-	var statusID int
-	var graduationYear structs.NullableInt64
-
-	if roll < 0.80 {
-		statusID = studentStatusByName["active"]
-	} else if roll < 0.90 {
-		statusID = studentStatusByName["graduated"]
-		graduationYear = structs.NullableInt64{
-			Int64: int64(time.Now().Year() - rand.Intn(5) - 1),
-			Valid: true,
-		}
-	} else if roll < 0.95 {
-		statusID = studentStatusByName["on leave"]
-	} else {
-		statusID = studentStatusByName["archived"]
-	}
-
+	statusID := studentStatusByName["active"]
 	isEmployed := studentIndex%2 == 0
 	yearLevel := rand.Intn(4) + 1
 	enrollmentYear := time.Now().Year() - yearLevel
@@ -461,7 +443,6 @@ func insertPersonalInfo(
 		MobileNumber:    mobileNumber,
 		TelephoneNumber: telephoneNumber,
 		StatusID:        statusID,
-		GraduationYear:  graduationYear,
 	}
 
 	err := studentsRepo.UpsertStudentPersonalInfo(ctx, tx, info)

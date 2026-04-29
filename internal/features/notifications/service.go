@@ -116,6 +116,9 @@ func (s *Service) GetUserNotifications(
 		dtos = append(dtos, audit.NotificationEntry{
 			ID:         m.ID,
 			ReceiverID: m.ReceiverID,
+			ActorID:    m.ActorID,
+			TargetID:   m.TargetID,
+			TargetType: m.TargetType,
 			Title:      m.Title,
 			Message:    m.Message,
 			Type:       m.Type,

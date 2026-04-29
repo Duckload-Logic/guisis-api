@@ -82,9 +82,10 @@ func (s *Service) GetSlipByID(
 		return nil, fmt.Errorf("slip not found")
 	}
 
-	return &SlipDTO{
-		ID:    slip.ID,
-		IIRID: slip.IIRID,
+	dto := &SlipDTO{
+		ID:     slip.ID,
+		UserID: slip.UserID,
+		IIRID:  slip.IIRID,
 		User: users.UserResponse{
 			FirstName:  slip.UserFirstName,
 			MiddleName: slip.UserMiddleName,
@@ -107,7 +108,12 @@ func (s *Service) GetSlipByID(
 		},
 		CreatedAt: slip.CreatedAt,
 		UpdatedAt: slip.UpdatedAt,
-	}, nil
+	}
+
+	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, []string{slip.UserID})
+	dto.StudentCORURL = corMap[slip.UserID]
+
+	return dto, nil
 }
 
 func (s *Service) GetUrgentSlips(
@@ -121,12 +127,22 @@ func (s *Service) GetUrgentSlips(
 		return nil, err
 	}
 
+	// Batch fetch COR URLs
+	userIDs := make([]string, 0, len(slips))
+	for i := range slips {
+		if slips[i].UserID != "" {
+			userIDs = append(userIDs, slips[i].UserID)
+		}
+	}
+	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, userIDs)
+
 	var slipDTOs []SlipDTO
 	for s := range slips {
 		slipDTOs = append(slipDTOs, SlipDTO{
-			ID: slips[s].ID,
+			ID:     slips[s].ID,
+			UserID: slips[s].UserID,
+			IIRID:  slips[s].IIRID,
 			User: users.UserResponse{
-				ID:         "",
 				FirstName:  slips[s].UserFirstName,
 				MiddleName: slips[s].UserMiddleName,
 				LastName:   slips[s].UserLastName,
@@ -145,8 +161,9 @@ func (s *Service) GetUrgentSlips(
 				Name:     slips[s].StatusName,
 				ColorKey: slips[s].StatusColorKey,
 			},
-			CreatedAt: slips[s].CreatedAt,
-			UpdatedAt: slips[s].UpdatedAt,
+			StudentCORURL: corMap[slips[s].UserID],
+			CreatedAt:     slips[s].CreatedAt,
+			UpdatedAt:     slips[s].UpdatedAt,
 		})
 	}
 
@@ -186,13 +203,22 @@ func (s *Service) GetAllExcuseSlips(
 		return nil, err
 	}
 
+	// Batch fetch COR URLs
+	userIDs := make([]string, 0, len(slips))
+	for i := range slips {
+		if slips[i].UserID != "" {
+			userIDs = append(userIDs, slips[i].UserID)
+		}
+	}
+	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, userIDs)
+
 	var slipDTOs []SlipDTO
 	for s := range slips {
 		slipDTOs = append(slipDTOs, SlipDTO{
-			ID:    slips[s].ID,
-			IIRID: slips[s].IIRID,
+			ID:     slips[s].ID,
+			UserID: slips[s].UserID,
+			IIRID:  slips[s].IIRID,
 			User: users.UserResponse{
-				ID:         "",
 				FirstName:  slips[s].UserFirstName,
 				MiddleName: slips[s].UserMiddleName,
 				LastName:   slips[s].UserLastName,
@@ -212,8 +238,9 @@ func (s *Service) GetAllExcuseSlips(
 				Name:     slips[s].StatusName,
 				ColorKey: slips[s].StatusColorKey,
 			},
-			CreatedAt: slips[s].CreatedAt,
-			UpdatedAt: slips[s].UpdatedAt,
+			StudentCORURL: corMap[slips[s].UserID],
+			CreatedAt:     slips[s].CreatedAt,
+			UpdatedAt:     slips[s].UpdatedAt,
 		})
 	}
 
@@ -695,8 +722,9 @@ func (s *Service) DownloadAttachment(
 		return nil, fmt.Errorf("attachment not found")
 	}
 
-	// Convert URL path "/slips/hash/file" to blob path "slips/hash/file"
-	blobPath := strings.TrimPrefix(attachment.FileURL, "/")
+	// Convert URL path "/uploads/slips/hash/file" to blob path "slips/hash/file"
+	blobPath := strings.TrimPrefix(attachment.FileURL, "/uploads/")
+	blobPath = strings.TrimPrefix(blobPath, "/")
 
 	// Security: Path Traversal Protection (Jail Check)
 	if strings.Contains(blobPath, "..") ||

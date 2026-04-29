@@ -1471,6 +1471,47 @@ func (r *Repository) SaveStudentCOR(
 	return err
 }
 
+func (r *Repository) GetLatestCORsByUserIDs(
+	ctx context.Context,
+	userIDs []string,
+) (map[string]string, error) {
+	if len(userIDs) == 0 {
+		return map[string]string{}, nil
+	}
+
+	placeholders := strings.Repeat("?,", len(userIDs))
+	placeholders = placeholders[:len(placeholders)-1]
+
+	query := fmt.Sprintf(`
+		SELECT sc.student_id, f.file_url 
+		FROM student_cors sc
+		JOIN files f ON f.id = sc.file_id
+		WHERE sc.student_id IN (%s)
+	`, placeholders)
+
+	args := make([]interface{}, len(userIDs))
+	for i, id := range userIDs {
+		args[i] = id
+	}
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make(map[string]string)
+	for rows.Next() {
+		var studentID, fileURL string
+		if err := rows.Scan(&studentID, &fileURL); err != nil {
+			return nil, err
+		}
+		results[studentID] = fileURL
+	}
+
+	return results, nil
+}
+
 func (r *Repository) GetStudentCORByUserID(
 	ctx context.Context,
 	userID string,
