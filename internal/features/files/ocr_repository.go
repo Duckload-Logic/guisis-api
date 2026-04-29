@@ -31,7 +31,7 @@ func (r *Repository) SaveOCRResult(
 	return nil
 }
 
-func (r *Repository) GetOCRResultByFileID(
+func (r *Repository) GetOCRResult(
 	ctx context.Context,
 	fileID string,
 ) (*OCRResult, error) {
@@ -40,7 +40,7 @@ func (r *Repository) GetOCRResultByFileID(
 	err := r.db.GetContext(ctx, &result, query, fileID)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"[OCRRepository] {GetOCRResultByFileID}: %w",
+			"[OCRRepository] {GetOCRResult}: %w",
 			err,
 		)
 	}
