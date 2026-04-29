@@ -51,8 +51,13 @@ func (r *Repository) GetUserByID(
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch user roles: %w", err)
 	}
-
 	user.Roles = roles
+
+	profileURL, err := r.GetProfilePictureURLByUserID(ctx, userID)
+	if err == nil {
+		user.ProfilePicture = structs.StringToNullableString(profileURL)
+	}
+
 	return &user, nil
 }
 
@@ -127,8 +132,13 @@ func (r *Repository) GetUserByEmail(
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch user roles: %w", err)
 	}
-
 	user.Roles = roles
+
+	profileURL, err := r.GetProfilePictureURLByUserID(ctx, user.ID)
+	if err == nil {
+		user.ProfilePicture = structs.StringToNullableString(profileURL)
+	}
+
 	return &user, nil
 }
 
@@ -182,6 +192,28 @@ func (r *Repository) GetProfilePictureURLByUserID(
 		JOIN files f ON f.id = pp.file_id
 		WHERE pp.user_id = ?
 		ORDER BY f.created_at DESC
+		LIMIT 1
+	`
+
+	err := r.db.GetContext(ctx, &fileURL, query, userID)
+	if err != nil {
+		return "", err
+	}
+
+	return fileURL, nil
+}
+ 
+func (r *Repository) GetStudentCORURLByUserID(
+	ctx context.Context,
+	userID string,
+) (string, error) {
+	var fileURL string
+
+	query := `
+		SELECT f.file_url
+		FROM student_cors sc
+		JOIN files f ON f.id = sc.file_id
+		WHERE sc.student_id = ?
 		LIMIT 1
 	`
 
@@ -342,6 +374,32 @@ func (r *Repository) ListUsers(
 
 	for i := range users {
 		users[i].Roles = userRolesMap[users[i].ID]
+	}
+
+	// Fetch profile pictures in one go
+	picQuery, picArgs, err := sqlx.In(`
+		SELECT pp.user_id, f.file_url
+		FROM profile_pictures pp
+		JOIN files f ON f.id = pp.file_id
+		WHERE pp.user_id IN (?)
+	`, userIDs)
+	if err == nil {
+		picQuery = r.db.Rebind(picQuery)
+		var pics []struct {
+			UserID  string `db:"user_id"`
+			FileURL string `db:"file_url"`
+		}
+		if err := r.db.SelectContext(ctx, &pics, picQuery, picArgs...); err == nil {
+			picMap := make(map[string]string)
+			for _, p := range pics {
+				picMap[p.UserID] = p.FileURL
+			}
+			for i := range users {
+				if url, ok := picMap[users[i].ID]; ok {
+					users[i].ProfilePicture = structs.StringToNullableString(url)
+				}
+			}
+		}
 	}
 
 	return users, total, nil

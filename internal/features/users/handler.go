@@ -378,3 +378,63 @@ func (h *Handler) PostRemoveUserFromWhitelist(c *gin.Context) {
 		gin.H{"message": "User removed from whitelist successfully"},
 	)
 }
+
+func (h *Handler) PostProfilePicture(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	fileID := c.Param("id")
+	if fileID == "" {
+		response.SendFail(c, gin.H{"error": "File ID is required"})
+		return
+	}
+
+	err := h.service.PostProfilePicture(c.Request.Context(), userID, fileID)
+	if err != nil {
+		fmt.Printf("[PostProfilePicture] {PostProfilePicture}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to associate profile picture",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(
+		c,
+		gin.H{"message": "Profile picture updated successfully"},
+	)
+}
+
+func (h *Handler) UploadProfilePicture(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		response.SendFail(c, gin.H{"error": "File is required"})
+		return
+	}
+
+	fileURL, err := h.service.UploadProfilePicture(
+		c.Request.Context(),
+		userID,
+		fileHeader,
+	)
+	if err != nil {
+		fmt.Printf("[UploadProfilePicture] {UploadProfilePicture}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to upload profile picture",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(
+		c,
+		gin.H{
+			"message": "Profile picture uploaded successfully",
+			"url":     fileURL,
+		},
+	)
+}

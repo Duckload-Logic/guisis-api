@@ -23,6 +23,8 @@ func RegisterRoutes(
 	))
 
 	userRoutes.GET("/me", h.GetMe)
+	userRoutes.POST("/profile-picture/:id", h.PostProfilePicture)
+	userRoutes.POST("/profile-picture/upload", h.UploadProfilePicture)
 
 	adminOnly := userRoutes.Group("")
 	adminOnly.Use(middleware.RoleMiddleware(

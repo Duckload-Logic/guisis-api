@@ -2,28 +2,52 @@ package users
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
+	"mime/multipart"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
 
 type Service struct {
 	repo           *Repository
 	sessionService *sessions.Service
+	filesSvc       *files.Service
 }
 
 // NewService creates a new users service.
 func NewService(
 	repo *Repository,
 	sessionService *sessions.Service,
+	filesSvc *files.Service,
 ) *Service {
 	return &Service{
 		repo:           repo,
 		sessionService: sessionService,
+		filesSvc:       filesSvc,
 	}
+}
+
+func (s *Service) UploadProfilePicture(
+	ctx context.Context,
+	userID string,
+	fileHeader *multipart.FileHeader,
+) (string, error) {
+	// 1. Upload file using files service
+	file, err := s.filesSvc.UploadFile(ctx, fileHeader, "profiles")
+	if err != nil {
+		return "", fmt.Errorf("failed to upload profile picture: %w", err)
+	}
+
+	// 2. Associate file with user's profile picture
+	err = s.PostProfilePicture(ctx, userID, file.ID)
+	if err != nil {
+		return "", err
+	}
+
+	return file.FileURL, nil
 }
 
 // GetUserByID retrieves a user by their ID and returns a DTO.
@@ -36,15 +60,7 @@ func (s *Service) GetUserByID(
 		return nil, err
 	}
 
-	resp := s.mapToResponse(user)
-	profilePicture, err := s.repo.GetProfilePictureURLByUserID(ctx, userID)
-	if err == nil {
-		resp.ProfilePicture = profilePicture
-	} else if err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	return resp, nil
+	return s.mapToResponse(user), nil
 }
 
 // GetUserByEmail retrieves a user by their email and auth type.
@@ -58,15 +74,7 @@ func (s *Service) GetUserByEmail(
 		return nil, err
 	}
 
-	resp := s.mapToResponse(user)
-	profilePicture, err := s.repo.GetProfilePictureURLByUserID(ctx, user.ID)
-	if err == nil {
-		resp.ProfilePicture = profilePicture
-	} else if err != sql.ErrNoRows {
-		return nil, err
-	}
-
-	return resp, nil
+	return s.mapToResponse(user), nil
 }
 
 func (s *Service) GetUserIDsByRole(
@@ -222,15 +230,16 @@ func (s *Service) RemoveUserFromWhitelist(
 }
 func (s *Service) mapToResponse(user *User) *UserResponse {
 	return &UserResponse{
-		ID:         user.ID,
-		Roles:      user.Roles,
-		FirstName:  user.FirstName,
-		MiddleName: user.MiddleName,
-		LastName:   user.LastName,
-		SuffixName: user.SuffixName,
-		Email:      user.Email,
-		IsActive:   user.IsActive,
-		CreatedAt:  user.CreatedAt.Time.String(),
-		UpdatedAt:  user.UpdatedAt.Time.String(),
+		ID:             user.ID,
+		Roles:          user.Roles,
+		FirstName:      user.FirstName,
+		MiddleName:     user.MiddleName,
+		LastName:       user.LastName,
+		SuffixName:     user.SuffixName,
+		Email:          user.Email,
+		IsActive:       user.IsActive,
+		ProfilePicture: user.ProfilePicture.String,
+		CreatedAt:      user.CreatedAt.Time.String(),
+		UpdatedAt:      user.UpdatedAt.Time.String(),
 	}
 }
