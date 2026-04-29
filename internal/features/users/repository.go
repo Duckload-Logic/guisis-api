@@ -170,15 +170,46 @@ func (r *Repository) CreateUser(
 	return nil
 }
 
+func (r *Repository) GetProfilePictureURLByUserID(
+	ctx context.Context,
+	userID string,
+) (string, error) {
+	var fileURL string
+
+	query := `
+		SELECT f.file_url
+		FROM profile_pictures pp
+		JOIN files f ON f.id = pp.file_id
+		WHERE pp.user_id = ?
+		ORDER BY f.created_at DESC
+		LIMIT 1
+	`
+
+	err := r.db.GetContext(ctx, &fileURL, query, userID)
+	if err != nil {
+		return "", err
+	}
+
+	return fileURL, nil
+}
+
 func (r *Repository) PostProfilePicture(
 	ctx context.Context,
 	tx datastore.DB,
 	userID string,
 	fileID string,
 ) error {
-	query := `INSERT INTO profile_pictures (user_id, file_id)
-			  VALUES (?, ?)`
-	_, err := tx.ExecContext(ctx, query, userID, fileID)
+	deleteQuery := `DELETE FROM profile_pictures WHERE user_id = ?`
+	if _, err := tx.ExecContext(ctx, deleteQuery, userID); err != nil {
+		return fmt.Errorf("failed to delete old profile picture: %w", err)
+	}
+
+	insertQuery := `
+		INSERT INTO profile_pictures (user_id, file_id)
+		VALUES (?, ?)
+	`
+
+	_, err := tx.ExecContext(ctx, insertQuery, userID, fileID)
 	if err != nil {
 		return fmt.Errorf("failed to post profile picture: %w", err)
 	}
