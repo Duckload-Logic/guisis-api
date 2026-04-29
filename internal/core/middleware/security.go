@@ -10,8 +10,8 @@ import (
 // SecurityHeadersMiddleware adds essential security headers to every response.
 func SecurityHeadersMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Prevent clickjacking
-		c.Header("X-Frame-Options", "DENY")
+		// Removed overly strict X-Frame-Options to allow frontend iframes
+		// c.Header("X-Frame-Options", "DENY")
 
 		// Prevent MIME type sniffing
 		c.Header("X-Content-Type-Options", "nosniff")
@@ -19,9 +19,8 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 		// Basic XSS protection for older browsers
 		c.Header("X-XSS-Protection", "1; mode=block")
 
-		// Basic Content Security Policy
-		// Since this is an API, we restrict everything
-		c.Header("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none';")
+		// Relaxed CSP to allow our frontend to embed files
+		c.Header("Content-Security-Policy", "default-src 'none'; frame-ancestors *;")
 
 		// Prevent search engines from indexing the API
 		c.Header("X-Robots-Tag", "noindex, nofollow")

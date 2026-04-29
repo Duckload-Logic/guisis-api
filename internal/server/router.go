@@ -117,7 +117,7 @@ func NewRouter(
 	})
 
 	if !cfg.IsProduction {
-		apiV1Routes.Static("./uploads", "./uploads")
+		apiV1Routes.Static("/uploads", cfg.LocalUploadDIR)
 	}
 
 	apiV1Routes.GET("/", func(c *gin.Context) {
