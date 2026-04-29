@@ -9,15 +9,17 @@ import (
 type TTL int
 
 type MeResponse struct {
-	ID         string       `json:"id"`
-	Email      string       `json:"email"`
-	FirstName  string       `json:"firstName"`
-	LastName   string       `json:"lastName"`
-	SuffixName string       `json:"suffixName,omitempty"`
-	MiddleName string       `json:"middleName,omitempty"`
-	CreatedAt  time.Time    `json:"createdAt"`
-	Roles      []users.Role `json:"roles"`
-	Type       string       `json:"type"` // "native" or "idp"
+	ID             string       `json:"id"`
+	Email          string       `json:"email"`
+	FirstName      string       `json:"firstName"`
+	LastName       string       `json:"lastName"`
+	SuffixName     string       `json:"suffixName,omitempty"`
+	MiddleName     string       `json:"middleName,omitempty"`
+	ProfilePicture string       `json:"profilePicture,omitempty"`
+	CreatedAt      time.Time    `json:"createdAt"`
+	Roles          []users.Role `json:"roles"`
+	StudentCORURL  string       `json:"studentCorUrl,omitempty"`
+	Type           string       `json:"type"` // "native" or "idp"
 }
 
 type IDPRefreshRequest struct {

@@ -674,7 +674,7 @@ func (s *Service) GetMe(
 		return nil, err
 	}
 
-	return &MeResponse{
+	resp := &MeResponse{
 		ID:         user.ID,
 		Email:      user.Email,
 		FirstName:  user.FirstName,
@@ -684,7 +684,29 @@ func (s *Service) GetMe(
 		CreatedAt:  user.CreatedAt.Time,
 		Roles:      user.Roles,
 		Type:       tokenType,
-	}, nil
+	}
+
+	profilePicture, err := s.repo.GetProfilePictureURLByUserID(ctx, userID)
+	if err == nil {
+		resp.ProfilePicture = profilePicture
+	} else if err != sql.ErrNoRows {
+		log.Printf("[GetMe] {Profile Picture Fetch}: %v", err)
+	}
+
+	// Fetch COR for students
+	for _, role := range user.Roles {
+		if role.ID == int(constants.StudentRoleID) {
+			corURL, err := s.repo.GetStudentCORURLByUserID(ctx, userID)
+			if err == nil {
+				resp.StudentCORURL = corURL
+			} else if err != sql.ErrNoRows {
+				log.Printf("[GetMe] {Student COR Fetch}: %v", err)
+			}
+			break
+		}
+	}
+
+	return resp, nil
 }
 
 // Logout invalidates the user's session in Redis and optionally the IDP.
