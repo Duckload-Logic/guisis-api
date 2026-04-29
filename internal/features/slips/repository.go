@@ -22,6 +22,7 @@ const (
 	slipsBaseQuery = `
 	SELECT
 		slp.id AS id,
+		u.id AS user_id,
 		slp.iir_id AS iir_id,
 		u.first_name AS user_first_name,
 		u.middle_name AS user_middle_name,

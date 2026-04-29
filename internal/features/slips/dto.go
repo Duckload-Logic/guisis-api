@@ -21,6 +21,7 @@ type ListSlipsResponse struct {
 
 type SlipDTO struct {
 	ID            string                 `json:"id,omitempty"`
+	UserID        string                 `json:"userId,omitempty"`
 	IIRID         string                 `json:"iirId,omitempty"`
 	User          users.UserResponse     `json:"user,omitempty"`
 	StudentNumber string                 `json:"studentNumber,omitempty"`
@@ -30,6 +31,7 @@ type SlipDTO struct {
 	AdminNotes    structs.NullableString `json:"adminNotes,omitempty"`
 	Category      SlipCategory           `json:"category"                form:"categoryId"    binding:"required"`
 	Status        SlipStatus             `json:"status,omitempty"`
+	StudentCORURL string                 `json:"studentCorUrl,omitempty"`
 	CreatedAt     time.Time              `json:"createdAt,omitempty"`
 	UpdatedAt     time.Time              `json:"updatedAt,omitempty"`
 }
