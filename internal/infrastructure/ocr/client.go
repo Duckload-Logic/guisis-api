@@ -31,7 +31,7 @@ func (o *OCRClient) ProcessCOR(
 	filename string,
 	file io.Reader,
 ) (*CORResponse, error) {
-	respBody, err := o.upload(ctx, "/api/v1/ocr/cor", filename, file)
+	respBody, err := o.upload(ctx, "/ocr/cor", filename, file)
 	if err != nil {
 		return nil, fmt.Errorf("[OCRClient] {ProcessCOR}: %w", err)
 	}
@@ -51,7 +51,7 @@ func (o *OCRClient) ProcessDocument(
 	filename string,
 	file io.Reader,
 ) (*OCRResponse, error) {
-	respBody, err := o.upload(ctx, "/api/v1/ocr", filename, file)
+	respBody, err := o.upload(ctx, "/ocr", filename, file)
 	if err != nil {
 		return nil, fmt.Errorf("[OCRClient] {ProcessDocument}: %w", err)
 	}
