@@ -24,7 +24,7 @@ func (s *SendGrid) SendEmail(
 	to, subject, body string,
 ) (bool, error) {
 	from := constants.FromEmail()
-	fromAddress := mail.NewEmail("PUPT-OGOS", from)
+	fromAddress := mail.NewEmail("GuiSIS", from)
 	toAddress := mail.NewEmail("", to)
 
 	message := mail.NewSingleEmail(fromAddress, subject, toAddress, "", body)
