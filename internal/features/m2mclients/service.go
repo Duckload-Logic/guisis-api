@@ -99,12 +99,53 @@ func (s *Service) Authenticate(
 		return nil, fmt.Errorf("invalid client credentials")
 	}
 
-	token, claims, err := s.tokenService.GenerateToken(
+	return s.issueTokens(ctx, client)
+}
+
+func (s *Service) RefreshM2MToken(
+	ctx context.Context,
+	refreshToken string,
+) (*M2MTokenResponse, error) {
+	claims, err := s.tokenService.ValidateToken(refreshToken)
+	if err != nil {
+		return nil, fmt.Errorf("invalid or expired refresh token")
+	}
+
+	if claims.TokenType != "m2m_refresh" {
+		return nil, fmt.Errorf("invalid token type")
+	}
+
+	session, err := s.sessionService.GetToken(ctx, sessions.NewJTI(claims.ID))
+	if err != nil {
+		return nil, fmt.Errorf("refresh session expired or revoked")
+	}
+
+	clientID := session["clientID"]
+	if clientID == "" {
+		return nil, fmt.Errorf("invalid session data")
+	}
+
+	// Verify client is still active
+	client, err := s.repo.GetByClientID(ctx, clientID)
+	if err != nil || !client.IsActive {
+		return nil, fmt.Errorf("client is inactive or revoked")
+	}
+
+	return s.issueTokens(ctx, client)
+}
+
+func (s *Service) issueTokens(
+	ctx context.Context,
+	client *M2MClient,
+) (*M2MTokenResponse, error) {
+	// Access Token
+	token, claims, err := s.tokenService.GenerateM2MToken(
 		client.ClientName,
 		client.UserID,
 		[]int{int(constants.DeveloperRoleID)},
 		"m2m",
-		constants.AccessTokenMaxAge,
+		client.ClientID,
+		constants.M2MAccessTokenMaxAge,
 	)
 	if err != nil {
 		return nil, err
@@ -113,22 +154,51 @@ func (s *Service) Authenticate(
 	val := map[string]string{
 		"userID":    client.UserID,
 		"tokenType": "m2m",
-		"clientID":  clientID,
+		"clientID":  client.ClientID,
 	}
 	err = s.sessionService.StoreToken(
 		ctx,
 		sessions.NewJTI(claims.ID),
 		val,
-		constants.AccessTokenMaxAge,
+		constants.M2MAccessTokenMaxAge,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Refresh Token
+	refreshToken, rClaims, err := s.tokenService.GenerateM2MToken(
+		client.ClientName,
+		client.UserID,
+		[]int{int(constants.DeveloperRoleID)},
+		"m2m_refresh",
+		client.ClientID,
+		constants.M2MRefreshTokenMaxAge,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	rVal := map[string]string{
+		"userID":    client.UserID,
+		"tokenType": "m2m_refresh",
+		"clientID":  client.ClientID,
+	}
+	err = s.sessionService.StoreToken(
+		ctx,
+		sessions.NewJTI(rClaims.ID),
+		rVal,
+		constants.M2MRefreshTokenMaxAge,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	return &M2MTokenResponse{
-		AccessToken: token,
-		TokenType:   "Bearer",
-		ExpiresIn:   constants.AccessTokenMaxAge,
+		AccessToken:  token,
+		RefreshToken: refreshToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    constants.M2MAccessTokenMaxAge,
 	}, nil
 }
 

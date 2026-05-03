@@ -78,7 +78,19 @@ func (h *Handler) PostM2MToken(c *gin.Context) {
 }
 
 func (h *Handler) PostM2MTokenRefresh(c *gin.Context) {
-	response.SendError(c, "Not implemented", http.StatusNotImplemented, nil)
+	var req RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp, err := h.service.RefreshM2MToken(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		response.SendError(c, err.Error(), http.StatusUnauthorized, nil)
+		return
+	}
+
+	response.SendSuccess(c, resp)
 }
 
 func (h *Handler) GetM2MClients(c *gin.Context) {

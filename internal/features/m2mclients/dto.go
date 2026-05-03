@@ -20,7 +20,7 @@ type M2MTokenRequest struct {
 	ClientSecret string `json:"clientSecret" binding:"required"`
 }
 
-type M2MRefreshTokenRequest struct {
+type RefreshTokenRequest struct {
 	RefreshToken string `json:"refreshToken" binding:"required"`
 }
 
