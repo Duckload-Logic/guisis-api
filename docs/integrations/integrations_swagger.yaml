@@ -103,7 +103,7 @@ definitions:
     type: object
   locations.Barangay:
     properties:
-      cityId:
+      cityCode:
         type: integer
       code:
         type: string
@@ -117,19 +117,19 @@ definitions:
       code:
         type: string
       district:
-        type: string
+        $ref: '#/definitions/structs.NullableString'
       id:
         type: integer
       name:
         type: string
       provinceCode:
-        type: string
+        $ref: '#/definitions/structs.NullableString'
       regionCode:
-        type: string
+        $ref: '#/definitions/structs.NullableString'
       type:
-        type: string
+        $ref: '#/definitions/structs.NullableString'
       zipCode:
-        type: string
+        $ref: '#/definitions/structs.NullableString'
     type: object
   locations.ProvinceDTO:
     properties:
@@ -150,13 +150,6 @@ definitions:
         type: integer
       name:
         type: string
-    type: object
-  m2mclients.M2MRefreshTokenRequest:
-    properties:
-      refreshToken:
-        type: string
-    required:
-    - refreshToken
     type: object
   m2mclients.M2MTokenRequest:
     properties:
@@ -180,13 +173,12 @@ definitions:
       tokenType:
         type: string
     type: object
-  m2mclients.M2MTokenSuccessResponse:
+  m2mclients.RefreshTokenRequest:
     properties:
-      data:
-        $ref: '#/definitions/m2mclients.M2MTokenResponse'
-      status:
-        example: success
+      refreshToken:
         type: string
+    required:
+    - refreshToken
     type: object
   response.CommonErrorResponse:
     properties:
@@ -255,42 +247,42 @@ paths:
     post:
       consumes:
       - application/json
-      description: Refreshes an existing M2M session using a valid refresh token.
+      description: Use refresh token to get a new access token
       parameters:
-      - description: Refresh Token
+      - description: Refresh token
         in: body
-        name: request
+        name: refreshToken
         required: true
         schema:
-          $ref: '#/definitions/m2mclients.M2MRefreshTokenRequest'
+          $ref: '#/definitions/m2mclients.RefreshTokenRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/m2mclients.M2MTokenSuccessResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.CommonErrorResponse'
+            $ref: '#/definitions/m2mclients.M2MTokenResponse'
         "401":
-          description: Unauthorized
+          description: Invalid refresh token
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
-      summary: M2M Token Refresh
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.CommonErrorResponse'
+      summary: Get new M2M access token using refresh token
       tags:
-      - Auth
+      - M2M Clients
   /auth/m2m/token:
     post:
       consumes:
       - application/json
-      description: Exchanges client credentials (client_id and client_secret) for
-        an M2M access token.
+      description: Authenticate with client ID and client secret to get access and
+        refresh tokens
       parameters:
-      - description: M2M Credentials
+      - description: Client credentials
         in: body
-        name: request
+        name: credentials
         required: true
         schema:
           $ref: '#/definitions/m2mclients.M2MTokenRequest'
@@ -300,18 +292,18 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/m2mclients.M2MTokenSuccessResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/response.CommonErrorResponse'
+            $ref: '#/definitions/m2mclients.M2MTokenResponse'
         "401":
-          description: Unauthorized
+          description: Invalid client credentials
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
-      summary: M2M Token Exchange
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.CommonErrorResponse'
+      summary: Get M2M access token using client credentials
       tags:
-      - Auth
+      - M2M Clients
   /integrations/students/{studentNumber}:
     get:
       consumes:
@@ -427,6 +419,45 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Get personal information by student number
+      tags:
+      - External Students
+  /integrations/students/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get student information by their email
+      parameters:
+      - description: Student Email
+        in: query
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/integrations.StudentSuccessResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.CommonErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.CommonErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.CommonErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.CommonErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get student by Email
       tags:
       - External Students
   /integrations/students/profiles:
