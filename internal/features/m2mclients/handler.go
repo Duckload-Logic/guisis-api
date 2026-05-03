@@ -17,13 +17,27 @@ func NewHandler(service *Service) *Handler {
 }
 
 func (h *Handler) isAdmin(c *gin.Context) bool {
-	roles, ok := c.Get("roleIDs")
+	roleIDsVal, ok := c.Get("roleIDs")
 	if !ok {
 		return false
 	}
-	roleIDs := roles.([]int)
+
+	var roleIDs []int
+	switch v := roleIDsVal.(type) {
+	case []int:
+		roleIDs = v
+	case []interface{}:
+		for _, item := range v {
+			if f, ok := item.(float64); ok {
+				roleIDs = append(roleIDs, int(f))
+			} else if i, ok := item.(int); ok {
+				roleIDs = append(roleIDs, i)
+			}
+		}
+	}
+
 	for _, id := range roleIDs {
-		if id == int(constants.SuperAdminRoleID) {
+		if id == int(constants.SuperAdminRoleID) || id == int(constants.DeveloperRoleID) {
 			return true
 		}
 	}

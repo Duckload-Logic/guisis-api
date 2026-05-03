@@ -13,13 +13,28 @@ import (
 func OwnershipMiddleware(db *sqlx.DB, paramName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		loggedInUserID := c.MustGet("userID").(string)
-		roleIDs := c.MustGet("roleIDs").([]int)
+		roleIDsVal, _ := c.Get("roleIDs")
+
+		var roleIDs []int
+		switch v := roleIDsVal.(type) {
+		case []int:
+			roleIDs = v
+		case []interface{}:
+			for _, item := range v {
+				if f, ok := item.(float64); ok {
+					roleIDs = append(roleIDs, int(f))
+				} else if i, ok := item.(int); ok {
+					roleIDs = append(roleIDs, i)
+				}
+			}
+		}
 
 		isAdmin := false
 		isStudent := false
 		for _, rid := range roleIDs {
 			if rid == int(constants.AdminRoleID) ||
-				rid == int(constants.SuperAdminRoleID) {
+				rid == int(constants.SuperAdminRoleID) ||
+				rid == int(constants.DeveloperRoleID) {
 				isAdmin = true
 				break
 			}
