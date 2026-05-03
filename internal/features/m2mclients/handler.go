@@ -61,6 +61,16 @@ func (h *Handler) PostM2MClient(c *gin.Context) {
 	response.SendSuccess(c, resp)
 }
 
+// @Summary     Get M2M access token using client credentials
+// @Description Authenticate with client ID and client secret to get access and refresh tokens
+// @Tags         M2M Clients
+// @Accept       json
+// @Produce      json
+// @Param      credentials body M2MTokenRequest true "Client credentials"
+// @Success 200  {object} M2MTokenResponse
+// @Failure 401  {object} response.Response "Invalid client credentials"
+// @Failure 500  {object} response.Response "Internal server error"
+// @Router /api/v1/auth/m2m/token [post]
 func (h *Handler) PostM2MToken(c *gin.Context) {
 	var req M2MTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -77,6 +87,16 @@ func (h *Handler) PostM2MToken(c *gin.Context) {
 	response.SendSuccess(c, resp)
 }
 
+// @Summary     Get new M2M access token using refresh token
+// @Description Use refresh token to get a new access token
+// @Tags         M2M Clients
+// @Accept       json
+// @Produce      json
+// @Param      refreshToken body RefreshTokenRequest true "Refresh token"
+// @Success 200  {object} M2MTokenResponse
+// @Failure 401  {object} response.Response "Invalid refresh token"
+// @Failure 500  {object} response.Response "Internal server error"
+// @Router /api/v1/auth/m2m/refresh [post]
 func (h *Handler) PostM2MTokenRefresh(c *gin.Context) {
 	var req RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
