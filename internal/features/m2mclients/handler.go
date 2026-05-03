@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
 )
 
@@ -13,6 +14,20 @@ type Handler struct {
 
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
+}
+
+func (h *Handler) isAdmin(c *gin.Context) bool {
+	roles, ok := c.Get("roleIDs")
+	if !ok {
+		return false
+	}
+	roleIDs := roles.([]int)
+	for _, id := range roleIDs {
+		if id == int(constants.SuperAdminRoleID) {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *Handler) PostM2MClient(c *gin.Context) {
@@ -80,7 +95,14 @@ func (h *Handler) GetMyM2MClient(c *gin.Context) {
 
 func (h *Handler) PostM2MClientSecret(c *gin.Context) {
 	clientID := c.Param("id")
-	secret, err := h.service.ResetSecret(c.Request.Context(), clientID)
+	userID := c.MustGet("userID").(string)
+
+	secret, err := h.service.ResetSecret(
+		c.Request.Context(),
+		clientID,
+		userID,
+		h.isAdmin(c),
+	)
 	if err != nil {
 		response.SendError(c, err.Error(), http.StatusInternalServerError, nil)
 		return
@@ -90,7 +112,14 @@ func (h *Handler) PostM2MClientSecret(c *gin.Context) {
 
 func (h *Handler) DeleteM2MClient(c *gin.Context) {
 	id := c.Param("id")
-	err := h.service.Deactivate(c.Request.Context(), id)
+	userID := c.MustGet("userID").(string)
+
+	err := h.service.Deactivate(
+		c.Request.Context(),
+		id,
+		userID,
+		h.isAdmin(c),
+	)
 	if err != nil {
 		response.SendError(c, err.Error(), http.StatusInternalServerError, nil)
 		return

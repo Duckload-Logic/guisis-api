@@ -140,18 +140,46 @@ func (s *Service) GetClientByUserID(ctx context.Context, userID string) (*M2MCli
 	return s.repo.GetActiveByUserID(ctx, userID)
 }
 
-func (s *Service) ResetSecret(ctx context.Context, id string) (string, error) {
+func (s *Service) ResetSecret(
+	ctx context.Context,
+	id string,
+	requestingUserID string,
+	isAdmin bool,
+) (string, error) {
+	client, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return "", fmt.Errorf("client not found")
+	}
+
+	if !isAdmin && client.UserID != requestingUserID {
+		return "", fmt.Errorf("unauthorized: you do not own this client")
+	}
+
 	rawSecret, _ := s.generateRandomString(32)
 	hashedSecret := s.hashSecret(rawSecret)
 
-	err := s.repo.UpdateSecret(ctx, id, hashedSecret)
+	err = s.repo.UpdateSecret(ctx, id, hashedSecret)
 	if err != nil {
 		return "", fmt.Errorf("failed to rotate client secret: %w", err)
 	}
 	return rawSecret, nil
 }
 
-func (s *Service) Deactivate(ctx context.Context, id string) error {
+func (s *Service) Deactivate(
+	ctx context.Context,
+	id string,
+	requestingUserID string,
+	isAdmin bool,
+) error {
+	client, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("client not found")
+	}
+
+	if !isAdmin && client.UserID != requestingUserID {
+		return fmt.Errorf("unauthorized: you do not own this client")
+	}
+
 	return s.repo.DeactivateByID(ctx, id)
 }
 
