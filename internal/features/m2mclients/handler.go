@@ -68,8 +68,8 @@ func (h *Handler) PostM2MClient(c *gin.Context) {
 // @Produce      json
 // @Param      credentials body M2MTokenRequest true "Client credentials"
 // @Success 200  {object} M2MTokenResponse
-// @Failure 401  {object} response.Response "Invalid client credentials"
-// @Failure 500  {object} response.Response "Internal server error"
+// @Failure 401  {object} response.CommonErrorResponse "Invalid client credentials"
+// @Failure 500  {object} response.CommonErrorResponse "Internal server error"
 // @Router /api/v1/auth/m2m/token [post]
 func (h *Handler) PostM2MToken(c *gin.Context) {
 	var req M2MTokenRequest
@@ -94,8 +94,8 @@ func (h *Handler) PostM2MToken(c *gin.Context) {
 // @Produce      json
 // @Param      refreshToken body RefreshTokenRequest true "Refresh token"
 // @Success 200  {object} M2MTokenResponse
-// @Failure 401  {object} response.Response "Invalid refresh token"
-// @Failure 500  {object} response.Response "Internal server error"
+// @Failure 401  {object} response.CommonErrorResponse "Invalid refresh token"
+// @Failure 500  {object} response.CommonErrorResponse "Internal server error"
 // @Router /api/v1/auth/m2m/refresh [post]
 func (h *Handler) PostM2MTokenRefresh(c *gin.Context) {
 	var req RefreshTokenRequest
