@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/hash"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/appointments"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/slips"
 )
@@ -24,71 +25,64 @@ func insertAdmissionSlip(
 	tx *sqlx.Tx,
 	iirID string,
 ) string {
-	// More realistic status distribution (pending less likely for
-	// historical data)
-	statusName := chooseAdmissionSlipStatus()
+	now := time.Now().Truncate(24 * time.Hour)
+
+	// Randomly decide if this slip is for a past or future absence
+	// Most are past (80%), some are upcoming (20%)
+	var daysOffset int
+	if rand.Float32() < 0.2 {
+		daysOffset = rand.Intn(14) + 1 // 1-14 days in future
+	} else {
+		daysOffset = -(rand.Intn(90) + 1) // 1-90 days in past
+	}
+
+	absDate := now.AddDate(0, 0, daysOffset)
+	dateOfAbsence := absDate.Format("2006-01-02")
+
+	// Status depends on time
+	statusName := chooseAdmissionSlipStatus(absDate, now)
 	statusID, ok := admissionSlipStatusesByName[statusName]
 	if !ok {
-		log.Printf(
-			"[Seeder] {Insert AdmissionSlip}: status '%s' not found",
-			statusName)
 		statusID = randomChoice(admissionSlipStatusIDs).(int)
 	}
-	categoryID := randomChoice(admissionSlipCategoryIDs).(int)
 
-	// Realistic reasons for admission slips
+	categoryID := randomChoice(admissionSlipCategoryIDs).(int)
 	reason := generateRealisticAdmissionReason()
 
-	daysAgo := rand.Intn(7) + 2 // 2-8 days ago
-	dateOfAbsence := time.Now().AddDate(0, 0, -daysAgo).Format(
-		"2006-01-02")
-
-	// Date needed: submission should be a few days to weeks after
-	// absence
-	daysAfterAbsence := rand.Intn(7) + 1
-	targetDate := time.Now().AddDate(0, 0, -daysAgo+daysAfterAbsence)
-
-	// If targetDate is before "Now", set it to "Now"
-	if targetDate.Before(time.Now()) {
-		targetDate = time.Now()
+	// Date needed: submission should be near the absence date
+	// for future, it's usually current; for past, it was around then
+	var dateNeeded string
+	if absDate.After(now) {
+		dateNeeded = now.Format("2006-01-02")
+	} else {
+		dateNeeded = absDate.AddDate(0, 0, rand.Intn(3)+1).Format("2006-01-02")
 	}
 
-	dateNeeded := targetDate.Format("2006-01-02")
-
-	// Use PDF as primary extension (more realistic for official
-	// documents)
-	extensions := []string{
-		".pdf", ".pdf", ".pdf", ".jpg", ".jpeg",
-		".png",
-	}
+	// Use PDF as primary extension...
+	extensions := []string{".pdf", ".pdf", ".pdf", ".jpg", ".jpeg", ".png"}
 	ext := extensions[rand.Intn(len(extensions))]
 	basePath := "./uploads"
 	subFolder := gofakeit.UUID()
 
-	// More realistic file names for admission documents
 	baseFileName := generateAdmissionFileName()
 	readableFileName := baseFileName + ext
 	fileName := hash.GetSHA256Hash(readableFileName, 16) + ext
 
-	// DISK PATH (Where Go writes the bytes)
-	fullStoragePath := filepath.Join(basePath, "slips", subFolder,
-		fileName)
+	fullStoragePath := filepath.Join(basePath, "slips", subFolder, fileName)
 
 	dbURL := fmt.Sprintf("/slips/%s/%s", subFolder, fileName)
-	// Create directory and file
 	dir := filepath.Dir(fullStoragePath)
 	os.MkdirAll(dir, os.ModePerm)
 	f, _ := os.Create(fullStoragePath)
-	// Write realistic dummy content
 	content := fmt.Sprintf(
-		"ADMISSION SLIP / EXCUSE SLIP\nStudent ID: %s\nDate: %s\n"+
-			"Reason: %s\n\n[Document content created for admission "+
-			"purposes]",
-		iirID, dateOfAbsence, reason)
+		"ADMISSION SLIP / EXCUSE SLIP\nStudent ID: %s\nDate of Absence: %s\nReason: %s\n",
+		iirID,
+		dateOfAbsence,
+		reason,
+	)
 	f.WriteString(content)
 	f.Close()
 
-	// Admin notes more realistic based on status
 	adminNotes := generateAdmissionNotes(statusName)
 	admissionSlipID := uuid.New().String()
 
@@ -109,11 +103,21 @@ func insertAdmissionSlip(
 		return ""
 	}
 
+	fileID := uuid.New().String()
+	// Insert dummy record into files table so FK check passes
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO files (id, file_name, file_url, file_type, file_size, mime_type)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, fileID, readableFileName, dbURL, "application/pdf", 1024, "application/pdf")
+	if err != nil {
+		log.Printf("[Seeder] {Insert File Metadata}: %v", err)
+		return ""
+	}
+
 	attachment := &slips.SlipAttachment{
-		ID:       uuid.New().String(),
-		SlipID:   &admissionSlipID,
-		FileName: readableFileName,
-		FileURL:  dbURL,
+		FileID:         fileID,
+		SlipID:         structs.PointerToNullableString(&admissionSlipID),
+		AttachmentType: "OTHER",
 	}
 
 	err = slipsRepo.SaveSlipAttachment(ctx, tx, attachment)
@@ -125,15 +129,20 @@ func insertAdmissionSlip(
 	return admissionSlipID
 }
 
-func chooseAdmissionSlipStatus() string {
+func chooseAdmissionSlipStatus(absDate, now time.Time) string {
+	// Future absences can only be pending
+	if absDate.After(now) {
+		return "pending"
+	}
+
+	// Past absences are processed
 	statuses := []struct {
 		name   string
 		weight int
 	}{
-		{"approved", 50},
-		{"pending", 25},
-		{"for revision", 15},
-		{"rejected", 10},
+		{"approved", 70},
+		{"rejected", 20},
+		{"for revision", 10},
 	}
 
 	totalWeight := 0
@@ -148,7 +157,7 @@ func chooseAdmissionSlipStatus() string {
 			return s.name
 		}
 	}
-	return "pending"
+	return "approved"
 }
 
 func generateRealisticAdmissionReason() string {
@@ -186,7 +195,7 @@ func generateAdmissionFileName() string {
 	return fileTypes[rand.Intn(len(fileTypes))]
 }
 
-func generateAdmissionNotes(status string) sql.NullString {
+func generateAdmissionNotes(status string) structs.NullableString {
 	switch status {
 	case "approved":
 		notes := []string{
@@ -198,9 +207,9 @@ func generateAdmissionNotes(status string) sql.NullString {
 		}
 		selected := notes[rand.Intn(len(notes))]
 		if selected == "" {
-			return sql.NullString{Valid: false}
+			return structs.NullableString{Valid: false}
 		}
-		return sql.NullString{String: selected, Valid: true}
+		return structs.NullableString{String: selected, Valid: true}
 	case "rejected":
 		notes := []string{
 			"Insufficient documentation",
@@ -208,7 +217,10 @@ func generateAdmissionNotes(status string) sql.NullString {
 			"Documentation not properly verified",
 			"Required supporting documents missing",
 		}
-		return sql.NullString{String: notes[rand.Intn(len(notes))], Valid: true}
+		return structs.NullableString{
+			String: notes[rand.Intn(len(notes))],
+			Valid:  true,
+		}
 	case "for revision":
 		notes := []string{
 			"Requires additional supporting documents",
@@ -216,28 +228,61 @@ func generateAdmissionNotes(status string) sql.NullString {
 			"Missing required signatures",
 			"Please provide recent medical certificate",
 		}
-		return sql.NullString{String: notes[rand.Intn(len(notes))], Valid: true}
+		return structs.NullableString{
+			String: notes[rand.Intn(len(notes))],
+			Valid:  true,
+		}
 	default:
-		return sql.NullString{Valid: false}
+		return structs.NullableString{Valid: false}
 	}
 }
 
-func insertAppointment(ctx context.Context, tx *sqlx.Tx, iirID string) string {
-	if len(timeSlotIDs) == 0 || len(appointmentCategoryIDs) == 0 ||
+func insertAppointment(
+	ctx context.Context,
+	tx *sqlx.Tx,
+	iirID string,
+	appointmentsDataset []map[string]string,
+) string {
+	if len(timeSlotIDs) == 0 || len(appointmentCategories) == 0 ||
 		len(appointmentStatusIDs) == 0 {
-		log.Printf(
-			"[Seeder] {Insert Appointment}: missing lookup data for "+
-				"iir %s",
-			iirID)
 		return ""
 	}
 
-	whenDate, timeSlotID := reserveAppointmentSlot()
-	statusID := chooseAppointmentStatusID()
-	concernCategoryID := randomChoice(appointmentCategoryIDs).(int)
+	hasDataset := false
+	if len(appointmentsDataset) > 0 {
+		hasDataset = true
+	}
+
+	selectedIdx := 0
+	var selectedAppt map[string]string
+	if hasDataset {
+		selectedIdx = rand.Intn(len(appointmentsDataset))
+		selectedAppt = (appointmentsDataset)[selectedIdx]
+	} else {
+		selectedAppt = map[string]string{
+			"text":          gofakeit.Sentence(rand.Intn(5) + 5),
+			"urgency_level": []string{"LOW", "MEDIUM", "HIGH", "CRITICAL"}[rand.Intn(4)],
+			"category":      []string{"ACADEMIC", "CAREER GUIDANCE", "PERSONAL", "MENTAL HEALTH", "FINANCIAL", "OTHER"}[rand.Intn(6)],
+		}
+	}
+
+	now := time.Now().Truncate(24 * time.Hour)
+	whenDateStr, timeSlotID, whenDate := reserveAppointmentSlot(now)
+	statusID := chooseAppointmentStatusID(whenDate, now)
+	concernCategoryID := func() string {
+		for _, category := range appointmentCategories {
+			if strings.EqualFold(category["name"], selectedAppt["category"]) {
+				return category["id"]
+			}
+		}
+
+		return "0"
+	}()
+
+	concernCategoryIDInt, _ := strconv.Atoi(concernCategoryID)
 
 	// Determine admin_notes value
-	var adminNotes sql.NullString
+	var adminNotes structs.NullableString
 	statusName := ""
 	for name, id := range appointmentStatusByName {
 		if id == statusID {
@@ -246,28 +291,27 @@ func insertAppointment(ctx context.Context, tx *sqlx.Tx, iirID string) string {
 		}
 	}
 	if statusName == "cancelled" || statusName == "rejected" ||
-		strings.Contains(statusName, "show") {
-		adminNotes = sql.NullString{
+		strings.Contains(statusName, "show") || statusName == "completed" {
+		adminNotes = structs.NullableString{
 			String: gofakeit.Sentence(rand.Intn(5) + 5),
 			Valid:  true,
 		}
 	} else {
-		adminNotes = sql.NullString{Valid: false}
+		adminNotes = structs.NullableString{Valid: false}
 	}
 
 	appointmentID := uuid.New().String()
 
 	appt := &appointments.Appointment{
-		ID:    appointmentID,
-		IIRID: iirID,
-		Reason: sql.NullString{
-			String: gofakeit.Sentence(rand.Intn(11) + 20),
-			Valid:  true,
-		},
+		ID:                    appointmentID,
+		IIRID:                 iirID,
+		Reason:                structs.StringToNullableString(selectedAppt["text"]),
 		AdminNotes:            adminNotes,
-		WhenDate:              whenDate,
+		WhenDate:              whenDateStr,
 		TimeSlotID:            timeSlotID,
-		AppointmentCategoryID: concernCategoryID,
+		UrgencyLevel:          selectedAppt["urgency_level"],
+		UrgencyScore:          0.95,
+		AppointmentCategoryID: concernCategoryIDInt,
 		StatusID:              statusID,
 	}
 
@@ -280,16 +324,25 @@ func insertAppointment(ctx context.Context, tx *sqlx.Tx, iirID string) string {
 	return appointmentID
 }
 
-func reserveAppointmentSlot() (string, int) {
+func reserveAppointmentSlot(now time.Time) (string, int, time.Time) {
 	if len(timeSlotIDs) == 0 {
 		log.Fatal("no time slots found in time_slots")
 	}
 
-	for attempts := 0; attempts < 500; attempts++ {
-		when := time.Now().AddDate(0, 0, rand.Intn(180)+1)
+	for attempts := 0; attempts < 1000; attempts++ {
+		// Randomly decide if past or future
+		var when time.Time
+		if rand.Float32() < 0.3 {
+			// Future (up to 2 weeks)
+			when = now.AddDate(0, 0, rand.Intn(14))
+		} else {
+			// Past (up to 90 days)
+			when = now.AddDate(0, 0, -(rand.Intn(90) + 1))
+		}
+
 		weekday := when.Weekday()
 		if weekday == time.Saturday || weekday == time.Sunday {
-			continue // skip weekends
+			continue
 		}
 		whenDate := when.Format("2006-01-02")
 		timeSlotID := randomChoice(timeSlotIDs).(int)
@@ -300,18 +353,16 @@ func reserveAppointmentSlot() (string, int) {
 		if !exists {
 			reservedAppointmentSlots[key] = struct{}{}
 			appointmentSlotMu.Unlock()
-			return whenDate, timeSlotID
+			return whenDate, timeSlotID, when
 		}
 		appointmentSlotMu.Unlock()
 	}
 
-	log.Fatal(
-		"unable to reserve unique appointment slot after multiple attempts",
-	)
-	return "", 0
+	log.Fatal("unable to reserve unique appointment slot")
+	return "", 0, time.Time{}
 }
 
-func chooseAppointmentStatusID() int {
+func chooseAppointmentStatusID(apptDate, now time.Time) int {
 	if len(appointmentStatusByName) == 0 {
 		return randomChoice(appointmentStatusIDs).(int)
 	}
@@ -331,17 +382,19 @@ func chooseAppointmentStatusID() int {
 		}
 	}
 
-	add("pending", 50)
-	add("approved", 20)
-	add("completed", 15)
-	add("cancelled", 10)
-	add("rejected", 20)
-	add("rescheduled", 10)
+	isFuture := apptDate.After(now) || apptDate.Equal(now)
 
-	for _, id := range appointmentStatusIDs {
-		if !used[id] {
-			weighted = append(weighted, weightedStatus{id: id, weight: 3})
-		}
+	if isFuture {
+		// Future: pending, approved (scheduled), rescheduled
+		add("pending", 60)
+		add("approved", 30) // means Scheduled
+		add("rescheduled", 10)
+	} else {
+		// Past: completed, no-show, rejected, cancelled
+		add("completed", 60)
+		add("no-show", 20)
+		add("rejected", 10)
+		add("cancelled", 10)
 	}
 
 	if len(weighted) == 0 {

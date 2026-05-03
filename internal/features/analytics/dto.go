@@ -11,8 +11,9 @@ type DemographicStatDTO struct {
 	Rank        int     `json:"rank,omitempty"`
 }
 
-type DashboardResponseDTO struct {
-	TotalStudents int `json:"totalStudents"`
+type DashboardResponse struct {
+	TotalStudents      int                  `json:"totalStudents"`
+	GenderDistribution []DemographicStatDTO `json:"genderDistribution"`
 
 	// Personal Information
 	AgeDistribution []DemographicStatDTO `json:"ageDistribution"`
@@ -46,7 +47,7 @@ type MonthlyVisitorStatDTO struct {
 	Count    int    `json:"count"`    // Generic count (Appointments or Logins)
 }
 
-type AdminDashboardResponseDTO struct {
+type AdminDashboardResponse struct {
 	TotalStudents     int                     `json:"totalStudents"`
 	TotalReports      int                     `json:"totalReports"`
 	TotalAppointments int                     `json:"totalAppointments"`

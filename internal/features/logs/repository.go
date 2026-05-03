@@ -2,11 +2,10 @@ package logs
 
 import (
 	"context"
-	"database/sql"
-	"encoding/json"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
 
@@ -22,17 +21,27 @@ func (r *Repository) GetDB() *sqlx.DB {
 	return r.db
 }
 
-// Record inserts a new system log entry
+func (r *Repository) WithTransaction(
+	ctx context.Context,
+	fn func(datastore.DB) error,
+) error {
+	return datastore.RunInTransaction(ctx, r.db, fn)
+}
+
 func (r *Repository) Record(
 	ctx context.Context,
 	tx datastore.DB,
 	log *SystemLog,
 ) error {
-	cols, vals := datastore.GetInsertStatement(log, []string{"created_at"})
-	query := fmt.Sprintf(`
-		INSERT INTO system_logs (%s)
-		VALUES (%s)
-	`, cols, vals)
+	query := `
+		INSERT INTO system_logs (
+			level, category, action, message, user_id, target_id, target_type,
+			user_email, target_email, ip_address, user_agent, metadata, trace_id
+		) VALUES (
+			:level, :category, :action, :message, :user_id, :target_id, :target_type,
+			:user_email, :target_email, :ip_address, :user_agent, :metadata, :trace_id
+		)
+	`
 
 	exec := tx
 	if exec == nil {
@@ -47,17 +56,13 @@ func (r *Repository) Record(
 	return nil
 }
 
-// List retrieves system log entries with filtering and pagination
 func (r *Repository) List(
 	ctx context.Context, offset, limit int,
 	category, action, userEmail, targetType, targetEmail,
 	search, startDate, endDate, orderBy string,
 ) ([]SystemLog, error) {
 	query, args := r.applyLogFilters(
-		fmt.Sprintf(
-			"SELECT %s FROM system_logs WHERE 1=1",
-			datastore.GetColumns(&SystemLog{}),
-		),
+		"SELECT id, level, category, action, message, user_id, target_id, target_type, user_email, target_email, ip_address, user_agent, metadata, trace_id, created_at FROM system_logs WHERE 1=1",
 		nil,
 		category,
 		action,
@@ -165,7 +170,7 @@ func (r *Repository) applyLogFilters(
 func (r *Repository) GetStats(
 	ctx context.Context,
 	startDate, endDate string,
-) ([]LogStatsDTO, error) {
+) ([]audit.LogStatsDTO, error) {
 	query, args := r.applyLogFilters(
 		"SELECT category, COUNT(*) as count FROM system_logs WHERE 1=1",
 		nil,
@@ -174,7 +179,7 @@ func (r *Repository) GetStats(
 
 	query += " GROUP BY category ORDER BY category"
 
-	var stats []LogStatsDTO
+	var stats []audit.LogStatsDTO
 	err := r.db.SelectContext(ctx, &stats, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get log stats: %w", err)
@@ -186,9 +191,9 @@ func (r *Repository) GetStats(
 // GetActivityStats returns log counts grouped by hour for the last 24 hours
 func (r *Repository) GetActivityStats(
 	ctx context.Context,
-) ([]LogActivityDTO, error) {
+) ([]audit.LogActivityDTO, error) {
 	query := `
-		SELECT 
+		SELECT
 			DATE_FORMAT(created_at, '%Y-%m-%d %H:00') as time,
 			COUNT(CASE WHEN level != 'ERROR' THEN 1 END) as requests,
 			COUNT(CASE WHEN level = 'ERROR' THEN 1 END) as errors
@@ -198,7 +203,7 @@ func (r *Repository) GetActivityStats(
 		ORDER BY time ASC
 	`
 
-	var stats []LogActivityDTO
+	var stats []audit.LogActivityDTO
 	err := r.db.SelectContext(ctx, &stats, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get log activity stats: %w", err)
@@ -207,16 +212,24 @@ func (r *Repository) GetActivityStats(
 	return stats, nil
 }
 
-// toNullString converts a value to sql.NullString
-func toNullString(v interface{}) sql.NullString {
-	if v == nil {
-		return sql.NullString{Valid: false}
-	}
-
-	bytes, err := json.Marshal(v)
+func (r *Repository) DeleteLogsOlderThan(
+	ctx context.Context,
+	days int,
+) (int64, error) {
+	query := `
+		DELETE FROM system_logs
+		WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)
+	`
+	res, err := r.db.ExecContext(ctx, query, days)
 	if err != nil {
-		return sql.NullString{Valid: false}
+		return 0, fmt.Errorf("failed to delete old logs: %w", err)
 	}
 
-	return sql.NullString{String: string(bytes), Valid: true}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	return rows, nil
 }
+

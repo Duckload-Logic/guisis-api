@@ -209,52 +209,6 @@ func (c *IDPClient) RefreshToken(
 	return &tokenResp, nil
 }
 
-// ValidateSession checks if the provided session ID is valid by calling
-// the IDP's session endpoint with the idp_session cookie.
-func (c *IDPClient) ValidateSession(
-	ctx context.Context,
-	sessionID string,
-	cfg *config.Config,
-) (*IDPSessionResponse, error) {
-	req, err := http.NewRequestWithContext(
-		ctx,
-		http.MethodGet,
-		fmt.Sprintf("%s/auth/session", cfg.IDPBaseUrl),
-		nil,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("[IDPClient] {Create Session Request}: %w", err)
-	}
-
-	// Set the idp_session cookie
-	req.AddCookie(&http.Cookie{
-		Name:  "idp_session",
-		Value: sessionID,
-	})
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("[IDPClient] {Execute Session Request}: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf(
-			"[IDPClient] {Session Validation Failed}: status %d, body: %s",
-			resp.StatusCode,
-			string(bodyBytes),
-		)
-	}
-
-	var sessionResp IDPSessionResponse
-	if err := json.NewDecoder(resp.Body).Decode(&sessionResp); err != nil {
-		return nil, fmt.Errorf("[IDPClient] {Parse Session Response}: %w", err)
-	}
-
-	return &sessionResp, nil
-}
-
 func (c *IDPClient) GetLogoutURL(
 	cfg *config.Config,
 	idpUserID string,

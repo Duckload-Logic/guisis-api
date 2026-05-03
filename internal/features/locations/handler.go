@@ -1,6 +1,7 @@
 package locations
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -8,16 +9,17 @@ import (
 )
 
 type Handler struct {
-	service ServiceInterface
+	service *Service
 }
 
-func NewHandler(service ServiceInterface) *Handler {
+func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
 func (h *Handler) GetRegions(c *gin.Context) {
 	regions, err := h.service.GetRegions(c.Request.Context())
 	if err != nil {
+		fmt.Printf("[GetRegions] {GetRegions}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve regions",
@@ -42,6 +44,7 @@ func (h *Handler) GetProvincesByRegion(c *gin.Context) {
 		regionCode,
 	)
 	if err != nil {
+		fmt.Printf("[GetProvincesByRegion] {GetProvinces}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve provinces",
@@ -66,6 +69,7 @@ func (h *Handler) GetCitiesByProvince(c *gin.Context) {
 		provinceCode,
 	)
 	if err != nil {
+		fmt.Printf("[GetCitiesByProvince] {GetCities}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve cities",
@@ -87,6 +91,7 @@ func (h *Handler) GetCitiesByRegion(c *gin.Context) {
 
 	cities, err := h.service.GetCitiesByRegion(c.Request.Context(), regionCode)
 	if err != nil {
+		fmt.Printf("[GetCitiesByRegion] {GetCities}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve cities",
@@ -111,6 +116,7 @@ func (h *Handler) GetBarangaysByCity(c *gin.Context) {
 		cityCode,
 	)
 	if err != nil {
+		fmt.Printf("[GetBarangaysByCity] {GetBarangays}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve barangays",

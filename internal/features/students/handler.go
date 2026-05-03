@@ -11,16 +11,17 @@ import (
 )
 
 type Handler struct {
-	service ServiceInterface
+	service *Service
 }
 
-func NewHandler(service ServiceInterface) *Handler {
+func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
 func (h *Handler) GetGenders(c *gin.Context) {
 	genders, err := h.service.GetGenders(c.Request.Context())
 	if err != nil {
+		log.Printf("[GetGenders] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get genders",
@@ -36,6 +37,7 @@ func (h *Handler) GetGenders(c *gin.Context) {
 func (h *Handler) GetParentalStatusTypes(c *gin.Context) {
 	statuses, err := h.service.GetParentalStatusTypes(c.Request.Context())
 	if err != nil {
+		log.Printf("[GetParentalStatusTypes] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get parental status types",
@@ -48,24 +50,10 @@ func (h *Handler) GetParentalStatusTypes(c *gin.Context) {
 	response.SendSuccess(c, statuses)
 }
 
-func (h *Handler) GetEnrollmentReasons(c *gin.Context) {
-	reasons, err := h.service.GetEnrollmentReasons(c.Request.Context())
-	if err != nil {
-		response.SendError(
-			c,
-			"Failed to get enrollment reasons",
-			http.StatusInternalServerError,
-			nil,
-		)
-		return
-	}
-
-	response.SendSuccess(c, reasons)
-}
-
 func (h *Handler) GetIncomeRanges(c *gin.Context) {
 	ranges, err := h.service.GetIncomeRanges(c.Request.Context())
 	if err != nil {
+		log.Printf("[GetIncomeRanges] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get income ranges",
@@ -81,6 +69,7 @@ func (h *Handler) GetIncomeRanges(c *gin.Context) {
 func (h *Handler) GetStudentSupportTypes(c *gin.Context) {
 	supportTypes, err := h.service.GetStudentSupportTypes(c.Request.Context())
 	if err != nil {
+		log.Printf("[GetStudentSupportTypes] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student support types",
@@ -96,6 +85,7 @@ func (h *Handler) GetStudentSupportTypes(c *gin.Context) {
 func (h *Handler) GetSiblingSupportTypes(c *gin.Context) {
 	supportTypes, err := h.service.GetSiblingSupportTypes(c.Request.Context())
 	if err != nil {
+		log.Printf("[GetSiblingSupportTypes] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get sibling support types",
@@ -111,6 +101,7 @@ func (h *Handler) GetSiblingSupportTypes(c *gin.Context) {
 func (h *Handler) GetEducationalLevels(c *gin.Context) {
 	levels, err := h.service.GetEducationalLevels(c.Request.Context())
 	if err != nil {
+		log.Printf("[GetEducationalLevels] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get educational levels",
@@ -126,6 +117,7 @@ func (h *Handler) GetEducationalLevels(c *gin.Context) {
 func (h *Handler) GetCourses(c *gin.Context) {
 	courses, err := h.service.GetCourses(c.Request.Context())
 	if err != nil {
+		log.Printf("[GetCourses] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get courses",
@@ -141,6 +133,7 @@ func (h *Handler) GetCourses(c *gin.Context) {
 func (h *Handler) GetCivilStatusTypes(c *gin.Context) {
 	civilStatusTypes, err := h.service.GetCivilStatusTypes(c.Request.Context())
 	if err != nil {
+		log.Printf("[GetCivilStatusTypes] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get civil status types",
@@ -156,6 +149,7 @@ func (h *Handler) GetCivilStatusTypes(c *gin.Context) {
 func (h *Handler) GetReligions(c *gin.Context) {
 	religions, err := h.service.GetReligions(c.Request.Context())
 	if err != nil {
+		log.Printf("[GetReligions] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get religions",
@@ -173,6 +167,7 @@ func (h *Handler) GetStudentRelationshipTypes(c *gin.Context) {
 		c.Request.Context(),
 	)
 	if err != nil {
+		log.Printf("[GetStudentRelationshipTypes] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student relationship types",
@@ -185,9 +180,26 @@ func (h *Handler) GetStudentRelationshipTypes(c *gin.Context) {
 	response.SendSuccess(c, relationshipTypes)
 }
 
+func (h *Handler) GetStudentStatuses(c *gin.Context) {
+	statuses, err := h.service.GetStudentStatuses(c.Request.Context())
+	if err != nil {
+		log.Printf("[GetStudentStatuses] {Service Call}: %v", err)
+		response.SendError(
+			c,
+			"Failed to get student statuses",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, statuses)
+}
+
 func (h *Handler) GetNatureOfResidenceTypes(c *gin.Context) {
 	types, err := h.service.GetNatureOfResidenceTypes(c.Request.Context())
 	if err != nil {
+		log.Printf("[GetNatureOfResidenceTypes] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get nature of residence types",
@@ -203,6 +215,7 @@ func (h *Handler) GetNatureOfResidenceTypes(c *gin.Context) {
 func (h *Handler) GetActivityOptions(c *gin.Context) {
 	options, err := h.service.GetActivityOptions(c.Request.Context())
 	if err != nil {
+		log.Printf("[GetActivityOptions] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get activity options",
@@ -282,6 +295,7 @@ func (h *Handler) GetStudentBasicInfo(c *gin.Context) {
 
 	basicInfo, err := h.service.GetStudentBasicInfo(c.Request.Context(), iirID)
 	if err != nil {
+		log.Printf("[GetStudentBasicInfo] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student basic info",
@@ -294,11 +308,11 @@ func (h *Handler) GetStudentBasicInfo(c *gin.Context) {
 	response.SendSuccess(c, basicInfo)
 }
 
-func (h *Handler) GetIIRDraft(c *gin.Context) {
+func (h *Handler) GetStudentIIRDraft(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	draft, err := h.service.GetIIRDraft(c.Request.Context(), userID)
 	if err != nil {
-		log.Printf("[GetIIRDraft] {Fetch Draft Error}: %v", err)
+		log.Printf("[GetStudentIIRDraft] {Fetch Draft}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get IIR draft",
@@ -320,7 +334,7 @@ func (h *Handler) GetStudentIIRByUserID(c *gin.Context) {
 
 	iir, err := h.service.GetStudentIIRByUserID(c.Request.Context(), userID)
 	if err != nil {
-		log.Printf("[GetStudentIIRByUserID] {Fetch IIR Error}: %v", err)
+		log.Printf("[GetStudentIIRByUserID] {Fetch IIR}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student IIR by user ID",
@@ -342,6 +356,7 @@ func (h *Handler) GetStudentIIRByIIRID(c *gin.Context) {
 
 	iir, err := h.service.GetStudentIIR(c.Request.Context(), iirID)
 	if err != nil {
+		log.Printf("[GetStudentIIRByIIRID] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student IIR by IIR ID",
@@ -352,30 +367,6 @@ func (h *Handler) GetStudentIIRByIIRID(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, iir)
-}
-
-func (h *Handler) GetStudentEnrollmentReasons(c *gin.Context) {
-	iirID := c.Param("iirID")
-	if iirID == "" {
-		response.SendFail(c, gin.H{"error": "Invalid IIR ID format"})
-		return
-	}
-
-	reasons, err := h.service.GetStudentEnrollmentReasons(
-		c.Request.Context(),
-		iirID,
-	)
-	if err != nil {
-		response.SendError(
-			c,
-			"Failed to get student enrollment reasons",
-			http.StatusInternalServerError,
-			nil,
-		)
-		return
-	}
-
-	response.SendSuccess(c, reasons)
 }
 
 func (h *Handler) GetStudentPersonalInfo(c *gin.Context) {
@@ -390,6 +381,7 @@ func (h *Handler) GetStudentPersonalInfo(c *gin.Context) {
 		iirID,
 	)
 	if err != nil {
+		log.Printf("[GetStudentPersonalInfo] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student personal info",
@@ -411,6 +403,7 @@ func (h *Handler) GetStudentAddresses(c *gin.Context) {
 
 	addresses, err := h.service.GetStudentAddresses(c.Request.Context(), iirID)
 	if err != nil {
+		log.Printf("[GetStudentAddresses] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student addresses",
@@ -435,6 +428,7 @@ func (h *Handler) GetStudentFamilyBackground(c *gin.Context) {
 		iirID,
 	)
 	if err != nil {
+		log.Printf("[GetStudentFamilyBackground] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student family background",
@@ -459,6 +453,7 @@ func (h *Handler) GetStudentRelatedPersons(c *gin.Context) {
 		iirID,
 	)
 	if err != nil {
+		log.Printf("[GetStudentRelatedPersons] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student related persons",
@@ -471,7 +466,7 @@ func (h *Handler) GetStudentRelatedPersons(c *gin.Context) {
 	response.SendSuccess(c, relatedPersons)
 }
 
-func (h *Handler) GetEducationalBackground(c *gin.Context) {
+func (h *Handler) GetStudentEducationalBackground(c *gin.Context) {
 	iirID := c.Param("iirID")
 	if iirID == "" {
 		response.SendFail(c, gin.H{"error": "Invalid IIR ID format"})
@@ -483,6 +478,7 @@ func (h *Handler) GetEducationalBackground(c *gin.Context) {
 		iirID,
 	)
 	if err != nil {
+		log.Printf("[GetStudentEducationalBackground] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get educational background",
@@ -507,6 +503,7 @@ func (h *Handler) GetStudentFinancialInfo(c *gin.Context) {
 		iirID,
 	)
 	if err != nil {
+		log.Printf("[GetStudentFinancialInfo] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student financial info",
@@ -555,6 +552,7 @@ func (h *Handler) GetStudentConsultations(c *gin.Context) {
 		iirID,
 	)
 	if err != nil {
+		log.Printf("[GetStudentConsultations] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student consultations",
@@ -579,6 +577,7 @@ func (h *Handler) GetStudentActivities(c *gin.Context) {
 		iirID,
 	)
 	if err != nil {
+		log.Printf("[GetStudentActivities] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student activities",
@@ -603,6 +602,7 @@ func (h *Handler) GetStudentSubjectPreferences(c *gin.Context) {
 		iirID,
 	)
 	if err != nil {
+		log.Printf("[GetStudentSubjectPreferences] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student subject preferences",
@@ -624,6 +624,7 @@ func (h *Handler) GetStudentHobbies(c *gin.Context) {
 
 	hobbies, err := h.service.GetStudentHobbies(c.Request.Context(), iirID)
 	if err != nil {
+		log.Printf("[GetStudentHobbies] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student hobbies",
@@ -648,6 +649,7 @@ func (h *Handler) GetStudentTestResults(c *gin.Context) {
 		iirID,
 	)
 	if err != nil {
+		log.Printf("[GetStudentTestResults] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to get student test results",
@@ -660,24 +662,18 @@ func (h *Handler) GetStudentTestResults(c *gin.Context) {
 	response.SendSuccess(c, testResults)
 }
 
-func (h *Handler) PostIIRDraft(c *gin.Context) {
+func (h *Handler) PostStudentIIRDraft(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	var req ComprehensiveProfileDTO
 	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
-		log.Printf(
-			"[PostIIRDraft] {JSON Decode}: %v",
-			err,
-		)
+		log.Printf("[PostStudentIIRDraft] {JSON Decode}: %v", err)
 		response.SendFail(c, gin.H{"error": "Invalid JSON format"})
 		return
 	}
 
 	draftID, err := h.service.SaveIIRDraft(c.Request.Context(), userID, req)
 	if err != nil {
-		log.Printf(
-			"[PostIIRDraft] {Service Error}: %v",
-			err,
-		)
+		log.Printf("[PostStudentIIRDraft] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to save IIR draft",
@@ -693,18 +689,18 @@ func (h *Handler) PostIIRDraft(c *gin.Context) {
 	)
 }
 
-func (h *Handler) PostIIR(c *gin.Context) {
+func (h *Handler) PostStudentIIR(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	var req ComprehensiveProfileDTO
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("[PostIIR] {JSON Decode}: %s", err.Error())
+		log.Printf("[PostStudentIIR] {JSON Bind}: %s", err.Error())
 		response.SendFail(c, gin.H{"error": err.Error()})
 		return
 	}
 
 	iirID, err := h.service.SubmitStudentIIR(c.Request.Context(), userID, req)
 	if err != nil {
-		log.Printf("[PostIIR] {Service Error}: %s", err.Error())
+		log.Printf("[PostStudentIIR] {Service Call}: %s", err.Error())
 		response.SendError(
 			c,
 			"Failed to submit student IIR",
@@ -731,7 +727,7 @@ func (h *Handler) PostIIR(c *gin.Context) {
 // @Failure      400     {object}  map[string]string
 // @Failure      500     {object}  map[string]string
 // @Router       /students/{iirID}/iir/download [get]
-func (h *Handler) GenerateIIR(c *gin.Context) {
+func (h *Handler) GetStudentIIRPDF(c *gin.Context) {
 	iirID := c.Param("iirID")
 	if iirID == "" {
 		response.SendFail(c, gin.H{"error": "Invalid IIR ID format"})
@@ -740,7 +736,7 @@ func (h *Handler) GenerateIIR(c *gin.Context) {
 
 	pdfBytes, fileName, err := h.service.GenerateIIR(c.Request.Context(), iirID)
 	if err != nil {
-		log.Printf("[GenerateIIR] {Service Error}: %v", err)
+		log.Printf("[GetStudentIIRPDF] {Service Call}: %v", err)
 		response.SendError(
 			c,
 			"Failed to generate IIR PDF",
@@ -757,4 +753,140 @@ func (h *Handler) GenerateIIR(c *gin.Context) {
 	c.Header("Content-Type", "application/pdf")
 	c.Header("Content-Length", fmt.Sprintf("%d", len(pdfBytes)))
 	c.Data(http.StatusOK, "application/pdf", pdfBytes)
+}
+
+// PatchStudentBulkStatus handles PATCH /students/inventory/records/bulk-status.
+// It applies a lifecycle status transition to multiple student records in a
+// single transaction. For the "Graduated" status the service layer enforces
+// eligibility (Diploma/Year-3, Bachelor/Year-4) and quietly skips ineligible
+// records — the response always reports the attempted count so the frontend
+// can surface a warning if the actual count differs.
+func (h *Handler) PatchStudentStatusBulk(c *gin.Context) {
+	var req BulkUpdateStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[PatchStudentStatusBulk] {Bind JSON}: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	if err := h.service.BulkUpdateStudentStatus(c.Request.Context(), req); err != nil {
+		log.Printf("[PatchStudentStatusBulk] {Service Call}: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to update student status pool",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Bulk status update successful"})
+}
+
+func (h *Handler) PostStudentCOR(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+
+	file, err := c.FormFile("cor")
+	if err != nil {
+		response.SendFail(c, gin.H{"error": "COR file is required (field: cor)"})
+		return
+	}
+
+	fileID, err := h.service.SubmitCOR(c.Request.Context(), userID, file)
+	if err != nil {
+		log.Printf("[PostStudentCOR] {Service Call}: %v", err)
+		response.SendError(
+			c,
+			"Failed to submit COR",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{
+		"fileId":  fileID,
+		"message": "COR submitted and processing successfully",
+	})
+}
+
+func (h *Handler) PostStudentCORByIIRID(c *gin.Context) {
+	iirID := c.Param("iirID")
+	if iirID == "" {
+		response.SendFail(c, gin.H{"error": "Invalid IIR ID format"})
+		return
+	}
+
+	// Resolve UserID from IIRID
+	iir, err := h.service.GetStudentIIR(c.Request.Context(), iirID)
+	if err != nil || iir == nil {
+		log.Printf("[PostStudentCORByIIRID] {Resolve UserID}: %v", err)
+		response.SendError(
+			c,
+			"Student record not found",
+			http.StatusNotFound,
+			nil,
+		)
+		return
+	}
+
+	file, err := c.FormFile("cor")
+	if err != nil {
+		response.SendFail(c, gin.H{"error": "COR file is required (field: cor)"})
+		return
+	}
+
+	fileID, err := h.service.SubmitCOR(c.Request.Context(), iir.UserID, file)
+	if err != nil {
+		log.Printf("[PostStudentCORByIIRID] {Service Call}: %v", err)
+		response.SendError(
+			c,
+			"Failed to submit COR",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{
+		"fileId":  fileID,
+		"message": "COR submitted and processing successfully",
+	})
+}
+
+func (h *Handler) GetStudentCORByUserID(c *gin.Context) {
+	userID := c.Param("userID")
+	if userID == "" {
+		response.SendFail(c, gin.H{"error": "Invalid User ID format"})
+		return
+	}
+
+	cor, err := h.service.GetStudentCOR(c.Request.Context(), userID)
+	if err != nil {
+		log.Printf("[GetStudentCORByUserID] {Fetch COR}: %v", err)
+		response.SendError(
+			c,
+			"Failed to retrieve COR",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, cor)
+}
+
+func (h *Handler) GetStudentCORs(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+
+	cors, err := h.service.GetStudentCORs(c.Request.Context(), userID)
+	if err != nil {
+		log.Printf("[GetStudentCORs] {Fetch CORs}: %v", err)
+		response.SendError(
+			c,
+			"Failed to retrieve CORs",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, cors)
 }

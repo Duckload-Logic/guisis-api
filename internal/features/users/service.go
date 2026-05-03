@@ -2,31 +2,65 @@ package users
 
 import (
 	"context"
+	"fmt"
+	"mime/multipart"
 
+	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
 
 type Service struct {
-	repo RepositoryInterface
+	repo           *Repository
+	sessionService *sessions.Service
+	filesSvc       *files.Service
 }
 
 // NewService creates a new users service.
-func NewService(repo RepositoryInterface) *Service {
-	return &Service{repo: repo}
+func NewService(
+	repo *Repository,
+	sessionService *sessions.Service,
+	filesSvc *files.Service,
+) *Service {
+	return &Service{
+		repo:           repo,
+		sessionService: sessionService,
+		filesSvc:       filesSvc,
+	}
 }
 
-// GetUserByID retrieves a user by their ID.
+func (s *Service) UploadProfilePicture(
+	ctx context.Context,
+	userID string,
+	fileHeader *multipart.FileHeader,
+) (string, error) {
+	// 1. Upload file using files service
+	file, err := s.filesSvc.UploadFile(ctx, fileHeader, "profiles")
+	if err != nil {
+		return "", fmt.Errorf("failed to upload profile picture: %w", err)
+	}
+
+	// 2. Associate file with user's profile picture
+	err = s.PostProfilePicture(ctx, userID, file.ID)
+	if err != nil {
+		return "", err
+	}
+
+	return file.FileURL, nil
+}
+
+// GetUserByID retrieves a user by their ID and returns a DTO.
 func (s *Service) GetUserByID(
 	ctx context.Context,
 	userID string,
-) (*GetUserResponse, error) {
+) (*UserResponse, error) {
 	user, err := s.repo.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.mapUserModelToResponse(user), nil
+	return s.mapToResponse(user), nil
 }
 
 // GetUserByEmail retrieves a user by their email and auth type.
@@ -34,13 +68,13 @@ func (s *Service) GetUserByEmail(
 	ctx context.Context,
 	email string,
 	authType string,
-) (*GetUserResponse, error) {
+) (*UserResponse, error) {
 	user, err := s.repo.GetUserByEmail(ctx, email, authType)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.mapUserModelToResponse(user), nil
+	return s.mapToResponse(user), nil
 }
 
 func (s *Service) GetUserIDsByRole(
@@ -50,78 +84,162 @@ func (s *Service) GetUserIDsByRole(
 	return s.repo.GetUserIDsByRole(ctx, roleID)
 }
 
-func (s *Service) ListUsers(
-	ctx context.Context,
-	params ListUsersParams,
-) (*ListUsersResponse, error) {
-	users, total, err := s.repo.ListUsers(ctx, params)
-	if err != nil {
-		return nil, err
-	}
-
-	dtos := make([]GetUserResponse, 0, len(users))
-	for _, user := range users {
-		dto := s.mapUserModelToResponse(&user)
-		if dto != nil {
-			dtos = append(dtos, *dto)
-		}
-	}
-
-	totalPages := (total + params.PageSize - 1) / params.PageSize
-
-	return &ListUsersResponse{
-		Users: dtos,
-		Meta: structs.PaginationMetadata{
-			Total:      total,
-			Page:       params.Page,
-			PageSize:   params.PageSize,
-			TotalPages: totalPages,
-		},
-	}, nil
-}
-
 func (s *Service) GetRoleDistribution(
 	ctx context.Context,
 ) ([]RoleDistributionDTO, error) {
 	return s.repo.GetRoleDistribution(ctx)
 }
 
-func (s *Service) mapUserModelToResponse(user *User) *GetUserResponse {
-	role, err := s.repo.GetRoleByID(context.Background(), user.RoleID)
+func (s *Service) GetRolesByUserID(
+	ctx context.Context,
+	userID string,
+) ([]Role, error) {
+	return s.repo.GetRolesByUserID(ctx, userID)
+}
+
+func (s *Service) GetRoleByID(
+	ctx context.Context,
+	roleID int,
+) (*Role, error) {
+	return s.repo.GetRoleByID(ctx, roleID)
+}
+
+func (s *Service) CheckUserWhitelist(
+	ctx context.Context,
+	email string,
+) ([]int, error) {
+	return s.repo.CheckUserWhitelist(ctx, email)
+}
+
+func (s *Service) ListUsers(
+	ctx context.Context,
+	params ListUsersRequest,
+) (*ListUsersResponse, error) {
+	users, total, err := s.repo.ListUsers(ctx, params)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	return &GetUserResponse{
-		Role:       *role,
-		ID:         user.ID,
-		FirstName:  user.FirstName,
-		MiddleName: structs.FromSqlNull(user.MiddleName),
-		LastName:   user.LastName,
-		SuffixName: structs.FromSqlNull(user.SuffixName),
-		Email:      user.Email,
-		IsActive:   user.IsActive == 1,
-		CreatedAt:  user.CreatedAt.Time.String(),
-		UpdatedAt:  user.UpdatedAt.Time.String(),
+	dtos := make([]UserResponse, 0, len(users))
+	for _, u := range users {
+		dtos = append(dtos, *s.mapToResponse(&u))
 	}
+
+	return &ListUsersResponse{
+		Users: dtos,
+		Meta:  structs.CalculateMetadata(total, params.Page, params.PageSize),
+	}, nil
+}
+
+func (s *Service) PostProfilePicture(
+	ctx context.Context,
+	userID string,
+	fileID string,
+) error {
+	return s.repo.WithTransaction(
+		ctx,
+		func(tx datastore.DB) error {
+			return s.repo.PostProfilePicture(ctx, tx, userID, fileID)
+		},
+	)
 }
 
 func (s *Service) BlockUser(ctx context.Context, userID string) error {
-	return datastore.RunInTransaction(
+	err := s.repo.WithTransaction(
 		ctx,
-		s.repo.GetDB(),
 		func(tx datastore.DB) error {
 			return s.repo.BlockUser(ctx, tx, userID)
 		},
 	)
+	if err != nil {
+		return err
+	}
+
+	// Revoke sessions
+	_ = s.sessionService.RevokeAllUserSessions(ctx, userID)
+
+	return nil
 }
 
 func (s *Service) UnblockUser(ctx context.Context, userID string) error {
-	return datastore.RunInTransaction(
+	return s.repo.WithTransaction(
 		ctx,
-		s.repo.GetDB(),
 		func(tx datastore.DB) error {
 			return s.repo.UnblockUser(ctx, tx, userID)
 		},
 	)
+}
+
+func (s *Service) UpdateUserRoles(
+	ctx context.Context,
+	req UpdateRolesRequest,
+	adminID string,
+) error {
+	return s.repo.WithTransaction(ctx, func(tx datastore.DB) error {
+		// Remove current roles
+		if err := s.repo.RemoveRoles(ctx, tx, req.UserID); err != nil {
+			return fmt.Errorf("failed to remove old roles: %w", err)
+		}
+
+		// Assign new roles
+		for _, roleID := range req.RoleIDs {
+			assignment := RoleAssignment{
+				UserID:      req.UserID,
+				RoleID:      roleID,
+				AssignedBy:  structs.StringToNullableString(adminID),
+				Reason:      structs.StringToNullableString(req.Reason),
+				ReferenceID: structs.StringToNullableString(req.ReferenceID),
+			}
+			if err := s.repo.AssignRole(ctx, tx, assignment); err != nil {
+				return fmt.Errorf("failed to assign role %d: %w", roleID, err)
+			}
+		}
+
+		return nil
+	})
+}
+
+func (s *Service) AddUserToWhitelist(
+	ctx context.Context,
+	req AddUserToWhitelistRequest,
+) error {
+	return s.repo.WithTransaction(ctx, func(tx datastore.DB) error {
+		for _, roleID := range req.RoleIDs {
+			if err := s.repo.AddUserToWhitelist(
+				ctx, tx, req.Email, roleID,
+			); err != nil {
+				return fmt.Errorf(
+					"failed to add user to whitelist: %w", err,
+				)
+			}
+		}
+		return nil
+	})
+}
+
+func (s *Service) RemoveUserFromWhitelist(
+	ctx context.Context,
+	req RemoveUserFromWhitelistRequest,
+) error {
+	return s.repo.WithTransaction(ctx, func(tx datastore.DB) error {
+		if err := s.repo.RemoveUserFromWhitelist(ctx, tx, req.Email); err != nil {
+			return fmt.Errorf("failed to remove user from whitelist: %w", err)
+		}
+		return nil
+	})
+}
+func (s *Service) mapToResponse(user *User) *UserResponse {
+	return &UserResponse{
+		ID:             user.ID,
+		Roles:          user.Roles,
+		FirstName:      user.FirstName,
+		MiddleName:     user.MiddleName,
+		LastName:       user.LastName,
+		SuffixName:     user.SuffixName,
+		Email:          user.Email,
+		IsActive:       user.IsActive,
+		ProfilePicture: user.ProfilePicture.String,
+		CreatedAt:      user.CreatedAt.Time.String(),
+		UpdatedAt:      user.UpdatedAt.Time.String(),
+	}
 }

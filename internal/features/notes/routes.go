@@ -16,8 +16,8 @@ func RegisterRoutes(
 ) {
 	routes := rg.Group("/notes")
 	routes.Use(middleware.AuthMiddleware(redis))
-	routes.Use(middleware.HydrateStudentContext(db))
-	routes.Use(middleware.RoleMiddleware(int(constants.AdminRoleID)))
+	routes.Use(middleware.HydrateStudentIIRContext(db))
+	routes.Use(middleware.RoleMiddleware(constants.AdminRoleID))
 	{
 		routes.GET("/user/id/:iirID", h.GetSignificantNotes)
 		routes.POST("/user/id/:iirID", h.PostSignificantNote)

@@ -39,9 +39,9 @@ func (s *Service) ListStudents(
 			Email:         student.Email,
 			MobileNumber:  student.MobileNumber,
 			Course: students.Course{
-				ID:         student.CourseID,
-				Code:       student.CourseCode,
-				CourseName: student.CourseName,
+				ID:   student.CourseID,
+				Code: student.CourseCode,
+				Name: student.CourseName,
 			},
 			YearLevel: student.YearLevel,
 			Section:   student.Section,
@@ -73,9 +73,9 @@ func (s *Service) GetStudentByStudentNumber(
 		Email:         student.Email,
 		MobileNumber:  student.MobileNumber,
 		Course: students.Course{
-			ID:         student.CourseID,
-			Code:       student.CourseCode,
-			CourseName: student.CourseName,
+			ID:   student.CourseID,
+			Code: student.CourseCode,
+			Name: student.CourseName,
 		},
 		YearLevel: student.YearLevel,
 		Section:   student.Section,
@@ -89,7 +89,7 @@ func (s *Service) GetStudentByEmail(
 	student, err := s.repo.GetStudentByEmail(ctx, email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("Student not found")
+			return nil, fmt.Errorf("student not found")
 		}
 
 		return nil, err
@@ -103,9 +103,9 @@ func (s *Service) GetStudentByEmail(
 		Email:         student.Email,
 		MobileNumber:  student.MobileNumber,
 		Course: students.Course{
-			ID:         student.CourseID,
-			Code:       student.CourseCode,
-			CourseName: student.CourseName,
+			ID:   student.CourseID,
+			Code: student.CourseCode,
+			Name: student.CourseName,
 		},
 		YearLevel: student.YearLevel,
 		Section:   student.Section,
@@ -124,8 +124,8 @@ func (s *Service) GetPersonalInfoByStudentNumber(
 	return &OGOSStudentPersonalInfoDTO{
 		StudentNumber: student.StudentNumber,
 		Gender: students.Gender{
-			ID:         student.GenderID,
-			GenderName: student.GenderName,
+			ID:   student.GenderID,
+			Name: student.GenderName,
 		},
 		DateOfBirth:  student.DateOfBirth,
 		PlaceOfBirth: student.PlaceOfBirth,

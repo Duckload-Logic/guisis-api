@@ -22,6 +22,7 @@ const (
 	slipsBaseQuery = `
 	SELECT
 		slp.id AS id,
+		u.id AS user_id,
 		slp.iir_id AS iir_id,
 		u.first_name AS user_first_name,
 		u.middle_name AS user_middle_name,
@@ -53,6 +54,13 @@ func (r *Repository) GetDB() *sqlx.DB {
 	return r.db
 }
 
+func (r *Repository) WithTransaction(
+	ctx context.Context,
+	fn func(datastore.DB) error,
+) error {
+	return datastore.RunInTransaction(ctx, r.db, fn)
+}
+
 func (r *Repository) BeginTx(ctx context.Context) (datastore.DB, error) {
 	return r.db.BeginTxx(ctx, nil)
 }
@@ -62,14 +70,15 @@ func (r *Repository) CreateSlip(
 	tx datastore.DB,
 	slip *Slip,
 ) (*string, error) {
-	cols, vals := datastore.GetInsertStatement(
-		slip,
-		[]string{"updated_at"},
-	)
-	query := fmt.Sprintf(`
-			INSERT INTO admission_slips (id, %s)
-			VALUES (:id, %s)
-		`, cols, vals)
+	query := `
+		INSERT INTO admission_slips (
+			id, iir_id, reason, date_of_absence, date_needed,
+			category_id, status_id
+		) VALUES (
+			:id, :iir_id, :reason, :date_of_absence, :date_needed,
+			:category_id, :status_id
+		)
+	`
 
 	_, err := tx.NamedExecContext(ctx, query, slip)
 	if err != nil {
@@ -84,16 +93,18 @@ func (r *Repository) SaveSlipAttachment(
 	tx datastore.DB,
 	attachment *SlipAttachment,
 ) error {
-	cols, vals := datastore.GetInsertStatement(
-		attachment,
-		[]string{"updated_at"},
-	)
-	query := fmt.Sprintf(`
-			INSERT INTO slip_attachments (id, %s)
-			VALUES (:id, %s)
-		`, cols, vals)
+	query := `
+			INSERT INTO slip_attachments (file_id, admission_slip_id, attachment_type)
+			VALUES (?, ?, ?)
+		`
 
-	_, err := tx.NamedExecContext(ctx, query, attachment)
+	_, err := tx.ExecContext(
+		ctx,
+		query,
+		attachment.FileID,
+		attachment.SlipID,
+		attachment.AttachmentType,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to insert slip attachment: %w", err)
 	}
@@ -160,9 +171,7 @@ func (r *Repository) GetSlipStatuses(
 	ctx context.Context,
 ) ([]SlipStatus, error) {
 	var statuses []SlipStatus
-	query := fmt.Sprintf(`
-		SELECT %s FROM statuses WHERE status_type IN ('slip', 'both')
-	`, datastore.GetColumns(SlipStatus{}))
+	query := `SELECT id, name, color_key FROM statuses WHERE status_type IN ('slip', 'both')`
 	err := r.db.SelectContext(ctx, &statuses, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get slip statuses: %w", err)
@@ -175,9 +184,7 @@ func (r *Repository) GetSlipCategories(
 	ctx context.Context,
 ) ([]SlipCategory, error) {
 	var categories []SlipCategory
-	query := fmt.Sprintf(`
-		SELECT %s FROM admission_slip_categories
-	`, datastore.GetColumns(SlipCategory{}))
+	query := `SELECT id, name FROM admission_slip_categories`
 	err := r.db.SelectContext(ctx, &categories, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get slip categories: %w", err)
@@ -189,7 +196,7 @@ func (r *Repository) GetSlipCategories(
 func (r *Repository) GetSlipStats(
 	ctx context.Context,
 	iirID *string,
-	req *ListSlipRequest,
+	req *ListSlipsRequest,
 ) ([]SlipStatusCount, error) {
 	filterConditions, args := r.applyFilters("1=1", nil, req, iirID)
 
@@ -208,10 +215,7 @@ func (r *Repository) GetSlipStats(
 	`, filterConditions)
 	err := r.db.SelectContext(ctx, &counts, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to get slip status counts: %w",
-			err,
-		)
+		return nil, fmt.Errorf("failed to get status counts: %w", err)
 	}
 
 	return counts, nil
@@ -220,7 +224,7 @@ func (r *Repository) GetSlipStats(
 func (r *Repository) applyFilters(
 	query string,
 	args []interface{},
-	req *ListSlipRequest,
+	req *ListSlipsRequest,
 	iirID *string,
 ) (string, []interface{}) {
 	if args == nil {
@@ -263,7 +267,7 @@ func (r *Repository) applyFilters(
 
 func (r *Repository) GetTotalSlipsCount(
 	ctx context.Context,
-	req *ListSlipRequest,
+	req *ListSlipsRequest,
 ) (int, error) {
 	query, args := r.applyFilters(
 		`SELECT COUNT(*) FROM admission_slips slp
@@ -286,7 +290,7 @@ func (r *Repository) GetTotalSlipsCount(
 
 func (r *Repository) GetTotalUrgentSlipsCount(
 	ctx context.Context,
-	req *ListSlipRequest,
+	req *ListSlipsRequest,
 ) (int, error) {
 	query := `
         SELECT COUNT(*)
@@ -315,9 +319,8 @@ func (r *Repository) GetTotalUrgentSlipsCount(
 
 func (r *Repository) GetUrgentSlips(
 	ctx context.Context,
-	req *ListSlipRequest,
+	req *ListSlipsRequest,
 ) ([]SlipWithDetailsView, error) {
-	// Add urgency_score to the base query
 	query := strings.Replace(
 		slipsBaseQuery,
 		"slp.updated_at AS updated_at",
@@ -365,7 +368,7 @@ func (r *Repository) getUrgencyScoreSQL() string {
 
 func (r *Repository) GetAll(
 	ctx context.Context,
-	req *ListSlipRequest,
+	req *ListSlipsRequest,
 ) ([]SlipWithDetailsView, error) {
 	query, args := r.applyFilters(slipsBaseQuery+" WHERE 1=1", nil, req, nil)
 
@@ -384,7 +387,7 @@ func (r *Repository) GetAll(
 func (r *Repository) GetByUserID(
 	ctx context.Context,
 	userID string,
-	req *ListSlipRequest,
+	req *ListSlipsRequest,
 ) ([]SlipWithDetailsView, error) {
 	query, args := r.applyFilters(
 		slipsBaseQuery+" WHERE u.id = ?",
@@ -399,10 +402,7 @@ func (r *Repository) GetByUserID(
 	var slips []SlipWithDetailsView
 	err := r.db.SelectContext(ctx, &slips, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to get slips for user: %w",
-			err,
-		)
+		return nil, fmt.Errorf("failed to get slips for user: %w", err)
 	}
 
 	return slips, nil
@@ -411,7 +411,7 @@ func (r *Repository) GetByUserID(
 func (r *Repository) GetByIIRID(
 	ctx context.Context,
 	iirID string,
-	req *ListSlipRequest,
+	req *ListSlipsRequest,
 ) ([]SlipWithDetailsView, error) {
 	query, args := r.applyFilters(
 		slipsBaseQuery+" WHERE slp.iir_id = ?",
@@ -426,10 +426,7 @@ func (r *Repository) GetByIIRID(
 	var slips []SlipWithDetailsView
 	err := r.db.SelectContext(ctx, &slips, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to get slips for IIR: %w",
-			err,
-		)
+		return nil, fmt.Errorf("failed to get slips for IIR: %w", err)
 	}
 
 	return slips, nil
@@ -440,17 +437,13 @@ func (r *Repository) GetSlipByID(
 	id string,
 ) (*Slip, error) {
 	var slip Slip
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM admission_slips
-		WHERE id = ?
-	`, datastore.GetColumns(Slip{}))
+	query := `SELECT id, iir_id, reason, date_of_absence, date_needed, admin_notes, category_id, status_id, created_at, updated_at FROM admission_slips WHERE id = ?`
 	err := r.db.GetContext(ctx, &slip, query, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get slip by ID: %w", err)
+		return nil, fmt.Errorf("failed to get slip: %w", err)
 	}
 	return &slip, nil
 }
@@ -491,11 +484,17 @@ func (r *Repository) GetSlipAttachments(
 	slipID string,
 ) ([]SlipAttachment, error) {
 	var attachments []SlipAttachment
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM slip_attachments
-		WHERE admission_slip_id = ?
-	`, datastore.GetColumns(SlipAttachment{}))
+	query := `
+		SELECT
+			sa.file_id,
+			sa.admission_slip_id,
+			sa.attachment_type,
+			f.file_name,
+			f.file_url
+		FROM slip_attachments sa
+		JOIN files f ON sa.file_id = f.id
+		WHERE sa.admission_slip_id = ?
+	`
 	err := r.db.SelectContext(ctx, &attachments, query, slipID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get slip attachments: %w", err)
@@ -509,19 +508,24 @@ func (r *Repository) GetAttachmentByID(
 	attachmentID string,
 ) (*SlipAttachment, error) {
 	var attachment SlipAttachment
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM slip_attachments
-		WHERE id = ?
-	`, datastore.GetColumns(SlipAttachment{}))
+	query := `
+		SELECT
+			sa.file_id,
+			sa.admission_slip_id,
+			sa.attachment_type,
+			f.file_name,
+			f.file_url
+		FROM slip_attachments sa
+		JOIN files f ON sa.file_id = f.id
+		WHERE sa.file_id = ?
+	`
 	err := r.db.GetContext(ctx, &attachment, query, attachmentID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil // Not found, return nil without error
+			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get attachment by ID: %w", err)
+		return nil, fmt.Errorf("failed to get attachment: %w", err)
 	}
-
 	return &attachment, nil
 }
 

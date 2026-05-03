@@ -17,14 +17,14 @@ func RegisterRoutes(
 	analyticsRoutes.Use(middleware.AuthMiddleware(redis))
 
 	analyticsRoutes.GET("/dashboard",
-		middleware.RoleMiddleware(int(constants.AdminRoleID)),
-		h.GetAnalyticsDashboard,
+		middleware.RoleMiddleware(constants.AdminRoleID),
+		h.GetDashboard,
 	)
 
 	analyticsRoutes.GET("/admin-dashboard",
 		middleware.RoleMiddleware(
-			int(constants.AdminRoleID),
-			int(constants.SuperAdminRoleID),
+			constants.AdminRoleID,
+			constants.SuperAdminRoleID,
 		),
 		h.GetAdminDashboard,
 	)

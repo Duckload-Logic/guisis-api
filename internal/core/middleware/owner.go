@@ -13,17 +13,29 @@ import (
 func OwnershipMiddleware(db *sqlx.DB, paramName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		loggedInUserID := c.MustGet("userID").(string)
-		roleID := c.MustGet("roleID").(int)
+		roleIDs := c.MustGet("roleIDs").([]int)
+
+		isAdmin := false
+		isStudent := false
+		for _, rid := range roleIDs {
+			if rid == int(constants.AdminRoleID) ||
+				rid == int(constants.SuperAdminRoleID) {
+				isAdmin = true
+				break
+			}
+			if rid == int(constants.StudentRoleID) {
+				isStudent = true
+			}
+		}
 
 		// Allow counselors and super admins to bypass
-		if roleID == int(constants.AdminRoleID) ||
-			roleID == int(constants.SuperAdminRoleID) {
+		if isAdmin {
 			c.Next()
 			return
 		}
 
 		// For students, check ownership
-		if roleID == int(constants.StudentRoleID) {
+		if isStudent {
 			paramValue := c.Param(paramName)
 
 			// For email-based params, compare directly
@@ -70,6 +82,28 @@ func checkStudentOwnership(
 				SELECT 1 FROM iir_records
 				WHERE id = ? AND user_id = ?
 			)`
+		var exists bool
+		err := db.QueryRow(query, resourceID, userID).Scan(&exists)
+		return exists, err
+	case "appointmentID":
+		query := `
+			SELECT EXISTS(
+				SELECT 1 FROM appointments a
+				INNER JOIN iir_records ir ON a.iir_id = ir.id
+				WHERE a.id = ? AND ir.user_id = ?
+			)
+		`
+		var exists bool
+		err := db.QueryRow(query, resourceID, userID).Scan(&exists)
+		return exists, err
+	case "slipID":
+		query := `
+			SELECT EXISTS(
+				SELECT 1 FROM admission_slips s
+				INNER JOIN iir_records ir ON s.iir_id = ir.id
+				WHERE s.id = ? AND ir.user_id = ?
+			)
+		`
 		var exists bool
 		err := db.QueryRow(query, resourceID, userID).Scan(&exists)
 		return exists, err

@@ -22,6 +22,7 @@ const (
 const appointmentsBaseQuery = `
 	SELECT
 		a.id,
+		u.id AS user_id,
 		ir.id AS iir_id,
 		spi.student_number AS student_number,
 		u.first_name AS user_first_name,
@@ -39,11 +40,13 @@ const appointmentsBaseQuery = `
 		ac.name AS category_name,
 		as2.id AS status_id,
 		as2.name AS status_name,
-		as2.color_key AS status_color_key
+		as2.color_key AS status_color_key,
+		a.urgency_level AS urgency_level,
+		a.urgency_score AS urgency_score
 	FROM appointments a
-	LEFT JOIN iir_records ir ON a.iir_id = ir.id
-	LEFT JOIN users u ON ir.user_id = u.id
-	LEFT JOIN student_personal_info spi ON ir.id = spi.iir_id
+	JOIN iir_records ir ON a.iir_id = ir.id
+	JOIN users u ON ir.user_id = u.id
+	JOIN student_personal_info spi ON ir.id = spi.iir_id
 	JOIN time_slots ts ON a.time_slot_id = ts.id
 	JOIN appointment_categories ac ON
 		a.appointment_category_id = ac.id
@@ -54,6 +57,13 @@ func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
+func (r *Repository) WithTransaction(
+	ctx context.Context,
+	fn func(datastore.DB) error,
+) error {
+	return datastore.RunInTransaction(ctx, r.db, fn)
+}
+
 func (r *Repository) GetDB() *sqlx.DB {
 	return r.db
 }
@@ -62,13 +72,10 @@ func (r *Repository) GetTimeSlots(
 	ctx context.Context,
 	date string,
 ) ([]TimeSlot, error) {
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM time_slots
-	`, datastore.GetColumns(TimeSlot{}))
+	query := `SELECT id, time FROM time_slots`
 
 	var slots []TimeSlot
-	err := r.db.SelectContext(ctx, &slots, query, date)
+	err := r.db.SelectContext(ctx, &slots, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get time slots: %w", err)
 	}
@@ -79,10 +86,7 @@ func (r *Repository) GetTimeSlots(
 func (r *Repository) GetCategories(
 	ctx context.Context,
 ) ([]AppointmentCategory, error) {
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM appointment_categories
-	`, datastore.GetColumns(AppointmentCategory{}))
+	query := `SELECT id, name FROM appointment_categories`
 
 	var categories []AppointmentCategory
 	err := r.db.SelectContext(ctx, &categories, query)
@@ -108,10 +112,7 @@ func (r *Repository) GetAppointment(
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, fmt.Errorf(
-			"failed to get appointment: %w",
-			err,
-		)
+		return nil, fmt.Errorf("failed to get appointment: %w", err)
 	}
 
 	return &appt, nil
@@ -267,10 +268,7 @@ func (r *Repository) List(
 		expandedArgs...,
 	)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to list appointments: %w",
-			err,
-		)
+		return nil, fmt.Errorf("failed to list appointments: %w", err)
 	}
 
 	return appts, nil
@@ -280,15 +278,11 @@ func (r *Repository) GetTimeSlotByID(
 	ctx context.Context,
 	id int,
 ) (*TimeSlot, error) {
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM time_slots
-		WHERE id = ?
-	`, datastore.GetColumns(TimeSlot{}))
+	query := `SELECT id, time FROM time_slots WHERE id = ?`
 	var slot TimeSlot
 	err := r.db.GetContext(ctx, &slot, query, id)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get time slot by ID: %w", err)
+		return nil, fmt.Errorf("failed to get time slot: %w", err)
 	}
 
 	return &slot, nil
@@ -298,18 +292,11 @@ func (r *Repository) GetAppointmentCategoryByID(
 	ctx context.Context,
 	id int,
 ) (*AppointmentCategory, error) {
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM appointment_categories
-		WHERE id = ?
-	`, datastore.GetColumns(AppointmentCategory{}))
+	query := `SELECT id, name FROM appointment_categories WHERE id = ?`
 	var category AppointmentCategory
 	err := r.db.GetContext(ctx, &category, query, id)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to get appointment category by ID: %w",
-			err,
-		)
+		return nil, fmt.Errorf("failed to get category: %w", err)
 	}
 
 	return &category, nil
@@ -319,23 +306,42 @@ func (r *Repository) GetStatusByID(
 	ctx context.Context,
 	id int,
 ) (*AppointmentStatus, error) {
-	query := fmt.Sprintf(`
-		SELECT %s
+	query := `
+		SELECT id, name, color_key
 		FROM statuses
 		WHERE status_type IN ('appointment', 'both')
 		AND id = ?
-	`, datastore.GetColumns(AppointmentStatus{}))
+	`
 
 	var status AppointmentStatus
 	err := r.db.GetContext(ctx, &status, query, id)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to get appointment status by ID: %w",
-			err,
-		)
+		return nil, fmt.Errorf("failed to get status: %w", err)
 	}
 
 	return &status, nil
+}
+
+func (r *Repository) IsSlotAvailableForUpdate(
+	ctx context.Context,
+	tx datastore.DB,
+	date string,
+	timeSlotID int,
+) (bool, error) {
+	var count int
+	query := `
+		SELECT COUNT(*) FROM appointments
+		WHERE when_date = ?
+			AND time_slot_id = ?
+			AND status_id != (
+				SELECT id
+				FROM statuses
+				WHERE name = 'Cancelled'
+			)
+		FOR UPDATE
+	`
+	err := tx.GetContext(ctx, &count, query, date, timeSlotID)
+	return count == 0, err
 }
 
 func (r *Repository) GetAvailableTimeSlots(
@@ -356,7 +362,7 @@ func (r *Repository) GetAvailableTimeSlots(
 	var slots []AvailableTimeSlotView
 	err := r.db.SelectContext(ctx, &slots, query, date)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get available time slots: %w", err)
+		return nil, fmt.Errorf("failed to get available slots: %w", err)
 	}
 
 	return slots, nil
@@ -365,15 +371,15 @@ func (r *Repository) GetAvailableTimeSlots(
 func (r *Repository) GetStatuses(
 	ctx context.Context,
 ) ([]AppointmentStatus, error) {
-	query := fmt.Sprintf(`
-		SELECT %s
+	query := `
+		SELECT id, name, color_key
 		FROM statuses
 		WHERE status_type IN ('appointment', 'both')
-	`, datastore.GetColumns(AppointmentStatus{}))
+	`
 	var statuses []AppointmentStatus
 	err := r.db.SelectContext(ctx, &statuses, query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get appointment statuses: %w", err)
+		return nil, fmt.Errorf("failed to get statuses: %w", err)
 	}
 
 	return statuses, nil
@@ -405,10 +411,7 @@ func (r *Repository) ListByUserID(
 	var appts []AppointmentWithDetailsView
 	err := r.db.SelectContext(ctx, &appts, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to get appointments by user ID: %w",
-			err,
-		)
+		return nil, fmt.Errorf("failed to get appointments: %w", err)
 	}
 
 	return appts, nil
@@ -440,10 +443,7 @@ func (r *Repository) ListByIIRID(
 	var appts []AppointmentWithDetailsView
 	err := r.db.SelectContext(ctx, &appts, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to get appointments by IIR ID: %w",
-			err,
-		)
+		return nil, fmt.Errorf("failed to get appointments: %w", err)
 	}
 
 	return appts, nil
@@ -492,10 +492,7 @@ func (r *Repository) GetAppointmentStats(
 	var counts []StatusCount
 	err := r.db.SelectContext(ctx, &counts, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to get appointment stats: %w",
-			err,
-		)
+		return nil, fmt.Errorf("failed to get stats: %w", err)
 	}
 
 	return counts, nil
@@ -506,21 +503,21 @@ func (r *Repository) CreateAppointment(
 	tx datastore.DB,
 	appt *Appointment,
 ) error {
-	cols, vals := datastore.GetInsertStatement(
-		appt,
-		[]string{"updated_at"},
-	)
-	query := fmt.Sprintf(`
-			INSERT INTO appointments (id, %s)
-			VALUES (:id, %s)
-		`, cols, vals)
+	query := `
+		INSERT INTO appointments (
+			id, iir_id, reason, admin_notes, when_date,
+			time_slot_id, appointment_category_id, status_id,
+			urgency_level, urgency_score
+		) VALUES (
+			:id, :iir_id, :reason, :admin_notes, :when_date,
+			:time_slot_id, :appointment_category_id, :status_id,
+			:urgency_level, :urgency_score
+		)
+	`
 
 	_, err := tx.NamedExecContext(ctx, query, appt)
 	if err != nil {
-		return fmt.Errorf(
-			"failed to insert appointment: %w",
-			err,
-		)
+		return fmt.Errorf("failed to create appointment: %w", err)
 	}
 	return nil
 }
@@ -558,7 +555,6 @@ func (r *Repository) UpdateAppointment(
 		args = append(args, appt.StatusID)
 	}
 
-	// Validate that there is actually something to update
 	if len(setQuery) == 0 {
 		return nil
 	}
@@ -569,9 +565,6 @@ func (r *Repository) UpdateAppointment(
 	args = append(args, appt.ID)
 
 	_, err := tx.ExecContext(ctx, query, args...)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
+

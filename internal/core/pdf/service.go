@@ -7,6 +7,8 @@ import (
 	"html/template"
 	"reflect"
 	"time"
+
+	"github.com/olazo-johnalbert/duckload-api/internal/core/datetime"
 )
 
 // GotenbergClient defines the interface for converting HTML to PDF.
@@ -101,17 +103,7 @@ func getBasicHelpers() template.FuncMap {
 func getDateHelpers() template.FuncMap {
 	return template.FuncMap{
 		"formatDate": func(dateStr string) string {
-			if dateStr == "" {
-				return ""
-			}
-			if len(dateStr) > 10 {
-				dateStr = dateStr[:10]
-			}
-			t, err := time.Parse("2006-01-02", dateStr)
-			if err != nil {
-				return dateStr
-			}
-			return t.Format("January 02, 2006")
+			return datetime.FormatDate(dateStr)
 		},
 		"calculateAge": func(birthDate string) int {
 			if birthDate == "" {
@@ -143,7 +135,7 @@ func getSupportHelpers() template.FuncMap {
 			}
 			for i := 0; i < v.Len(); i++ {
 				item := reflect.Indirect(v.Index(i))
-				if item.FieldByName("SupportName").String() == target {
+				if item.FieldByName("Name").String() == target {
 					return true
 				}
 			}
@@ -156,7 +148,7 @@ func getSupportHelpers() template.FuncMap {
 			}
 			for i := 0; i < v.Len(); i++ {
 				item := reflect.Indirect(v.Index(i))
-				if item.FieldByName("SupportTypeName").String() == target {
+				if item.FieldByName("Name").String() == target {
 					return true
 				}
 			}
@@ -206,7 +198,7 @@ func getRelationHelpers() template.FuncMap {
 				isParent := p.FieldByName("IsParent").Bool()
 				isGuardian := p.FieldByName("IsGuardian").Bool()
 				relName := p.FieldByName("Relationship").
-					FieldByName("RelationshipName").String()
+					FieldByName("Name").String()
 
 				switch role {
 				case "Father":
@@ -230,7 +222,9 @@ func getRelationHelpers() template.FuncMap {
 
 func getEduHelpers() template.FuncMap {
 	return template.FuncMap{
-		"getEduBackground": func(schools interface{}, level string) interface{} {
+		"getEduBackground": func(
+			schools interface{}, level string,
+		) interface{} {
 			v := reflect.ValueOf(schools)
 			if v.Kind() != reflect.Slice {
 				return nil
@@ -238,7 +232,7 @@ func getEduHelpers() template.FuncMap {
 			for i := 0; i < v.Len(); i++ {
 				s := v.Index(i)
 				lvl := s.FieldByName("EducationalLevel").
-					FieldByName("LevelName").String()
+					FieldByName("Name").String()
 				if lvl == level {
 					return s.Interface()
 				}
@@ -250,7 +244,9 @@ func getEduHelpers() template.FuncMap {
 
 func getConsultHelpers() template.FuncMap {
 	return template.FuncMap{
-		"getConsultation": func(consults interface{}, profType string) interface{} {
+		"getConsultation": func(
+			consults interface{}, profType string,
+		) interface{} {
 			v := reflect.ValueOf(consults)
 			if v.Kind() != reflect.Slice {
 				return nil

@@ -231,15 +231,19 @@ func loadLookups() {
 	}
 
 	// appointment categories
-	rows, err = db.Query("SELECT id FROM appointment_categories")
+	rows, err = db.Query("SELECT id, name FROM appointment_categories")
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id int
-		rows.Scan(&id)
-		appointmentCategoryIDs = append(appointmentCategoryIDs, id)
+		var id string
+		var name string
+		rows.Scan(&id, &name)
+		appointmentCategories = append(appointmentCategories, map[string]string{
+			"id":   id,
+			"name": name,
+		})
 	}
 
 	// admission_slip_categories
@@ -252,5 +256,22 @@ func loadLookups() {
 		var id int
 		row.Scan(&id)
 		admissionSlipCategoryIDs = append(admissionSlipCategoryIDs, id)
+	}
+
+	// student_statuses
+	studentStatusByName = make(map[string]int)
+	rows, err = db.Query("SELECT id, status_name FROM student_statuses")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id int
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			log.Fatal(err)
+		}
+		studentStatusIDs = append(studentStatusIDs, id)
+		studentStatusByName[strings.ToLower(name)] = id
 	}
 }

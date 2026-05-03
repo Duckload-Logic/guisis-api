@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Individual Inventory Record Form</title>
@@ -8,6 +9,7 @@
             size: A4;
             margin: 0;
         }
+
         body {
             font-family: 'Times New Roman', Arial, 'Helvetica Neue', Helvetica, sans-serif;
             font-size: 11pt;
@@ -17,7 +19,11 @@
             background-color: white;
             color: black;
         }
-        b { font-weight: bold; }
+
+        b {
+            font-weight: bold;
+        }
+
         .page {
             width: 100%;
             min-height: 100%;
@@ -27,10 +33,12 @@
             box-sizing: border-box;
             page-break-after: always;
         }
+
         .header {
             text-align: center;
             margin-bottom: 5px;
         }
+
         .footer {
             position: absolute;
             bottom: 10mm;
@@ -42,251 +50,455 @@
             border-top: 0.5px solid #000;
             padding-top: 5px;
         }
-        .form-id { font-size: 8pt; text-align: left; position: absolute; top: 10mm; left: 15mm; }
-        .student-no { font-size: 10pt; text-align: right; position: absolute; top: 10mm; right: 15mm; }
-        .header h2 { font-size: 11pt; margin: 0; font-weight: normal; }
-        .header h1 { font-size: 11pt; margin: 2px 0; font-weight: bold; }
-        .header p { margin: 0; font-size: 10pt; }
-        .form-title { font-size: 12pt; margin: 15px 0 10px 0; font-weight: bold; text-decoration: none; border-bottom: none; }
 
-        .date-section { text-align: right; margin-bottom: 5px; margin-top: 10px; }
-        .date-line { border-bottom: 1px solid black; width: 180px; display: inline-block; text-align: center; height: 14pt; }
+        .form-id {
+            font-size: 8pt;
+            text-align: left;
+            position: absolute;
+            top: 10mm;
+            left: 15mm;
+        }
 
-        .section-header { font-weight: bold; margin-top: 10px; margin-bottom: 4px; display: block; border-bottom: none; }
-        .row { display: flex; align-items: flex-end; margin-bottom: 3px; width: 100%; }
-        .field-label { padding-right: 4px; white-space: nowrap; }
-        .field-fill { border-bottom: 1px solid black; flex-grow: 1; min-height: 12pt; padding-left: 4px; }
-        .sub-label { font-size: 7.5pt; text-align: center; display: block; margin-top: 1px; }
+        .student-no {
+            font-size: 10pt;
+            text-align: right;
+            position: absolute;
+            top: 10mm;
+            right: 15mm;
+        }
 
-        .checkbox-group { display: inline-flex; align-items: center; margin-right: 12px; white-space: nowrap; }
-        .checkbox-box { width: 10px; height: 10px; border: 1px solid black; margin-right: 4px; display: inline-flex; align-items: center; justify-content: center; font-size: 8pt; font-weight: bold; }
+        .header h2 {
+            font-size: 11pt;
+            margin: 0;
+            font-weight: normal;
+        }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 8pt; border: 1px solid black; }
-        th, td { border: 1px solid black; padding: 2px 4px; height: 15pt; }
-        th { background-color: transparent; text-align: center; font-weight: bold; font-size: 7.5pt; text-transform: uppercase; }
+        .header h1 {
+            font-size: 11pt;
+            margin: 2px 0;
+            font-weight: bold;
+        }
 
-        .signature-block { margin-top: 20px; text-align: right; }
-        .signature-line { border-bottom: 1px solid black; width: 220px; display: inline-block; }
+        .header p {
+            margin: 0;
+            font-size: 10pt;
+        }
+
+        .form-title {
+            font-size: 12pt;
+            margin: 15px 0 10px 0;
+            font-weight: bold;
+            text-decoration: none;
+            border-bottom: none;
+        }
+
+        .date-section {
+            text-align: right;
+            margin-bottom: 5px;
+            margin-top: 10px;
+        }
+
+        .date-line {
+            border-bottom: 1px solid black;
+            width: 180px;
+            display: inline-block;
+            text-align: center;
+            height: 14pt;
+        }
+
+        .section-header {
+            font-weight: bold;
+            margin-top: 10px;
+            margin-bottom: 4px;
+            display: block;
+            border-bottom: none;
+        }
+
+        .row {
+            display: flex;
+            align-items: flex-end;
+            margin-bottom: 3px;
+            width: 100%;
+        }
+
+        .field-label {
+            padding-right: 4px;
+            white-space: nowrap;
+        }
+
+        .field-fill {
+            border-bottom: 1px solid black;
+            flex-grow: 1;
+            min-height: 12pt;
+            padding-left: 4px;
+        }
+
+        .sub-label {
+            font-size: 7.5pt;
+            text-align: center;
+            display: block;
+            margin-top: 1px;
+        }
+
+        .checkbox-group {
+            display: inline-flex;
+            align-items: center;
+            margin-right: 12px;
+            white-space: nowrap;
+        }
+
+        .checkbox-box {
+            width: 10px;
+            height: 10px;
+            border: 1px solid black;
+            margin-right: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8pt;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 5px;
+            font-size: 8pt;
+            border: 1px solid black;
+        }
+
+        th,
+        td {
+            border: 1px solid black;
+            padding: 2px 4px;
+            height: 15pt;
+        }
+
+        th {
+            background-color: transparent;
+            text-align: center;
+            font-weight: bold;
+            font-size: 7.5pt;
+            text-transform: uppercase;
+        }
+
+        .signature-block {
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .signature-line {
+            border-bottom: 1px solid black;
+            width: 220px;
+            display: inline-block;
+        }
 
         /* Specific layouts to match the PDF exactly */
-        .flex-row { display: flex; width: 100%; gap: 10px; }
-        .flex-row-no-gap { display: flex; width: 100%; }
-        .flex-1 { flex: 1; }
-        .flex-2 { flex: 2; }
-        .flex-3 { flex: 3; }
+        .flex-row {
+            display: flex;
+            width: 100%;
+            gap: 10px;
+        }
 
-        .align-end { align-items: flex-end; }
-        .justify-end { justify-content: flex-end; }
-        .justify-between { justify-content: space-between; }
+        .flex-row-no-gap {
+            display: flex;
+            width: 100%;
+        }
+
+        .flex-1 {
+            flex: 1;
+        }
+
+        .flex-2 {
+            flex: 2;
+        }
+
+        .flex-3 {
+            flex: 3;
+        }
+
+        .align-end {
+            align-items: flex-end;
+        }
+
+        .justify-end {
+            justify-content: flex-end;
+        }
+
+        .justify-between {
+            justify-content: space-between;
+        }
 
         /* Utility Widths (Commonly used in this form) */
-        .w-40 { width: 40px; }
-        .w-60 { width: 60px; }
-        .w-80 { width: 80px; }
-        .w-100 { width: 100px; }
-        .w-150 { width: 150px; }
-        .w-180 { width: 180px; }
-        .w-200 { width: 200px; }
-        .w-250 { width: 250px; }
-        .w-full { width: 100%; }
+        .w-40 {
+            width: 40px;
+        }
+
+        .w-60 {
+            width: 60px;
+        }
+
+        .w-80 {
+            width: 80px;
+        }
+
+        .w-100 {
+            width: 100px;
+        }
+
+        .w-150 {
+            width: 150px;
+        }
+
+        .w-180 {
+            width: 180px;
+        }
+
+        .w-200 {
+            width: 200px;
+        }
+
+        .w-250 {
+            width: 250px;
+        }
+
+        .w-full {
+            width: 100%;
+        }
 
         /* Text Utilities */
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .bold { font-weight: bold; }
-        .italic { font-style: italic; }
-        .underline { text-decoration: underline; }
-        .no-border { border: none !important; }
-        .mt-5 { margin-top: 5px; }
-        .mt-10 { margin-top: 10px; }
-        .ml-10 { margin-left: 10px; }
-        .pl-20 { padding-left: 20px; }
-        .pl-30 { padding-left: 30px; }
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+
+        .italic {
+            font-style: italic;
+        }
+
+        .underline {
+            text-decoration: underline;
+        }
+
+        .no-border {
+            border: none !important;
+        }
+
+        .mt-5 {
+            margin-top: 5px;
+        }
+
+        .mt-10 {
+            margin-top: 10px;
+        }
+
+        .ml-10 {
+            margin-left: 10px;
+        }
+
+        .pl-20 {
+            padding-left: 20px;
+        }
+
+        .pl-30 {
+            padding-left: 30px;
+        }
     </style>
 </head>
+
 <body>
 
-<!--
+    <!--
     =========================================
     PAGE 1: Personal & Educational Background
     =========================================
 -->
-<div class="page">
-    {{with .Profile}}
-    {{with .Student}}
-    <!-- Header Section -->
-    <div class="form-id">Form 1A -GCTS</div>
-    <div class="student-no text-right">Student No. <span class="field-fill w-200 text-center">{{.StudentNumber}}</span></div>
+    <div class="page">
+        {{with .Profile}}
+        {{with .Student}}
+        <!-- Header Section -->
+        <div class="form-id">Form 1A -GCTS</div>
+        <div class="student-no text-right">Student No. <span
+                class="field-fill w-200 text-center">{{.StudentNumber}}</span></div>
 
-    <div class="header mt-10" style="margin-top: 30px;">
-        <h2>Polytechnic University of the Philippines</h2>
-        <h1>GUIDANCE, COUNSELING AND TESTING SERVICES</h1>
-        <p>Taguig Campus</p>
-        <div class="form-title mt-5"><b>INDIVIDUAL INVENTORY RECORD FORM</b></div>
-    </div>
+        <div class="header mt-10" style="margin-top: 30px;">
+            <h2>Polytechnic University of the Philippines</h2>
+            <h1>GUIDANCE, COUNSELING AND TESTING SERVICES</h1>
+            <p>Taguig Campus</p>
+            <div class="form-title mt-5"><b>INDIVIDUAL INVENTORY RECORD FORM</b></div>
+        </div>
 
-    <div class="date-section mt-10 text-right">
-        <div class="date-line text-center">{{$.DateToday}}</div><br>
-        <span style="font-size: 8pt; padding-right: 70px;">Date</span>
-    </div>
+        <div class="date-section mt-10 text-right">
+            <div class="date-line text-center">{{$.DateToday}}</div><br>
+            <span style="font-size: 8pt; padding-right: 70px;">Date</span>
+        </div>
 
-    <div style="font-size: 9pt; margin-bottom: 5px;">Please <b>PRINT</b> clearly</div>
+        <div style="font-size: 9pt; margin-bottom: 5px;">Please <b>PRINT</b> clearly</div>
 
-    <!-- I. PERSONAL INFORMATION -->
-    <div class="section-header">I. PERSONAL INFORMATION</div>
-    <div class="row">
-        <div class="flex-1">
-            <div class="flex-row-no-gap align-end">
-                <div class="flex-1 flex-row-no-gap align-end">
-                    <span class="field-label" style="width: 45px;">Name:</span>
-                    <div class="flex-row-no-gap flex-1 ml-10" style="border-bottom: 1px solid black; min-height: 12pt; gap: 10px;">
-                        <div class="flex-1 text-center">{{.BasicInfo.LastName}}</div>
-                        <div class="flex-1 text-center">{{.BasicInfo.FirstName}}</div>
-                        <div class="flex-1 text-center">{{.BasicInfo.MiddleName.String}}</div>
+        <!-- I. PERSONAL INFORMATION -->
+        <div class="section-header">I. PERSONAL INFORMATION</div>
+        <div class="row">
+            <div class="flex-1">
+                <div class="flex-row-no-gap align-end">
+                    <div class="flex-1 flex-row-no-gap align-end">
+                        <span class="field-label" style="width: 45px;">Name:</span>
+                        <div class="flex-row-no-gap flex-1 ml-10"
+                            style="border-bottom: 1px solid black; min-height: 12pt; gap: 10px;">
+                            <div class="flex-1 text-center">{{.BasicInfo.LastName}}</div>
+                            <div class="flex-1 text-center">{{.BasicInfo.FirstName}}</div>
+                            <div class="flex-1 text-center">{{.BasicInfo.MiddleName.String}}</div>
+                        </div>
+                    </div>
+                    <div class="w-100 ml-10 flex-row-no-gap align-end">
+                        <span class="field-label">Gender:</span>
+                        <span class="field-fill text-center">{{.Gender.Name}}</span>
+                    </div>
+                    <div class="w-80 ml-10 flex-row-no-gap align-end">
+                        <span class="field-label">Age:</span>
+                        <span class="field-fill text-center">{{calculateAge .DateOfBirth}}</span>
                     </div>
                 </div>
-                <div class="w-100 ml-10 flex-row-no-gap align-end">
-                    <span class="field-label">Gender:</span>
-                    <span class="field-fill text-center">{{.Gender.GenderName}}</span>
-                </div>
-                <div class="w-80 ml-10 flex-row-no-gap align-end">
-                    <span class="field-label">Age:</span>
-                    <span class="field-fill text-center">{{calculateAge .DateOfBirth}}</span>
+                <div class="flex-row-no-gap" style="gap: 10px;">
+                    <span style="width: 55px;"></span> {{/* 45px label + 10px margin */}}
+                    <span class="sub-label flex-1">(Surname)</span>
+                    <span class="sub-label flex-1">(First Name)</span>
+                    <span class="sub-label flex-1">(Middle Name)</span>
+                    <div class="w-100 ml-10"></div> {{/* Gender spacer */}}
+                    <div class="w-80 ml-10"></div> {{/* Age spacer */}}
                 </div>
             </div>
-            <div class="flex-row-no-gap" style="gap: 10px;">
-                <span style="width: 55px;"></span> {{/* 45px label + 10px margin */}}
-                <span class="sub-label flex-1">(Surname)</span>
-                <span class="sub-label flex-1">(First Name)</span>
-                <span class="sub-label flex-1">(Middle Name)</span>
-                <div class="w-100 ml-10"></div> {{/* Gender spacer */}}
-                <div class="w-80 ml-10"></div> {{/* Age spacer */}}
+        </div>
+
+        <div class="flex-row mt-5">
+            <div class="flex-1 flex-row-no-gap align-end">
+                <span class="field-label">Course, Year and Section:</span>
+                <span class="field-fill">{{.Course.Code}} {{.YearLevel}}-{{.Section}}</span>
+            </div>
+            <div class="w-250 flex-row-no-gap align-end">
+                <span class="field-label">Civil Status:</span>
+                <span class="field-fill">{{.CivilStatus.Name}}</span>
             </div>
         </div>
-    </div>
 
-    <div class="flex-row mt-5">
-        <div class="flex-1 flex-row-no-gap align-end">
-            <span class="field-label">Course, Year and Section:</span>
-            <span class="field-fill">{{.Course.Code}} {{.YearLevel}}-{{.Section}}</span>
+        <div class="flex-row mt-5">
+            <div class="flex-1 flex-row-no-gap align-end">
+                <span class="field-label">Height (m):</span>
+                <span class="field-fill">{{printf "%.2f" .HeightFt}}</span>
+            </div>
+            <div class="flex-1 flex-row-no-gap align-end">
+                <span class="field-label">Weight:</span>
+                <span class="field-fill">{{printf "%.2f" .WeightKg}} kg</span>
+            </div>
+            <div class="flex-2 flex-row-no-gap align-end">
+                <span class="field-label">Complexion:</span>
+                <span class="field-fill">{{.Complexion}}</span>
+            </div>
+            <div class="flex-2 flex-row-no-gap align-end">
+                <span class="field-label">Date of Birth:</span>
+                <span class="field-fill">{{formatDate .DateOfBirth}}</span>
+            </div>
         </div>
-        <div class="w-250 flex-row-no-gap align-end">
-            <span class="field-label">Civil Status:</span>
-            <span class="field-fill">{{.CivilStatus.StatusName}}</span>
-        </div>
-    </div>
 
-    <div class="flex-row mt-5">
-        <div class="flex-1 flex-row-no-gap align-end">
-            <span class="field-label">Height (m):</span>
-            <span class="field-fill">{{printf "%.2f" .HeightFt}}</span>
-        </div>
-        <div class="flex-1 flex-row-no-gap align-end">
-            <span class="field-label">Weight:</span>
-            <span class="field-fill">{{printf "%.2f" .WeightKg}} kg</span>
-        </div>
-        <div class="flex-2 flex-row-no-gap align-end">
-            <span class="field-label">Complexion:</span>
-            <span class="field-fill">{{.Complexion}}</span>
-        </div>
-        <div class="flex-2 flex-row-no-gap align-end">
-            <span class="field-label">Date of Birth:</span>
-            <span class="field-fill">{{formatDate .DateOfBirth}}</span>
-        </div>
-    </div>
-
-    <div class="flex-row mt-5">
-        <div class="flex-2 flex-row-no-gap align-end">
-            <span class="field-label">City Address:</span>
-            <span class="field-fill">
-                {{range .Addresses}}{{if eq .AddressType "Residential"}}
+        <div class="flex-row mt-5">
+            <div class="flex-2 flex-row-no-gap align-end">
+                <span class="field-label">City Address:</span>
+                <span class="field-fill">
+                    {{range .Addresses}}{{if eq .AddressType "Residential"}}
                     {{.Address.StreetDetail}}, {{.Address.Barangay.Name}}, {{.Address.City.Name}}
-                {{end}}{{end}}
-            </span>
+                    {{end}}{{end}}
+                </span>
+            </div>
+            <div class="flex-1 flex-row-no-gap align-end">
+                <span class="field-label">Place of Birth:</span>
+                <span class="field-fill">{{.PlaceOfBirth}}</span>
+            </div>
         </div>
-        <div class="flex-1 flex-row-no-gap align-end">
-            <span class="field-label">Place of Birth:</span>
-            <span class="field-fill">{{.PlaceOfBirth}}</span>
-        </div>
-    </div>
 
-    <div class="flex-row mt-5">
-        <div class="flex-2 flex-row-no-gap align-end">
-            <span class="field-label">Provincial Address:</span>
+        <div class="flex-row mt-5">
+            <div class="flex-2 flex-row-no-gap align-end">
+                <span class="field-label">Provincial Address:</span>
+                <span class="field-fill">
+                    {{range .Addresses}}{{if eq .AddressType "Provincial"}}
+                    {{.Address.StreetDetail}}, {{.Address.Barangay.Name}}, {{.Address.City.Name}}, {{if
+                    .Address.Province}}{{.Address.Province.Name}}{{end}}
+                    {{end}}{{end}}
+                </span>
+            </div>
+            <div class="flex-1 flex-row-no-gap align-end">
+                <span class="field-label">Email Address:</span>
+                <span class="field-fill">{{.BasicInfo.Email}}</span>
+            </div>
+        </div>
+
+        <div class="flex-row mt-5">
+            <div class="w-250 flex-row-no-gap align-end">
+                <span class="field-label">High School General Average:</span>
+                <span class="field-fill text-center">{{printf "%.2f" .HighSchoolGWA}}</span>
+            </div>
+            <div class="flex-1 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Religion:</span>
+                <span class="field-fill">{{.Religion.Name}}</span>
+            </div>
+            <div class="flex-1 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Telephone No.:</span>
+                <span class="field-fill">{{.TelephoneNumber.String}}</span>
+            </div>
+        </div>
+
+        <div class="row align-end mt-5">
+            <span class="field-label">If working, please indicate the name and address of employer:</span>
             <span class="field-fill">
-                {{range .Addresses}}{{if eq .AddressType "Provincial"}}
-                    {{.Address.StreetDetail}}, {{.Address.Barangay.Name}}, {{.Address.City.Name}}, {{if .Address.Province}}{{.Address.Province.Name}}{{end}}
-                {{end}}{{end}}
+                {{if .IsEmployed}}{{.EmployerName.String}}, {{.EmployerAddress.String}}{{end}}
             </span>
+            <div class="w-200 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Mobile No.:</span>
+                <span class="field-fill text-center">{{.MobileNumber}}</span>
+            </div>
         </div>
-        <div class="flex-1 flex-row-no-gap align-end">
-            <span class="field-label">Email Address:</span>
-            <span class="field-fill">{{.BasicInfo.Email}}</span>
-        </div>
-    </div>
 
-    <div class="flex-row mt-5">
-        <div class="w-250 flex-row-no-gap align-end">
-            <span class="field-label">High School General Average:</span>
-            <span class="field-fill text-center">{{printf "%.2f" .HighSchoolGWA}}</span>
+        <div class="row align-end mt-5">
+            <span class="field-label">Person to be contacted in case of accident or serious illness:</span>
+            <span class="field-fill">{{.EmergencyContact.FirstName}} {{.EmergencyContact.LastName}}</span>
         </div>
-        <div class="flex-1 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Religion:</span>
-            <span class="field-fill">{{.Religion.ReligionName}}</span>
-        </div>
-        <div class="flex-1 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Telephone No.:</span>
-            <span class="field-fill">{{.TelephoneNumber.String}}</span>
-        </div>
-    </div>
 
-    <div class="row align-end mt-5">
-        <span class="field-label">If working, please indicate the name and address of employer:</span>
-        <span class="field-fill">
-            {{if .IsEmployed}}{{.EmployerName.String}}, {{.EmployerAddress.String}}{{end}}
-        </span>
-        <div class="w-200 flex-row-no-gap align-end ml-10">
-           <span class="field-label">Mobile No.:</span>
-           <span class="field-fill text-center">{{.MobileNumber}}</span>
+        <div class="flex-row mt-5">
+            <div class="flex-1 flex-row-no-gap align-end">
+                <span class="field-label">Address:</span>
+                <span class="field-fill">{{.EmergencyContact.Address.StreetDetail}}</span>
+            </div>
+            <div class="w-200 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Relationship:</span>
+                <span class="field-fill text-center">{{.EmergencyContact.Relationship.Name}}</span>
+            </div>
+            <div class="w-200 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Contact Number:</span>
+                <span class="field-fill text-center">{{.EmergencyContact.ContactNumber}}</span>
+            </div>
         </div>
-    </div>
+        {{end}} {{/* end with .Student */}}
 
-    <div class="row align-end mt-5">
-        <span class="field-label">Person to be contacted in case of accident or serious illness:</span>
-        <span class="field-fill">{{.EmergencyContact.FirstName}} {{.EmergencyContact.LastName}}</span>
-    </div>
-
-    <div class="flex-row mt-5">
-        <div class="flex-1 flex-row-no-gap align-end">
-            <span class="field-label">Address:</span>
-            <span class="field-fill">{{.EmergencyContact.Address.StreetDetail}}</span>
-        </div>
-        <div class="w-200 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Relationship:</span>
-            <span class="field-fill text-center">{{.EmergencyContact.Relationship.RelationshipName}}</span>
-        </div>
-        <div class="w-200 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Contact Number:</span>
-            <span class="field-fill text-center">{{.EmergencyContact.ContactNumber}}</span>
-        </div>
-    </div>
-    {{end}} {{/* end with .Student */}}
-
-    <div class="section-header">II. EDUCATIONAL BACKGROUND</div>
-    {{with .Education}}
-    <table>
-        <tr>
-            <th style="width: 15%;">LEVEL</th>
-            <th style="width: 25%;">SCHOOL GRADUATED</th>
-            <th style="width: 25%;">SCHOOL ADDRESS</th>
-            <th style="width: 10%;">PUBLIC /PRIVATE</th>
-            <th style="width: 10%;">DATES OF ATTENDANCE</th>
-            <th style="width: 15%;">HONORS RECEIVED/ SPECIAL AWARDS</th>
-        </tr>
-        {{$levels := iterate 5}}
-        {{$levelNames := makeSlice "Pre-Elementary" "Elementary" "High School" "Vocational" "College"}}
-        {{$schools := .School}}
-        {{range $index := $levels}}
+        <div class="section-header">II. EDUCATIONAL BACKGROUND</div>
+        {{with .Education}}
+        <table>
+            <tr>
+                <th style="width: 15%;">LEVEL</th>
+                <th style="width: 25%;">SCHOOL GRADUATED</th>
+                <th style="width: 25%;">SCHOOL ADDRESS</th>
+                <th style="width: 10%;">PUBLIC /PRIVATE</th>
+                <th style="width: 10%;">DATES OF ATTENDANCE</th>
+                <th style="width: 15%;">HONORS RECEIVED/ SPECIAL AWARDS</th>
+            </tr>
+            {{$levels := iterate 5}}
+            {{$levelNames := makeSlice "Pre-Elementary" "Elementary" "High School" "Vocational" "College"}}
+            {{$schools := .School}}
+            {{range $index := $levels}}
             {{$levelName := index $levelNames $index}}
             {{$school := getEduBackground $schools $levelName}}
             <tr>
@@ -297,345 +509,446 @@
                 <td class="text-center">{{if $school}}{{$school.YearStarted}} - {{$school.YearCompleted}}{{end}}</td>
                 <td>{{if $school}}{{$school.Awards.String}}{{end}}</td>
             </tr>
-        {{end}}
-    </table>
+            {{end}}
+        </table>
 
-    <div class="row mt-5 align-end">
-        <span class="field-label">Nature of Schooling:</span>
-        <div class="checkbox-group">
-            <div class="checkbox-box">{{if eq .NatureOfSchooling "Continuous"}}✓{{end}}</div> Continuous
+        <div class="row mt-5 align-end">
+            <span class="field-label">Nature of Schooling:</span>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if eq .NatureOfSchooling "Continuous"}}✓{{end}}</div> Continuous
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if eq .NatureOfSchooling "Interrupted"}}✓{{end}}</div> Interrupted, Why?
+            </div>
+            <span class="field-fill">{{.InterruptedDetails.String}}</span>
         </div>
-        <div class="checkbox-group">
-            <div class="checkbox-box">{{if eq .NatureOfSchooling "Interrupted"}}✓{{end}}</div> Interrupted, Why?
-        </div>
-        <span class="field-fill">{{.InterruptedDetails.String}}</span>
-    </div>
-    {{end}} {{/* end with .Education */}}
+        {{end}} {{/* end with .Education */}}
 
 
-    <!-- III. HOME AND FAMILY BACKGROUND -->
-    <div class="section-header">III. HOME AND FAMILY BACKGROUND</div>
-    {{with .Family}}
+        <!-- III. HOME AND FAMILY BACKGROUND -->
+        <div class="section-header">III. HOME AND FAMILY BACKGROUND</div>
+        {{with .Family}}
 
-    <!-- FATHER INFO -->
-    {{$father := getRelatedPerson .RelatedPersons "Father"}}
-    <div class="flex-row mt-5">
-        <div class="flex-2 flex-row-no-gap align-end">
-            <span class="field-label">Name of Father:</span>
-            <span class="field-fill">{{if $father}}{{$father.FirstName}} {{$father.LastName}}{{end}}</span>
+        <!-- FATHER INFO -->
+        {{$father := getRelatedPerson .RelatedPersons "Father"}}
+        <div class="flex-row mt-5">
+            <div class="flex-2 flex-row-no-gap align-end">
+                <span class="field-label">Name of Father:</span>
+                <span class="field-fill">{{if $father}}{{$father.FirstName}} {{$father.LastName}}{{end}}</span>
+            </div>
+            <div class="w-80 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Age:</span>
+                <span class="field-fill">{{if $father}}{{calculateAge $father.DateOfBirth}}{{end}}</span>
+            </div>
+            <div class="w-150 flex-row-no-gap align-end justify-end ml-10">
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if and $father $father.IsLiving}}✓{{end}}</div> Living
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if and $father (not $father.IsLiving)}}✓{{end}}</div> Deceased
+                </div>
+            </div>
         </div>
-        <div class="w-80 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Age:</span>
-            <span class="field-fill">{{if $father}}{{calculateAge $father.DateOfBirth}}{{end}}</span>
+        <div class="flex-row">
+            <div class="flex-1 flex-row-no-gap align-end">
+                <span class="field-label">Educational Attainment:</span>
+                <span class="field-fill">{{if $father}}{{$father.EducationalLevel}}{{end}}</span>
+            </div>
+            <div class="flex-1 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Occupation:</span>
+                <span class="field-fill">{{if $father}}{{$father.Occupation.String}}{{end}}</span>
+            </div>
         </div>
-        <div class="w-150 flex-row-no-gap align-end justify-end ml-10">
-            <div class="checkbox-group"><div class="checkbox-box">{{if and $father $father.IsLiving}}✓{{end}}</div> Living</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if and $father (not $father.IsLiving)}}✓{{end}}</div> Deceased</div>
+        <div class="flex-row">
+            <div class="flex-1 flex-row-no-gap align-end">
+                <span class="field-label">Name of Employer:</span>
+                <span class="field-fill">{{if $father}}{{$father.EmployerName.String}}{{end}}</span>
+            </div>
+            <div class="flex-1 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Address of Employer:</span>
+                <span class="field-fill">{{if $father}}{{$father.EmployerAddress.String}}{{end}}</span>
+            </div>
         </div>
-    </div>
-    <div class="flex-row">
-        <div class="flex-1 flex-row-no-gap align-end">
-            <span class="field-label">Educational Attainment:</span>
-            <span class="field-fill">{{if $father}}{{$father.EducationalLevel}}{{end}}</span>
+
+        <!-- MOTHER INFO -->
+        {{$mother := getRelatedPerson .RelatedPersons "Mother"}}
+        <div class="flex-row mt-5">
+            <div class="flex-2 flex-row-no-gap align-end">
+                <span class="field-label">Name of Mother:</span>
+                <span class="field-fill">{{if $mother}}{{$mother.FirstName}} {{$mother.LastName}}{{end}}</span>
+            </div>
+            <div class="w-80 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Age:</span>
+                <span class="field-fill">{{if $mother}}{{calculateAge $mother.DateOfBirth}}{{end}}</span>
+            </div>
+            <div class="w-150 flex-row-no-gap align-end justify-end ml-10">
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if and $mother $mother.IsLiving}}✓{{end}}</div> Living
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if and $mother (not $mother.IsLiving)}}✓{{end}}</div> Deceased
+                </div>
+            </div>
         </div>
-        <div class="flex-1 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Occupation:</span>
-            <span class="field-fill">{{if $father}}{{$father.Occupation.String}}{{end}}</span>
+        <div class="flex-row">
+            <div class="flex-1 flex-row-no-gap align-end">
+                <span class="field-label">Educational Attainment:</span>
+                <span class="field-fill">{{if $mother}}{{$mother.EducationalLevel}}{{end}}</span>
+            </div>
+            <div class="flex-1 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Occupation:</span>
+                <span class="field-fill">{{if $mother}}{{$mother.Occupation.String}}{{end}}</span>
+            </div>
         </div>
-    </div>
-    <div class="flex-row">
-        <div class="flex-1 flex-row-no-gap align-end">
-            <span class="field-label">Name of Employer:</span>
-            <span class="field-fill">{{if $father}}{{$father.EmployerName.String}}{{end}}</span>
+        <div class="flex-row">
+            <div class="flex-1 flex-row-no-gap align-end">
+                <span class="field-label">Name of Employer:</span>
+                <span class="field-fill">{{if $mother}}{{$mother.EmployerName.String}}{{end}}</span>
+            </div>
+            <div class="flex-1 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Address of Employer:</span>
+                <span class="field-fill">{{if $mother}}{{$mother.EmployerAddress.String}}{{end}}</span>
+            </div>
         </div>
-        <div class="flex-1 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Address of Employer:</span>
-            <span class="field-fill">{{if $father}}{{$father.EmployerAddress.String}}{{end}}</span>
+
+        <!-- GUARDIAN INFO -->
+        {{$guardian := getRelatedPerson .RelatedPersons "Guardian"}}
+        <div class="flex-row mt-5">
+            <div class="flex-2 flex-row-no-gap align-end">
+                <span class="field-label">Name of Guardian:</span>
+                <span class="field-fill">{{if $guardian}}{{$guardian.FirstName}} {{$guardian.LastName}}{{end}}</span>
+            </div>
+            <div class="w-80 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Age:</span>
+                <span class="field-fill">{{if $guardian}}{{calculateAge $guardian.DateOfBirth}}{{end}}</span>
+            </div>
+            <div class="w-150 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Relation:</span>
+                <span class="field-fill">{{if $guardian}}{{$guardian.Relationship.Name}}{{end}}</span>
+            </div>
         </div>
+        <div class="flex-row">
+            <div class="flex-1 flex-row-no-gap align-end">
+                <span class="field-label">Educational Attainment:</span>
+                <span class="field-fill">{{if $guardian}}{{$guardian.EducationalLevel}}{{end}}</span>
+            </div>
+            <div class="flex-1 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Occupation:</span>
+                <span class="field-fill">{{if $guardian}}{{$guardian.Occupation.String}}{{end}}</span>
+            </div>
+        </div>
+        <div class="flex-row">
+            <div class="flex-1 flex-row-no-gap align-end">
+                <span class="field-label">Name of Employer:</span>
+                <span class="field-fill">{{if $guardian}}{{$guardian.EmployerName.String}}{{end}}</span>
+            </div>
+            <div class="flex-1 flex-row-no-gap align-end ml-10">
+                <span class="field-label">Address of Employer:</span>
+                <span class="field-fill">{{if $guardian}}{{$guardian.EmployerAddress.String}}{{end}}</span>
+            </div>
+        </div>
+
+        <div class="row mt-10 align-end">
+            <span class="field-label">Parents' Marital Relationship: (Please Check)</span>
+            <div class="checkbox-group ml-10">
+                <div class="checkbox-box">{{if eq .ParentalStatus.Name "Single Parent"}}✓{{end}}</div> Single
+                Parent
+            </div>
+        </div>
+        <div class="row align-end" style="padding-left: 170px;">
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if eq .ParentalStatus.Name "Married and staying together"}}✓{{end}}
+                </div> Married and staying together
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if eq .ParentalStatus.Name "Married but Separated"}}✓{{end}}</div>
+                Married but Separated
+            </div>
+        </div>
+        <div class="row align-end" style="padding-left: 170px;">
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if eq .ParentalStatus.Name "Not Married but living together"}}✓{{end}}
+                </div> Not Married but living together
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if .ParentalStatusDetails.Valid}}✓{{end}}</div> Other's (please specify)
+                <span class="field-fill w-150">{{.ParentalStatusDetails.String}}</span>
+            </div>
+        </div>
+
+        <div class="flex-row mt-5">
+            <div class="flex-row-no-gap align-end">
+                <span class="field-label">Number of children in the family including yourself:</span>
+                <span class="field-fill w-40 text-center">{{add (add (ptrInt .Brothers) (ptrInt .Sisters)) 1}}</span>
+            </div>
+            <div class="flex-row-no-gap align-end ml-10">
+                <span class="field-label">Number of Brother/s:</span>
+                <span class="field-fill w-40 text-center">{{.Brothers}}</span>
+            </div>
+            <div class="flex-row-no-gap align-end ml-10">
+                <span class="field-label">Number of Sister/s:</span>
+                <span class="field-fill w-40 text-center">{{.Sisters}}</span>
+            </div>
+        </div>
+
+        <div class="row align-end">
+            <span class="field-label">Number of brother/s or sister/s gainfully employed?</span>
+            <span class="field-fill w-60 text-center">{{.EmployedSiblings}}</span>
+            <span class="field-label ml-10">Ordinal Position (1st child, 2nd child etc. )</span>
+            <span class="field-fill text-center">{{.OrdinalPosition}}</span>
+        </div>
+
+        <div class="row mt-5">
+            <span class="field-label">Is your brother/sister who is gainfully employed providing support to your:
+                (Please Check)</span>
+        </div>
+        <div class="row pl-30 align-end">
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasSiblingSupport .SiblingSupportTypes "Family"}}✓{{end}}</div> family?
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasSiblingSupport .SiblingSupportTypes "Your studies"}}✓{{end}}</div>
+                your studies?
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasSiblingSupport .SiblingSupportTypes "His/Her own family"}}✓{{end}}
+                </div> his/her own family?
+            </div>
+        </div>
+
+        <div class="row mt-5 align-end">
+            <span class="field-label">Who finances your schooling?</span>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes "Parents"}}✓{{end}}
+                </div> Parents
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes "Spouse"}}✓{{end}}
+                </div> Spouse
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes "Relatives"}}✓{{end}}
+                </div> Relatives
+            </div>
+        </div>
+        <div class="row align-end" style="padding-left: 110px;">
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes
+                    "Brother/Sister"}}✓{{end}}</div> Brother/Sister
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes
+                    "Scholarship"}}✓{{end}}</div> Scholarship
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes
+                    "Self-supporting"}}✓{{end}}</div> Self-supporting/working student
+            </div>
+        </div>
+        <div class="footer">
+            <span>
+                This document contains personal-identifiable information that is subject to Data Privacy
+            </span>
+            <br>
+            <span class="">
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Please keep this document protected and in a safe place.
+            </span>
+        </div>
+        {{end}} {{/* end with .Family */}}
+        {{end}} {{/* end with .Profile */}}
     </div>
 
-    <!-- MOTHER INFO -->
-    {{$mother := getRelatedPerson .RelatedPersons "Mother"}}
-    <div class="flex-row mt-5">
-        <div class="flex-2 flex-row-no-gap align-end">
-            <span class="field-label">Name of Mother:</span>
-            <span class="field-fill">{{if $mother}}{{$mother.FirstName}} {{$mother.LastName}}{{end}}</span>
-        </div>
-        <div class="w-80 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Age:</span>
-            <span class="field-fill">{{if $mother}}{{calculateAge $mother.DateOfBirth}}{{end}}</span>
-        </div>
-        <div class="w-150 flex-row-no-gap align-end justify-end ml-10">
-            <div class="checkbox-group"><div class="checkbox-box">{{if and $mother $mother.IsLiving}}✓{{end}}</div> Living</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if and $mother (not $mother.IsLiving)}}✓{{end}}</div> Deceased</div>
-        </div>
-    </div>
-    <div class="flex-row">
-        <div class="flex-1 flex-row-no-gap align-end">
-            <span class="field-label">Educational Attainment:</span>
-            <span class="field-fill">{{if $mother}}{{$mother.EducationalLevel}}{{end}}</span>
-        </div>
-        <div class="flex-1 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Occupation:</span>
-            <span class="field-fill">{{if $mother}}{{$mother.Occupation.String}}{{end}}</span>
-        </div>
-    </div>
-    <div class="flex-row">
-        <div class="flex-1 flex-row-no-gap align-end">
-            <span class="field-label">Name of Employer:</span>
-            <span class="field-fill">{{if $mother}}{{$mother.EmployerName.String}}{{end}}</span>
-        </div>
-        <div class="flex-1 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Address of Employer:</span>
-            <span class="field-fill">{{if $mother}}{{$mother.EmployerAddress.String}}{{end}}</span>
-        </div>
     </div>
 
-    <!-- GUARDIAN INFO -->
-    {{$guardian := getRelatedPerson .RelatedPersons "Guardian"}}
-    <div class="flex-row mt-5">
-        <div class="flex-2 flex-row-no-gap align-end">
-            <span class="field-label">Name of Guardian:</span>
-            <span class="field-fill">{{if $guardian}}{{$guardian.FirstName}} {{$guardian.LastName}}{{end}}</span>
-        </div>
-        <div class="w-80 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Age:</span>
-            <span class="field-fill">{{if $guardian}}{{calculateAge $guardian.DateOfBirth}}{{end}}</span>
-        </div>
-        <div class="w-150 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Relation:</span>
-            <span class="field-fill">{{if $guardian}}{{$guardian.Relationship.RelationshipName}}{{end}}</span>
-        </div>
-    </div>
-    <div class="flex-row">
-        <div class="flex-1 flex-row-no-gap align-end">
-            <span class="field-label">Educational Attainment:</span>
-            <span class="field-fill">{{if $guardian}}{{$guardian.EducationalLevel}}{{end}}</span>
-        </div>
-        <div class="flex-1 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Occupation:</span>
-            <span class="field-fill">{{if $guardian}}{{$guardian.Occupation.String}}{{end}}</span>
-        </div>
-    </div>
-    <div class="flex-row">
-        <div class="flex-1 flex-row-no-gap align-end">
-            <span class="field-label">Name of Employer:</span>
-            <span class="field-fill">{{if $guardian}}{{$guardian.EmployerName.String}}{{end}}</span>
-        </div>
-        <div class="flex-1 flex-row-no-gap align-end ml-10">
-            <span class="field-label">Address of Employer:</span>
-            <span class="field-fill">{{if $guardian}}{{$guardian.EmployerAddress.String}}{{end}}</span>
-        </div>
-    </div>
-
-    <div class="row mt-10 align-end">
-        <span class="field-label">Parents' Marital Relationship: (Please Check)</span>
-        <div class="checkbox-group ml-10"><div class="checkbox-box">{{if eq .ParentalStatus.StatusName "Single Parent"}}✓{{end}}</div> Single Parent</div>
-    </div>
-    <div class="row align-end" style="padding-left: 170px;">
-        <div class="checkbox-group"><div class="checkbox-box">{{if eq .ParentalStatus.StatusName "Married and staying together"}}✓{{end}}</div> Married and staying together</div>
-        <div class="checkbox-group"><div class="checkbox-box">{{if eq .ParentalStatus.StatusName "Married but Separated"}}✓{{end}}</div> Married but Separated</div>
-    </div>
-    <div class="row align-end" style="padding-left: 170px;">
-        <div class="checkbox-group"><div class="checkbox-box">{{if eq .ParentalStatus.StatusName "Not Married but living together"}}✓{{end}}</div> Not Married but living together</div>
-        <div class="checkbox-group">
-            <div class="checkbox-box">{{if .ParentalStatusDetails.Valid}}✓{{end}}</div> Other's (please specify)
-            <span class="field-fill w-150">{{.ParentalStatusDetails.String}}</span>
-        </div>
-    </div>
-
-    <div class="flex-row mt-5">
-        <div class="flex-row-no-gap align-end">
-            <span class="field-label">Number of children in the family including yourself:</span>
-            <span class="field-fill w-40 text-center">{{add (add (ptrInt .Brothers) (ptrInt .Sisters)) 1}}</span>
-        </div>
-        <div class="flex-row-no-gap align-end ml-10">
-            <span class="field-label">Number of Brother/s:</span>
-            <span class="field-fill w-40 text-center">{{.Brothers}}</span>
-        </div>
-        <div class="flex-row-no-gap align-end ml-10">
-            <span class="field-label">Number of Sister/s:</span>
-            <span class="field-fill w-40 text-center">{{.Sisters}}</span>
-        </div>
-    </div>
-
-    <div class="row align-end">
-        <span class="field-label">Number of brother/s or sister/s gainfully employed?</span>
-        <span class="field-fill w-60 text-center">{{.EmployedSiblings}}</span>
-        <span class="field-label ml-10">Ordinal Position (1st child, 2nd child etc. )</span>
-        <span class="field-fill text-center">{{.OrdinalPosition}}</span>
-    </div>
-
-    <div class="row mt-5">
-        <span class="field-label">Is your brother/sister who is gainfully employed providing support to your: (Please Check)</span>
-    </div>
-    <div class="row pl-30 align-end">
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasSiblingSupport .SiblingSupportTypes "Family"}}✓{{end}}</div> family?</div>
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasSiblingSupport .SiblingSupportTypes "Your studies"}}✓{{end}}</div> your studies?</div>
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasSiblingSupport .SiblingSupportTypes "His/Her own family"}}✓{{end}}</div> his/her own family?</div>
-    </div>
-
-    <div class="row mt-5 align-end">
-        <span class="field-label">Who finances your schooling?</span>
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes "Parents"}}✓{{end}}</div> Parents</div>
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes "Spouse"}}✓{{end}}</div> Spouse</div>
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes "Relatives"}}✓{{end}}</div> Relatives</div>
-    </div>
-    <div class="row align-end" style="padding-left: 110px;">
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes "Brother/Sister"}}✓{{end}}</div> Brother/Sister</div>
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes "Scholarship"}}✓{{end}}</div> Scholarship</div>
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes "Self-supporting"}}✓{{end}}</div> Self-supporting/working student</div>
-    </div>
-    <div class="footer">
-        <span>
-            This document contains personal-identifiable information that is subject to Data Privacy
-        </span>
-        <br>
-        <span class="">
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Please keep this document protected and in a safe place.
-        </span>
-    </div>
-    {{end}} {{/* end with .Family */}}
-    {{end}} {{/* end with .Profile */}}
-</div>
-
-</div>
-
-<!--
+    <!--
     =========================================
     PAGE 2: Health, Interests & Test Results
     =========================================
 -->
-<div class="page">
-    {{with .Profile}}
+    <div class="page">
+        {{with .Profile}}
 
-    <!-- III. HOME AND FAMILY BACKGROUND (Continuation) -->
-    {{with .Family}}
-    <div class="row align-end">
-        <span class="field-label">How much is your weekly allowance? (please specify the amount)</span>
-        <span class="field-fill">{{printf "P %.2f" .Finance.WeeklyAllowance}}</span>
-    </div>
-    <div class="row mt-5">
-        <span class="field-label">Parents' Total Monthly Income:</span>
-    </div>
-    <div class="pl-20">
+        <!-- III. HOME AND FAMILY BACKGROUND (Continuation) -->
+        {{with .Family}}
         <div class="row align-end">
-            {{$income := .Finance.MonthlyFamilyIncomeRange.RangeText}}
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $income "Below Php 5,000"}}✓{{end}}</div> Below Php 5,000</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $income "Php 15,001 - Php 20,000"}}✓{{end}}</div> Php 15,001 - Php 20,000</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $income "Php 30,001 - Php 35,000"}}✓{{end}}</div> Php 30,001 - Php 35,000</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $income "Php 45,001 - Php 50,000"}}✓{{end}}</div> Php 45,001 - Php 50,000</div>
+            <span class="field-label">How much is your weekly allowance? (please specify the amount)</span>
+            <span class="field-fill">{{printf "P %.2f" .Finance.WeeklyAllowance}}</span>
         </div>
-        <div class="row align-end">
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $income "Php 5,001 - Php 10,000"}}✓{{end}}</div> Php 5,001 - Php 10,000</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $income "Php 20,001 - Php 30,000"}}✓{{end}}</div> Php 20,001 - Php 30,000</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $income "Php 35,001 - Php 40,000"}}✓{{end}}</div> Php 35,001 - Php 40,000</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $income "Above Php 50,001"}}✓{{end}}</div> Above Php 50,001</div>
+        <div class="row mt-5">
+            <span class="field-label">Parents' Total Monthly Income:</span>
         </div>
-        <div class="row align-end">
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $income "Php 10,001 - Php 15,000"}}✓{{end}}</div> Php 10,001 - Php 15,000</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $income "Php 40,001 - Php 45,000"}}✓{{end}}</div> Php 40,001 - Php 45,000</div>
+        <div class="pl-20">
+            <div class="row align-end">
+                {{$income := .Finance.MonthlyFamilyIncomeRange.Text}}
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $income "Below Php 5,000"}}✓{{end}}</div> Below Php 5,000
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $income "Php 15,001 - Php 20,000"}}✓{{end}}</div> Php 15,001 - Php
+                    20,000
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $income "Php 30,001 - Php 35,000"}}✓{{end}}</div> Php 30,001 - Php
+                    35,000
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $income "Php 45,001 - Php 50,000"}}✓{{end}}</div> Php 45,001 - Php
+                    50,000
+                </div>
+            </div>
+            <div class="row align-end">
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $income "Php 5,001 - Php 10,000"}}✓{{end}}</div> Php 5,001 - Php
+                    10,000
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $income "Php 20,001 - Php 30,000"}}✓{{end}}</div> Php 20,001 - Php
+                    30,000
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $income "Php 35,001 - Php 40,000"}}✓{{end}}</div> Php 35,001 - Php
+                    40,000
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $income "Above Php 50,001"}}✓{{end}}</div> Above Php 50,001
+                </div>
+            </div>
+            <div class="row align-end">
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $income "Php 10,001 - Php 15,000"}}✓{{end}}</div> Php 10,001 - Php
+                    15,000
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $income "Php 40,001 - Php 45,000"}}✓{{end}}</div> Php 40,001 - Php
+                    45,000
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if .Finance.OtherIncomeDetails.Valid}}✓{{end}}</div> Others please
+                    specify
+                    <span class="field-fill w-80">{{.Finance.OtherIncomeDetails.String}}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-10 align-end">
+            <span class="field-label">Do you have a quiet place to study? (Please Check)</span>
             <div class="checkbox-group">
-                <div class="checkbox-box">{{if .Finance.OtherIncomeDetails.Valid}}✓{{end}}</div> Others please specify
-                <span class="field-fill w-80">{{.Finance.OtherIncomeDetails.String}}</span>
+                <div class="checkbox-box">{{if .HaveQuietPlaceToStudy}}✓{{end}}</div> Yes
             </div>
-        </div>
-    </div>
-
-    <div class="row mt-10 align-end">
-        <span class="field-label">Do you have a quiet place to study? (Please Check)</span>
-        <div class="checkbox-group"><div class="checkbox-box">{{if .HaveQuietPlaceToStudy}}✓{{end}}</div> Yes</div>
-        <div class="checkbox-group"><div class="checkbox-box">{{if not .HaveQuietPlaceToStudy}}✓{{end}}</div> No</div>
-    </div>
-    <div class="row align-end">
-        <span class="field-label">Do you share your room with anyone? (Please Check)</span>
-        <div class="checkbox-group"><div class="checkbox-box">{{if .IsSharingRoom}}✓{{end}}</div> Yes</div>
-        <div class="checkbox-group"><div class="checkbox-box">{{if not .IsSharingRoom}}✓{{end}}</div> No</div>
-        <span class="field-label ml-10">If yes with whom?</span>
-        <span class="field-fill">{{.RoomSharingDetails.String}}</span>
-    </div>
-
-    <div class="row mt-5">
-        <span class="field-label">Nature of Residence while attending school: (Please Check)</span>
-    </div>
-    <div class="pl-20">
-        {{$residence := .NatureOfResidence.ResidenceTypeName}}
-        <div class="row align-end">
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $residence "Family home"}}✓{{end}}</div> family home</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $residence "Bed spacer"}}✓{{end}}</div> bed spacer</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $residence "House of married brother/sister"}}✓{{end}}</div> house of married brother/sister</div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if not .HaveQuietPlaceToStudy}}✓{{end}}</div> No
+            </div>
         </div>
         <div class="row align-end">
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $residence "Relative's house"}}✓{{end}}</div> relative's house</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $residence "Rented apartment"}}✓{{end}}</div> rented apartment</div>
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $residence "Dorm (including board & lodging)"}}✓{{end}}</div> dorm (including board & lodging)</div>
+            <span class="field-label">Do you share your room with anyone? (Please Check)</span>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if .IsSharingRoom}}✓{{end}}</div> Yes
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if not .IsSharingRoom}}✓{{end}}</div> No
+            </div>
+            <span class="field-label ml-10">If yes with whom?</span>
+            <span class="field-fill">{{.RoomSharingDetails.String}}</span>
         </div>
-        <div class="row align-end">
-            <div class="checkbox-group"><div class="checkbox-box">{{if eq $residence "Shares apartment with friends/relatives"}}✓{{end}}</div> shares apartment with friends/relatives (<u>Please Underline</u>)</div>
-        </div>
-    </div>
-    {{end}} {{/* end with .Family */}}
 
-    <!-- IV. HEALTH -->
-    <div class="section-header">IV. HEALTH</div>
-    {{with .Health}}
-    <b>A. Physical</b>
-    <div class="row">Do you have problems with (Please Check)</div>
-    <div class="flex-row mt-5">
-        <div class="flex-1">
-            <div class="row">
-                <span class="w-80">&nbsp;</span>
-                <span class="w-40 text-center">YES</span>
-                <span class="w-40 text-center">NO</span>
-                <span>If Yes, please specify</span>
+        <div class="row mt-5">
+            <span class="field-label">Nature of Residence while attending school: (Please Check)</span>
+        </div>
+        <div class="pl-20">
+            {{$residence := .NatureOfResidence.Name }}
+            <div class="row align-end">
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $residence "Family home"}}✓{{end}}</div> family home
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $residence "Bed spacer"}}✓{{end}}</div> bed spacer
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $residence "House of married brother/sister"}}✓{{end}}</div> house
+                    of married brother/sister
+                </div>
             </div>
             <div class="row align-end">
-                <span class="w-80">Your Vision</span>
-                <div class="checkbox-box ml-10">{{if .VisionHasProblem}}✓{{end}}</div>
-                <div class="checkbox-box ml-10">{{if not .VisionHasProblem}}✓{{end}}</div>
-                <span class="field-fill ml-10">{{.VisionDetails.String}}</span>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $residence "Relative's house"}}✓{{end}}</div> relative's house
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $residence "Rented apartment"}}✓{{end}}</div> rented apartment
+                </div>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $residence "Dorm (including board & lodging)"}}✓{{end}}</div> dorm
+                    (including board & lodging)
+                </div>
             </div>
             <div class="row align-end">
-                <span class="w-80">Your Hearing</span>
-                <div class="checkbox-box ml-10">{{if .HearingHasProblem}}✓{{end}}</div>
-                <div class="checkbox-box ml-10">{{if not .HearingHasProblem}}✓{{end}}</div>
-                <span class="field-fill ml-10">{{.HearingDetails.String}}</span>
+                <div class="checkbox-group">
+                    <div class="checkbox-box">{{if eq $residence "Shares apartment with friends/relatives"}}✓{{end}}
+                    </div> shares apartment with friends/relatives (<u>Please Underline</u>)
+                </div>
             </div>
         </div>
-        <div class="flex-1">
-            <div class="row">
-                <span class="w-80">&nbsp;</span>
-                <span class="w-40 text-center">YES</span>
-                <span class="w-40 text-center">NO</span>
-                <span>If Yes, please specify</span>
-            </div>
-            <div class="row align-end">
-                <span class="w-80">Your Speech</span>
-                <div class="checkbox-box ml-10">{{if .SpeechHasProblem}}✓{{end}}</div>
-                <div class="checkbox-box ml-10">{{if not .SpeechHasProblem}}✓{{end}}</div>
-                <span class="field-fill ml-10">{{.SpeechDetails.String}}</span>
-            </div>
-            <div class="row align-end">
-                <span class="w-80">Your health</span>
-                <div class="checkbox-box ml-10">{{if .GeneralHealthHasProblem}}✓{{end}}</div>
-                <div class="checkbox-box ml-10">{{if not .GeneralHealthHasProblem}}✓{{end}}</div>
-                <span class="field-fill ml-10">{{.GeneralHealthDetails.String}}</span>
-            </div>
-        </div>
-    </div>
+        {{end}} {{/* end with .Family */}}
 
-    <div class="mt-10"><b>B. Psychological</b><br>Previous Consultations</div>
-    <table>
-        <tr>
-            <th style="width: 30%;">CONSULTED</th>
-            <th style="width: 10%;">YES</th>
-            <th style="width: 10%;">NO</th>
-            <th style="width: 20%;">WHEN</th>
-            <th>FOR WHAT?</th>
-        </tr>
-        {{$consults := .Consultations}}
-        {{$profTypes := makeSlice "Psychiatrist" "Psychologist" "Counselor"}}
-        {{range $profType := $profTypes}}
+        <!-- IV. HEALTH -->
+        <div class="section-header">IV. HEALTH</div>
+        {{with .Health}}
+        <b>A. Physical</b>
+        <div class="row">Do you have problems with (Please Check)</div>
+        <div class="flex-row mt-5">
+            <div class="flex-1">
+                <div class="row">
+                    <span class="w-80">&nbsp;</span>
+                    <span class="w-40 text-center">YES</span>
+                    <span class="w-40 text-center">NO</span>
+                    <span>If Yes, please specify</span>
+                </div>
+                <div class="row align-end">
+                    <span class="w-80">Your Vision</span>
+                    <div class="checkbox-box ml-10">{{if .VisionHasProblem}}✓{{end}}</div>
+                    <div class="checkbox-box ml-10">{{if not .VisionHasProblem}}✓{{end}}</div>
+                    <span class="field-fill ml-10">{{.VisionDetails.String}}</span>
+                </div>
+                <div class="row align-end">
+                    <span class="w-80">Your Hearing</span>
+                    <div class="checkbox-box ml-10">{{if .HearingHasProblem}}✓{{end}}</div>
+                    <div class="checkbox-box ml-10">{{if not .HearingHasProblem}}✓{{end}}</div>
+                    <span class="field-fill ml-10">{{.HearingDetails.String}}</span>
+                </div>
+            </div>
+            <div class="flex-1">
+                <div class="row">
+                    <span class="w-80">&nbsp;</span>
+                    <span class="w-40 text-center">YES</span>
+                    <span class="w-40 text-center">NO</span>
+                    <span>If Yes, please specify</span>
+                </div>
+                <div class="row align-end">
+                    <span class="w-80">Your Speech</span>
+                    <div class="checkbox-box ml-10">{{if .SpeechHasProblem}}✓{{end}}</div>
+                    <div class="checkbox-box ml-10">{{if not .SpeechHasProblem}}✓{{end}}</div>
+                    <span class="field-fill ml-10">{{.SpeechDetails.String}}</span>
+                </div>
+                <div class="row align-end">
+                    <span class="w-80">Your health</span>
+                    <div class="checkbox-box ml-10">{{if .GeneralHealthHasProblem}}✓{{end}}</div>
+                    <div class="checkbox-box ml-10">{{if not .GeneralHealthHasProblem}}✓{{end}}</div>
+                    <span class="field-fill ml-10">{{.GeneralHealthDetails.String}}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-10"><b>B. Psychological</b><br>Previous Consultations</div>
+        <table>
+            <tr>
+                <th style="width: 30%;">CONSULTED</th>
+                <th style="width: 10%;">YES</th>
+                <th style="width: 10%;">NO</th>
+                <th style="width: 20%;">WHEN</th>
+                <th>FOR WHAT?</th>
+            </tr>
+            {{$consults := .Consultations}}
+            {{$profTypes := makeSlice "Psychiatrist" "Psychologist" "Counselor"}}
+            {{range $profType := $profTypes}}
             {{$c := getConsultation $consults $profType}}
             <tr>
                 <td>{{$profType}}</td>
@@ -644,103 +957,158 @@
                 <td class="text-center">{{if $c}}{{$c.WhenDate.String}}{{end}}</td>
                 <td>{{if $c}}{{$c.ForWhat.String}}{{end}}</td>
             </tr>
-        {{end}}
-    </table>
-    {{end}} {{/* end with .Health */}}
+            {{end}}
+        </table>
+        {{end}} {{/* end with .Health */}}
 
-    <!-- V. INTERESTS AND HOBBIES -->
-    <div class="section-header mt-10">V. INTERESTS AND HOBBIES</div>
-    {{with .Interests}}
-    <b>A. Academic</b>
-    <div class="row mt-5">
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasActivity .Activities "Math Club"}}✓{{end}}</div> Math Club</div>
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasActivity .Activities "Science Club"}}✓{{end}}</div> Science Club</div>
-        <div class="checkbox-group">
-            <div class="checkbox-box">{{if hasActivity .Activities "Others"}}✓{{end}}</div> Others, please specify
-            <span class="field-fill w-150">{{range .Activities}}{{if eq .ActivityOption.Name "Others"}}{{.OtherSpecification.String}}{{end}}{{end}}</span>
+        <!-- V. INTERESTS AND HOBBIES -->
+        <div class="section-header mt-10">V. INTERESTS AND HOBBIES</div>
+        {{with .Interests}}
+        <b>A. Academic</b>
+        <div class="row mt-5">
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasActivity .Activities "Math Club"}}✓{{end}}</div> Math Club
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasActivity .Activities "Science Club"}}✓{{end}}</div> Science Club
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasActivity .Activities "Others"}}✓{{end}}</div> Others, please specify
+                <span class="field-fill w-150">{{range .Activities}}{{if eq .ActivityOption.Name
+                    "Others"}}{{.OtherSpecification.String}}{{end}}{{end}}</span>
+            </div>
         </div>
-    </div>
-    <div class="row">
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasActivity .Activities "Debating Club"}}✓{{end}}</div> Debating Club</div>
-        <div class="checkbox-group"><div class="checkbox-box">{{if hasActivity .Activities "Quizzer's club"}}✓{{end}}</div> Quizzer's club</div>
-    </div>
-    <div class="row align-end">
-        <span class="field-label">What is/are your favorite subject/s?</span>
-        <span class="field-fill">{{range .SubjectPreferences}}{{if .IsFavorite}}{{.SubjectName}}, {{end}}{{end}}</span>
-    </div>
-    <div class="row align-end">
-        <span class="field-label">What is /are the subject/s you like least?</span>
-        <span class="field-fill">{{range .SubjectPreferences}}{{if not .IsFavorite}}{{.SubjectName}}, {{end}}{{end}}</span>
-    </div>
-
-    <div class="mt-5"><b>B. Extra-Curricular</b></div>
-    <div class="row">What are your hobbies? Write them in the order of your preferences.</div>
-    <div class="flex-row">
-        <div class="flex-1">1. <span class="field-fill w-full inline-block">{{indexHobby .Hobbies 0}}</span></div>
-        <div class="flex-1">3. <span class="field-fill w-full inline-block">{{indexHobby .Hobbies 2}}</span></div>
-    </div>
-    <div class="flex-row mt-5">
-        <div class="flex-1">2. <span class="field-fill w-full inline-block">{{indexHobby .Hobbies 1}}</span></div>
-        <div class="flex-1">4. <span class="field-fill w-full inline-block">{{indexHobby .Hobbies 3}}</span></div>
-    </div>
-
-    <div class="row mt-5">Which of the following organizations have you participated in and which interest you most? (Please specify)</div>
-    <div class="row">
-        <div class="checkbox-group"><div class="checkbox-box"></div> Athletics</div>
-        <div class="checkbox-group"><div class="checkbox-box"></div> Religious organization</div>
-        <div class="checkbox-group"><div class="checkbox-box"></div> Glee Club</div>
-        <div class="checkbox-group">
-            <div class="checkbox-box"></div> Others, please specify <span class="field-fill w-100"></span>
+        <div class="row">
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasActivity .Activities "Debating Club"}}✓{{end}}</div> Debating Club
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box">{{if hasActivity .Activities "Quizzer's club"}}✓{{end}}</div> Quizzer's club
+            </div>
         </div>
-    </div>
-    <div class="row">
-        <div class="checkbox-group"><div class="checkbox-box"></div> Dramatics</div>
-        <div class="checkbox-group"><div class="checkbox-box"></div> Chess Club</div>
-        <div class="checkbox-group"><div class="checkbox-box"></div> Scouting</div>
-    </div>
-    <div class="row align-end">
-        <span class="field-label">Occupational position in the organization:</span>
-        <div class="checkbox-group"><div class="checkbox-box"></div> Officer</div>
-        <div class="checkbox-group"><div class="checkbox-box"></div> Member</div>
-        <div class="checkbox-group">
-            <div class="checkbox-box"></div> Others, please specify <span class="field-fill w-100"></span>
+        <div class="row align-end">
+            <span class="field-label">What is/are your favorite subject/s?</span>
+            <span class="field-fill">{{range .SubjectPreferences}}{{if .IsFavorite}}{{.SubjectName}},
+                {{end}}{{end}}</span>
         </div>
+        <div class="row align-end">
+            <span class="field-label">What is /are the subject/s you like least?</span>
+            <span class="field-fill">{{range .SubjectPreferences}}{{if not .IsFavorite}}{{.SubjectName}},
+                {{end}}{{end}}</span>
+        </div>
+
+        <div class="mt-5"><b>B. Extra-Curricular</b></div>
+        <div class="row">What are your hobbies? Write them in the order of your preferences.</div>
+        <div class="flex-row">
+            <div class="flex-1">1. <span class="field-fill w-full inline-block">{{indexHobby .Hobbies 0}}</span></div>
+            <div class="flex-1">3. <span class="field-fill w-full inline-block">{{indexHobby .Hobbies 2}}</span></div>
+        </div>
+        <div class="flex-row mt-5">
+            <div class="flex-1">2. <span class="field-fill w-full inline-block">{{indexHobby .Hobbies 1}}</span></div>
+            <div class="flex-1">4. <span class="field-fill w-full inline-block">{{indexHobby .Hobbies 3}}</span></div>
+        </div>
+
+        <div class="row mt-5">Which of the following organizations have you participated in and which interest you most?
+            (Please specify)</div>
+        <div class="row">
+            <div class="checkbox-group">
+                <div class="checkbox-box"></div> Athletics
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box"></div> Religious organization
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box"></div> Glee Club
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box"></div> Others, please specify <span class="field-fill w-100"></span>
+            </div>
+        </div>
+        <div class="row">
+            <div class="checkbox-group">
+                <div class="checkbox-box"></div> Dramatics
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box"></div> Chess Club
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box"></div> Scouting
+            </div>
+        </div>
+        <div class="row align-end">
+            <span class="field-label">Occupational position in the organization:</span>
+            <div class="checkbox-group">
+                <div class="checkbox-box"></div> Officer
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box"></div> Member
+            </div>
+            <div class="checkbox-group">
+                <div class="checkbox-box"></div> Others, please specify <span class="field-fill w-100"></span>
+            </div>
+        </div>
+        {{end}} {{/* end with .Interests */}}
+
+        <!-- VI. TEST RESULTS -->
+        <div class="section-header">VI. TEST RESULTS</div>
+        <table>
+            <tr>
+                <th>DATE</th>
+                <th>NAME OF TEST</th>
+                <th>RS</th>
+                <th>PR</th>
+                <th>DESCRIPTION</th>
+            </tr>
+            {{/* Fixed 2 blank rows as per PDF layout */}}
+            <tr>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+            </tr>
+            <tr>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+            </tr>
+        </table>
+
+        <!-- VII. SIGNIFICANT NOTES -->
+        <div class="section-header">VII. SIGNIFICANT NOTES (For Guidance Counselors only)</div>
+        <table>
+            <tr>
+                <th style="width: 15%;">DATE</th>
+                <th style="width: 50%;">INCIDENT</th>
+                <th>REMARKS</th>
+            </tr>
+            {{/* 1 content row with height of 5 rows */}}
+            <tr>
+                <td style="height: 75pt;">&nbsp;</td>
+                <td style="height: 75pt;">&nbsp;</td>
+                <td style="height: 75pt;">&nbsp;</td>
+            </tr>
+        </table>
+
+        <div class="signature-block mt-40">
+            <div class="signature-line w-250"></div><br>
+            <span style="padding-right: 50px;">(Student's Signature)</span>
+        </div>
+
+        <div class="footer">
+            <span>
+                This document contains personal-identifiable information that is subject to Data Privacy
+            </span>
+            <br>
+            <span class="">
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Please keep this document protected and in a safe place.
+            </span>
+        </div>
+        {{end}} {{/* end with .Profile */}}
     </div>
-    {{end}} {{/* end with .Interests */}}
-
-    <!-- VI. TEST RESULTS -->
-    <div class="section-header">VI. TEST RESULTS</div>
-    <table>
-        <tr><th>DATE</th><th>NAME OF TEST</th><th>RS</th><th>PR</th><th>DESCRIPTION</th></tr>
-        {{/* Fixed 2 blank rows as per PDF layout */}}
-        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-    </table>
-
-    <!-- VII. SIGNIFICANT NOTES -->
-    <div class="section-header">VII. SIGNIFICANT NOTES (For Guidance Counselors only)</div>
-    <table>
-        <tr><th style="width: 15%;">DATE</th><th style="width: 50%;">INCIDENT</th><th>REMARKS</th></tr>
-        {{/* 1 content row with height of 5 rows */}}
-        <tr><td style="height: 75pt;">&nbsp;</td><td style="height: 75pt;">&nbsp;</td><td style="height: 75pt;">&nbsp;</td></tr>
-    </table>
-
-    <div class="signature-block mt-40">
-        <div class="signature-line w-250"></div><br>
-        <span style="padding-right: 50px;">(Student's Signature)</span>
-    </div>
-
-    <div class="footer">
-        <span>
-            This document contains personal-identifiable information that is subject to Data Privacy
-        </span>
-        <br>
-        <span class="">
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Please keep this document protected and in a safe place.
-        </span>
-    </div>
-    {{end}} {{/* end with .Profile */}}
-</div>
 
 </body>
+
 </html>

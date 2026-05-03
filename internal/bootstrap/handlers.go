@@ -49,13 +49,13 @@ func getHandlers(
 	return &Handlers{
 		AuthHandler: auth.NewHandler(
 			services.AuthService,
-			services.SystemLogService,
 			cfg,
 		),
 		UserHandler: users.NewHandler(
 			services.UserService,
 			services.SessionService,
-			services.SystemLogService,
+			services.SystemLogService, // implements audit.Logger
+			services.SystemLogService, // implements audit.LogReader
 		),
 		LocationsHandler: locations.NewHandler(services.LocationsService),
 		StudentHandler:   students.NewHandler(services.StudentService),
@@ -67,7 +67,7 @@ func getHandlers(
 			services.IntegrationStudentService,
 		),
 		AppointmentHandler: appointments.NewHandler(
-			services.AppointmentService,
+			services.AppointmentService, cfg,
 		),
 		SlipHandler:          slips.NewHandler(services.SlipService),
 		AnalyticsHandler:     analyticsHandler,

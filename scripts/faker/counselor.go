@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"math/rand"
 
 	"github.com/brianvoe/gofakeit/v6"
 	"github.com/google/uuid"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 )
 
@@ -22,15 +22,15 @@ func createSuperAdmin(index int, password string, userFromCSV *users.User) {
 
 		user = users.User{
 			ID:           uuid.New().String(),
-			RoleID:       3, // Super Admin
+			Roles:        []users.Role{{ID: 3, Name: "SuperAdmin"}},
 			FirstName:    "Super",
 			MiddleName:   randomMiddleName(),
 			LastName:     "Admin",
-			SuffixName:   sql.NullString{Valid: false},
+			SuffixName:   structs.NullableString{Valid: false},
 			Email:        email,
-			PasswordHash: sql.NullString{Valid: true, String: password},
+			PasswordHash: structs.NullableString{Valid: true, String: password},
 			AuthType:     "native",
-			IsActive:     1,
+			IsActive:     true,
 		}
 	}
 
@@ -59,38 +59,21 @@ func createCounselor(index int, password string, userFromCSV *users.User) {
 
 		user = users.User{
 			ID:           uuid.New().String(),
-			RoleID:       2, // Counselor
+			Roles:        []users.Role{{ID: 2, Name: "Counselor"}},
 			FirstName:    firstName,
 			MiddleName:   randomMiddleName(),
 			LastName:     lastName,
 			SuffixName:   nullStringIf(rand.Float32() < 0.1, gofakeit.RandomString([]string{"Jr.", "Sr.", "III", "IV"})),
 			Email:        email,
-			PasswordHash: sql.NullString{Valid: true, String: password},
+			PasswordHash: structs.NullableString{Valid: true, String: password},
 			AuthType:     "native",
-			IsActive:     1,
+			IsActive:     true,
 		}
 	}
 
 	err := usersRepo.CreateUser(context.Background(), db, user)
 	if err != nil {
 		log.Fatalf("[Seeder] {Create Counselor User}: %v", err)
-	}
-
-	// For counselor_profiles, we still use raw SQL as there's no repository
-	// yet,
-	// but we could also use a named exec for better parity.
-	_, err = db.Exec(`
-		INSERT INTO counselor_profiles (
-			user_id, license_number, specialization, is_available
-		)
-		VALUES (?, ?, ?, ?)
-		ON DUPLICATE KEY UPDATE
-			license_number = VALUES(license_number),
-			specialization = VALUES(specialization),
-			is_available = VALUES(is_available)
-	`, user.ID, gofakeit.Regex("[A-Z]{3}-[0-9]{6}"), gofakeit.JobTitle(), true)
-	if err != nil {
-		log.Fatalf("[Seeder] {Create Counselor Profile}: %v", err)
 	}
 
 	fmt.Printf("Created counselor: %s %s\n", user.FirstName, user.LastName)

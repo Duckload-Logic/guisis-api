@@ -20,92 +20,126 @@ func (r *Repository) GetDB() *sqlx.DB {
 	return r.db
 }
 
+func (r *Repository) WithTransaction(
+	ctx context.Context,
+	fn func(datastore.DB) error,
+) error {
+	return datastore.RunInTransaction(ctx, r.db, fn)
+}
+
 func (r *Repository) GetRegions(ctx context.Context) ([]Region, error) {
-	query := fmt.Sprintf(
-		"SELECT %s FROM regions ORDER BY name",
-		datastore.GetColumns(Region{}),
-	)
+	query := "SELECT id, code, name FROM regions ORDER BY name"
 	var regions []Region
 	err := r.db.SelectContext(ctx, &regions, query)
-	return regions, err
+	if err != nil {
+		return nil, err
+	}
+
+	return regions, nil
 }
 
 func (r *Repository) GetProvincesByRegion(
 	ctx context.Context,
 	regionCode string,
 ) ([]Province, error) {
-	query := fmt.Sprintf(
-		"SELECT %s FROM provinces WHERE region_code = ? ORDER BY name",
-		datastore.GetColumns(Province{}),
-	)
+	query := `
+		SELECT id, code, name, region_code
+		FROM provinces
+		WHERE region_code = ?
+		ORDER BY name
+	`
 	var provinces []Province
 	err := r.db.SelectContext(ctx, &provinces, query, regionCode)
-	return provinces, err
+	if err != nil {
+		return nil, err
+	}
+
+	return provinces, nil
 }
 
 func (r *Repository) GetCitiesByProvince(
 	ctx context.Context,
 	provinceCode string,
 ) ([]City, error) {
-	query := fmt.Sprintf(
-		"SELECT %s FROM cities WHERE province_code = ? ORDER BY name",
-		datastore.GetColumns(City{}),
-	)
+	query := `
+		SELECT id, code, name, province_code, type, zip_code, district, region_code
+		FROM cities
+		WHERE province_code = ?
+		ORDER BY name
+	`
 	var cities []City
 	err := r.db.SelectContext(ctx, &cities, query, provinceCode)
-	return cities, err
+	if err != nil {
+		return nil, err
+	}
+
+	return cities, nil
 }
 
 func (r *Repository) GetCitiesByRegion(
 	ctx context.Context,
 	regionCode string,
 ) ([]City, error) {
-	query := fmt.Sprintf(
-		"SELECT %s FROM cities WHERE region_code = ? ORDER BY name",
-		datastore.GetColumns(City{}),
-	)
+	query := `
+		SELECT id, code, name, province_code, type, zip_code, district, region_code
+		FROM cities
+		WHERE region_code = ?
+		ORDER BY name
+	`
 	var cities []City
 	err := r.db.SelectContext(ctx, &cities, query, regionCode)
-	return cities, err
+	if err != nil {
+		return nil, err
+	}
+
+	return cities, nil
 }
 
 func (r *Repository) GetBarangaysByCity(
 	ctx context.Context,
 	cityCode string,
 ) ([]Barangay, error) {
-	query := fmt.Sprintf(
-		"SELECT %s FROM barangays WHERE city_code = ? ORDER BY name",
-		datastore.GetColumns(Barangay{}),
-	)
+	query := `
+		SELECT id, code, name, city_code
+		FROM barangays
+		WHERE city_code = ?
+		ORDER BY name
+	`
 	var barangays []Barangay
 	err := r.db.SelectContext(ctx, &barangays, query, cityCode)
-	return barangays, err
+	if err != nil {
+		return nil, err
+	}
+
+	return barangays, nil
 }
 
 func (r *Repository) GetAddressByID(
 	ctx context.Context,
 	addressID int,
 ) (*Address, error) {
-	query := fmt.Sprintf(
-		"SELECT %s FROM addresses WHERE id = ?",
-		datastore.GetColumns(Address{}),
-	)
-	var address Address
-	err := r.db.GetContext(ctx, &address, query, addressID)
+	query := `
+		SELECT id, region_code, province_code, city_code, barangay_code, street_detail, created_at, updated_at
+		FROM addresses
+		WHERE id = ?
+	`
+	var addr Address
+	err := r.db.GetContext(ctx, &addr, query, addressID)
 	if err != nil {
 		return nil, err
 	}
-	return &address, nil
+	return &addr, nil
 }
 
 func (r *Repository) GetCityByCode(
 	ctx context.Context,
 	cityCode string,
 ) (*City, error) {
-	query := fmt.Sprintf(
-		"SELECT %s FROM cities WHERE code = ?",
-		datastore.GetColumns(City{}),
-	)
+	query := `
+		SELECT id, code, name, province_code, type, zip_code, district, region_code
+		FROM cities
+		WHERE code = ?
+	`
 	var city City
 	err := r.db.GetContext(ctx, &city, query, cityCode)
 	if err != nil {
@@ -118,10 +152,7 @@ func (r *Repository) GetRegionByCode(
 	ctx context.Context,
 	regionCode string,
 ) (*Region, error) {
-	query := fmt.Sprintf(
-		"SELECT %s FROM regions WHERE code = ?",
-		datastore.GetColumns(Region{}),
-	)
+	query := "SELECT id, code, name FROM regions WHERE code = ?"
 	var region Region
 	err := r.db.GetContext(ctx, &region, query, regionCode)
 	if err != nil {
@@ -134,32 +165,26 @@ func (r *Repository) GetBarangayByCode(
 	ctx context.Context,
 	barangayCode string,
 ) (*Barangay, error) {
-	query := fmt.Sprintf(
-		"SELECT %s FROM barangays WHERE code = ?",
-		datastore.GetColumns(Barangay{}),
-	)
-	var barangay Barangay
-	err := r.db.GetContext(ctx, &barangay, query, barangayCode)
+	query := "SELECT id, code, name, city_code FROM barangays WHERE code = ?"
+	var brgy Barangay
+	err := r.db.GetContext(ctx, &brgy, query, barangayCode)
 	if err != nil {
 		return nil, err
 	}
-	return &barangay, nil
+	return &brgy, nil
 }
 
 func (r *Repository) GetProvinceByCode(
 	ctx context.Context,
 	provinceCode string,
 ) (*Province, error) {
-	query := fmt.Sprintf(
-		"SELECT %s FROM provinces WHERE code = ?",
-		datastore.GetColumns(Province{}),
-	)
-	var province Province
-	err := r.db.GetContext(ctx, &province, query, provinceCode)
+	query := "SELECT id, code, name, region_code FROM provinces WHERE code = ?"
+	var prov Province
+	err := r.db.GetContext(ctx, &prov, query, provinceCode)
 	if err != nil {
 		return nil, err
 	}
-	return &province, nil
+	return &prov, nil
 }
 
 func (r *Repository) UpsertAddress(
@@ -167,24 +192,19 @@ func (r *Repository) UpsertAddress(
 	tx datastore.DB,
 	addr *Address,
 ) (int, error) {
-	cols, vals := datastore.GetInsertStatement(
-		Address{},
-		[]string{"created_at", "updated_at"},
-	)
-	updateCols := datastore.GetOnDuplicateKeyUpdateStatement(
-		Address{},
-		[]string{"created_at", "updated_at"},
-	)
-
-	if addr.ProvinceCode != nil && *addr.ProvinceCode == "" {
-		addr.ProvinceCode = nil
-	}
-
-	query := fmt.Sprintf(`
-		INSERT INTO addresses (%s)
-		VALUES (%s)
-		ON DUPLICATE KEY UPDATE %s
-	`, cols, vals, updateCols)
+	query := `
+		INSERT INTO addresses (
+			region_code, province_code, city_code, barangay_code, street_detail
+		) VALUES (
+			:region_code, :province_code, :city_code, :barangay_code, :street_detail
+		) ON DUPLICATE KEY UPDATE
+			region_code = VALUES(region_code),
+			province_code = VALUES(province_code),
+			city_code = VALUES(city_code),
+			barangay_code = VALUES(barangay_code),
+			street_detail = VALUES(street_detail),
+			updated_at = NOW()
+	`
 	result, err := tx.NamedExecContext(ctx, query, addr)
 	if err != nil {
 		return 0, fmt.Errorf("failed to upsert address: %w", err)
@@ -200,3 +220,4 @@ func (r *Repository) UpsertAddress(
 
 	return int(lastID), nil
 }
+

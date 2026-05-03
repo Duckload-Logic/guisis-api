@@ -2,7 +2,6 @@ package slips
 
 import (
 	"fmt"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -13,11 +12,11 @@ import (
 )
 
 type Handler struct {
-	service ServiceInterface
+	service *Service
 }
 
 // NewHandler creates a new slips handler.
-func NewHandler(service ServiceInterface) *Handler {
+func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
@@ -72,21 +71,22 @@ func (h *Handler) PostSlip(c *gin.Context) {
 
 	var req CreateSlipRequest
 	if err := c.ShouldBind(&req); err != nil {
-		log.Printf("[PostSlip] {Bind Request}: %v", err)
+		fmt.Printf("[PostSlip] {Bind Request}: %v\n", err)
 		response.SendFail(c, gin.H{"error": "Invalid request format"})
 		return
 	}
 
 	form, err := c.MultipartForm()
 	if err != nil {
-		log.Printf("[PostSlip] {Parse Multipart Form}: %v", err)
+		fmt.Printf("[PostSlip] {Parse Form}: %v\n", err)
 		response.SendFail(c, gin.H{"error": "Failed to parse form"})
 		return
 	}
 
-	// Aggregate files from various document-specific fields used by the frontend
 	var files []*multipart.FileHeader
-	fieldNames := []string{"files", "cor", "excuseLetter", "parentId", "medicalCert"}
+	fieldNames := []string{
+		"files", "cor", "excuseLetter", "parentId", "medicalCert",
+	}
 
 	for _, field := range fieldNames {
 		if f := form.File[field]; len(f) > 0 {
@@ -100,13 +100,10 @@ func (h *Handler) PostSlip(c *gin.Context) {
 	}
 
 	slip, err := h.service.SubmitExcuseSlip(
-		c.Request.Context(),
-		iirID,
-		req,
-		files,
+		c.Request.Context(), iirID, req, files,
 	)
 	if err != nil {
-		log.Printf("[PostSlip] {Submit Excuse Slip}: %v", err)
+		fmt.Printf("[PostSlip] {Submit Slip}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to submit slip",
@@ -130,19 +127,16 @@ func (h *Handler) PostSlip(c *gin.Context) {
 // @Success      200  {object} map[string]interface{}
 // @Failure      500  {object} map[string]string
 // @Router       /slips/urgent [get]
-func (h *Handler) GetUrgentSlipList(c *gin.Context) {
-	var req ListSlipRequest
+func (h *Handler) GetSlipUrgent(c *gin.Context) {
+	var req ListSlipsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		response.SendFail(c, gin.H{"error": "Invalid query parameters"})
 		return
 	}
 
-	slips, err := h.service.GetUrgentSlips(
-		c.Request.Context(),
-		&req,
-	)
+	slips, err := h.service.GetUrgentSlips(c.Request.Context(), &req)
 	if err != nil {
-		log.Printf("[GetUrgentSlipList] {Fetch Urgent Slips}: %v", err)
+		fmt.Printf("[GetSlipUrgent] {Fetch Slips}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve slips",
@@ -163,17 +157,25 @@ func (h *Handler) GetUrgentSlipList(c *gin.Context) {
 // @Success      200  {object} []SlipStatusCount
 // @Failure      500  {object} map[string]string
 // @Router       /slips/stats [get]
-func (h *Handler) GetSlipStatsList(c *gin.Context) {
-	var req ListSlipRequest
+func (h *Handler) GetSlipStats(c *gin.Context) {
+	var req ListSlipsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		response.SendFail(c, gin.H{"error": "Invalid query parameters"})
 		return
 	}
 
-	roleID := c.MustGet("roleID").(int)
+	roleIDs := c.MustGet("roleIDs").([]int)
 	var iirIDPtr *string
 
-	if roleID == int(constants.StudentRoleID) {
+	isStudent := false
+	for _, rid := range roleIDs {
+		if rid == int(constants.StudentRoleID) {
+			isStudent = true
+			break
+		}
+	}
+
+	if isStudent {
 		iirID, ok := getIIRIDFromContext(c)
 		if !ok {
 			return
@@ -181,13 +183,9 @@ func (h *Handler) GetSlipStatsList(c *gin.Context) {
 		iirIDPtr = &iirID
 	}
 
-	stats, err := h.service.GetSlipStats(
-		c.Request.Context(),
-		iirIDPtr,
-		&req,
-	)
+	stats, err := h.service.GetSlipStats(c.Request.Context(), iirIDPtr, &req)
 	if err != nil {
-		log.Printf("[GetSlipStatsList] {Fetch Slip Stats}: %v", err)
+		fmt.Printf("[GetSlipStats] {Fetch Stats}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve statistics",
@@ -208,12 +206,10 @@ func (h *Handler) GetSlipStatsList(c *gin.Context) {
 // @Success      200  {object} []SlipStatus
 // @Failure      500  {object} map[string]string
 // @Router       /slips/lookups/statuses [get]
-func (h *Handler) GetSlipStatusList(c *gin.Context) {
-	statuses, err := h.service.GetSlipStatuses(
-		c.Request.Context(),
-	)
+func (h *Handler) GetSlipStatuses(c *gin.Context) {
+	statuses, err := h.service.GetSlipStatuses(c.Request.Context())
 	if err != nil {
-		log.Printf("[GetSlipStatusList] {Fetch Statuses}: %v", err)
+		fmt.Printf("[GetSlipStatuses] {Fetch Statuses}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve statuses",
@@ -234,12 +230,10 @@ func (h *Handler) GetSlipStatusList(c *gin.Context) {
 // @Success      200  {object} []SlipCategory
 // @Failure      500  {object} map[string]string
 // @Router       /slips/lookups/categories [get]
-func (h *Handler) GetSlipCategoryList(c *gin.Context) {
-	categories, err := h.service.GetSlipCategories(
-		c.Request.Context(),
-	)
+func (h *Handler) GetSlipCategories(c *gin.Context) {
+	categories, err := h.service.GetSlipCategories(c.Request.Context())
 	if err != nil {
-		log.Printf("[GetSlipCategoryList] {Fetch Categories}: %v", err)
+		fmt.Printf("[GetSlipCategories] {Fetch Categories}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve categories",
@@ -260,19 +254,16 @@ func (h *Handler) GetSlipCategoryList(c *gin.Context) {
 // @Success      200  {object} map[string]interface{}
 // @Failure      500  {object} map[string]string
 // @Router       /slips [get]
-func (h *Handler) GetSlipList(c *gin.Context) {
-	var req ListSlipRequest
+func (h *Handler) GetSlips(c *gin.Context) {
+	var req ListSlipsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		response.SendFail(c, gin.H{"error": "Invalid query parameters"})
 		return
 	}
 
-	slips, err := h.service.GetAllExcuseSlips(
-		c.Request.Context(),
-		req,
-	)
+	slips, err := h.service.GetAllExcuseSlips(c.Request.Context(), req)
 	if err != nil {
-		log.Printf("[GetSlipList] {Fetch All Slips}: %v", err)
+		fmt.Printf("[GetSlips] {Fetch Slips}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve slips",
@@ -294,25 +285,21 @@ func (h *Handler) GetSlipList(c *gin.Context) {
 // @Failure      403  {object} map[string]string
 // @Failure      500  {object} map[string]string
 // @Router       /slips/me [get]
-func (h *Handler) GetSlipListByIIR(c *gin.Context) {
+func (h *Handler) GetSlipMe(c *gin.Context) {
 	iirID, ok := getIIRIDFromContext(c)
 	if !ok {
 		return
 	}
 
-	var req ListSlipRequest
+	var req ListSlipsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		response.SendFail(c, gin.H{"error": "Invalid query parameters"})
 		return
 	}
 
-	slips, err := h.service.GetExcuseSlipsByIIRID(
-		c.Request.Context(),
-		iirID,
-		req,
-	)
+	slips, err := h.service.GetExcuseSlipsByIIRID(c.Request.Context(), iirID, req)
 	if err != nil {
-		log.Printf("[GetSlipListByIIR] {Fetch Slips by IIR}: %v", err)
+		fmt.Printf("[GetSlipMe] {Fetch Slips}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve slips",
@@ -336,7 +323,7 @@ func (h *Handler) GetSlipListByIIR(c *gin.Context) {
 // @Failure      500  {object} map[string]string
 // @Router       /slips/id/{id} [get]
 func (h *Handler) GetSlipByID(c *gin.Context) {
-	idParam := c.Param("id")
+	idParam := c.Param("slipID")
 	slip, err := h.service.GetSlipByID(c.Request.Context(), idParam)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
@@ -347,7 +334,7 @@ func (h *Handler) GetSlipByID(c *gin.Context) {
 			)
 			return
 		}
-		log.Printf("[GetSlipByID] {Fetch Slip}: %v", err)
+		fmt.Printf("[GetSlipByID] {Fetch Slip}: %v\n", err)
 		response.SendError(
 			c,
 			"Internal server error",
@@ -370,14 +357,11 @@ func (h *Handler) GetSlipByID(c *gin.Context) {
 // @Failure      400  {object} map[string]string
 // @Failure      500  {object} map[string]string
 // @Router       /slips/id/{id}/attachments [get]
-func (h *Handler) GetSlipAttachmentList(c *gin.Context) {
-	idParam := c.Param("id")
-	attachments, err := h.service.GetSlipAttachments(
-		c.Request.Context(),
-		idParam,
-	)
+func (h *Handler) GetSlipAttachments(c *gin.Context) {
+	idParam := c.Param("slipID")
+	attachments, err := h.service.GetSlipAttachments(c.Request.Context(), idParam)
 	if err != nil {
-		log.Printf("[GetSlipAttachmentList] {Fetch Attachments}: %v", err)
+		fmt.Printf("[GetSlipAttachments] {Fetch Attachments}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve attachments",
@@ -400,12 +384,10 @@ func (h *Handler) GetSlipAttachmentList(c *gin.Context) {
 // @Failure      404  {object} map[string]string
 // @Failure      500  {object} map[string]string
 // @Router       /slips/id/{id}/attachments/{attachmentId} [get]
-func (h *Handler) GetAttachmentFile(c *gin.Context) {
+func (h *Handler) GetSlipAttachmentContent(c *gin.Context) {
 	attachmentIDParam := c.Param("attachmentId")
 	attachment, err := h.service.DownloadAttachment(
-		c.Request.Context(),
-		attachmentIDParam,
-		c.Writer,
+		c.Request.Context(), attachmentIDParam, c.Writer,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "attachment not found") {
@@ -416,7 +398,7 @@ func (h *Handler) GetAttachmentFile(c *gin.Context) {
 			)
 			return
 		}
-		log.Printf("[GetAttachmentFile] {Download Attachment}: %v", err)
+		fmt.Printf("[GetSlipAttachmentContent] {Download}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to download file",
@@ -425,6 +407,10 @@ func (h *Handler) GetAttachmentFile(c *gin.Context) {
 		)
 		return
 	}
+
+	c.Header("Cache-Control", "no-store, no-cache, must-revalidate")
+	c.Header("Pragma", "no-cache")
+	c.Header("Expires", "0")
 
 	c.Header(
 		"Content-Disposition",
@@ -446,7 +432,7 @@ func (h *Handler) GetAttachmentFile(c *gin.Context) {
 // @Failure      500  {object} map[string]string
 // @Router       /slips/id/{id}/status [patch]
 func (h *Handler) PatchSlip(c *gin.Context) {
-	idParam := c.Param("id")
+	idParam := c.Param("slipID")
 	iirID, ok := getIIRIDFromContext(c)
 	if !ok {
 		return
@@ -465,7 +451,13 @@ func (h *Handler) PatchSlip(c *gin.Context) {
 	}
 
 	var files []*multipart.FileHeader
-	fieldNames := []string{"files", "cor", "excuseLetter", "parentId", "medicalCert"}
+	fieldNames := []string{
+		"files",
+		"cor",
+		"excuseLetter",
+		"parentId",
+		"medicalCert",
+	}
 	for _, field := range fieldNames {
 		if f := form.File[field]; len(f) > 0 {
 			files = append(files, f...)
@@ -478,14 +470,10 @@ func (h *Handler) PatchSlip(c *gin.Context) {
 	}
 
 	slip, err := h.service.UpdateExcuseSlip(
-		c.Request.Context(),
-		iirID,
-		idParam,
-		req,
-		files,
+		c.Request.Context(), iirID, idParam, req, files,
 	)
 	if err != nil {
-		log.Printf("[PatchSlip] {Update Excuse Slip}: %v", err)
+		fmt.Printf("[PatchSlip] {Update Slip}: %v\n", err)
 		response.SendError(
 			c,
 			err.Error(),
@@ -503,7 +491,7 @@ func (h *Handler) PatchSlip(c *gin.Context) {
 
 // PatchSlipStatus godoc
 func (h *Handler) PatchSlipStatus(c *gin.Context) {
-	idParam := c.Param("id")
+	idParam := c.Param("slipID")
 	var req UpdateStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.SendFail(c, gin.H{"error": "Invalid request format"})
@@ -529,7 +517,7 @@ func (h *Handler) PatchSlipStatus(c *gin.Context) {
 			response.SendFail(c, gin.H{"error": err.Error()})
 			return
 		}
-		log.Printf("[PatchSlipStatus] {Update Status}: %v", err)
+		fmt.Printf("[PatchSlipStatus] {Update Status}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to update status",

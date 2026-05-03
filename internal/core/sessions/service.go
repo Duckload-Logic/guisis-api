@@ -80,14 +80,14 @@ func (s *Service) StoreUserToken(
 
 	// Link to user sessions set
 	userKey := ToUserSessionsKey(userID)
-	err := s.redis.Client.SAdd(ctx, userKey, jti.Value).Err()
+	err := s.redis.SAdd(ctx, userKey, jti.Value)
 	if err != nil {
 		return fmt.Errorf("failed to link session to user: %w", err)
 	}
 
 	// Set expiration on the set if it's new (or refresh it)
 	// We use the same expiration as the token for simplicity
-	s.redis.Client.Expire(ctx, userKey, time.Duration(expireSeconds)*time.Second)
+	s.redis.Expire(ctx, userKey, time.Duration(expireSeconds)*time.Second)
 
 	return nil
 }
@@ -100,7 +100,7 @@ func (s *Service) DeleteUserToken(
 ) error {
 	// Unlink from user
 	userKey := ToUserSessionsKey(userID)
-	s.redis.Client.SRem(ctx, userKey, jti.Value)
+	s.redis.SRem(ctx, userKey, jti.Value)
 
 	// Delete session data
 	return s.DeleteToken(ctx, jti)
@@ -112,7 +112,7 @@ func (s *Service) ListUserSessions(
 	userID string,
 ) ([]map[string]string, error) {
 	userKey := ToUserSessionsKey(userID)
-	jtis, err := s.redis.Client.SMembers(ctx, userKey).Result()
+	jtis, err := s.redis.SMembers(ctx, userKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list user sessions: %w", err)
 	}
@@ -123,7 +123,7 @@ func (s *Service) ListUserSessions(
 		data, err := s.GetToken(ctx, jti)
 		if err != nil {
 			// Session might have expired individually, clean up the set
-			s.redis.Client.SRem(ctx, userKey, jtiVal)
+			s.redis.SRem(ctx, userKey, jtiVal)
 			continue
 		}
 		// Add JTI to the data map for the frontend
@@ -132,4 +132,22 @@ func (s *Service) ListUserSessions(
 	}
 
 	return sessions, nil
+}
+
+// RevokeAllUserSessions invalidates all active sessions for a user.
+func (s *Service) RevokeAllUserSessions(
+	ctx context.Context,
+	userID string,
+) error {
+	userKey := ToUserSessionsKey(userID)
+	jtis, err := s.redis.SMembers(ctx, userKey)
+	if err != nil {
+		return fmt.Errorf("failed to get user sessions: %w", err)
+	}
+
+	for _, jtiVal := range jtis {
+		_ = s.DeleteToken(ctx, NewJTI(jtiVal))
+	}
+
+	return s.redis.Del(ctx, userKey)
 }

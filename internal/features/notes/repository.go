@@ -3,7 +3,6 @@ package notes
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
@@ -17,18 +16,25 @@ func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
+func (r *Repository) WithTransaction(
+	ctx context.Context,
+	fn func(datastore.DB) error,
+) error {
+	return datastore.RunInTransaction(ctx, r.db, fn)
+}
+
 func (r *Repository) GetStudentSignificantNotes(
 	ctx context.Context,
 	iirID string,
 ) ([]SignificantNote, error) {
-	query := fmt.Sprintf(`
-		SELECT %s
+	query := `
+		SELECT id, iir_id, appointment_id, admission_slip_id, note, remarks, created_at, updated_at
 		FROM significant_notes
 		WHERE iir_id = ?
-	`, datastore.GetColumns(SignificantNote{}))
+	`
 
-	var notes []SignificantNote
-	err := r.db.SelectContext(ctx, &notes, query, iirID)
+	var results []SignificantNote
+	err := r.db.SelectContext(ctx, &results, query, iirID)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to get student significant notes: %w",
@@ -36,13 +42,7 @@ func (r *Repository) GetStudentSignificantNotes(
 		)
 	}
 
-	log.Printf(
-		"[GetStudentSignificantNotes] {Database Query}: Retrieved %d notes for IIR ID %s",
-		len(notes),
-		iirID,
-	)
-
-	return notes, nil
+	return results, nil
 }
 
 func (r *Repository) CreateSignificantNote(
@@ -53,15 +53,13 @@ func (r *Repository) CreateSignificantNote(
 		ctx,
 		r.db,
 		func(tx datastore.DB) (string, error) {
-			cols, vals := datastore.GetInsertStatement(
-				SignificantNote{},
-				[]string{"created_at", "updated_at"},
-			)
-
-			query := fmt.Sprintf(`
-				INSERT INTO significant_notes (id, %s)
-				VALUES (:id, %s)
-			`, cols, vals)
+			query := `
+				INSERT INTO significant_notes (
+					id, iir_id, appointment_id, admission_slip_id, note, remarks, updated_at
+				) VALUES (
+					:id, :iir_id, :appointment_id, :admission_slip_id, :note, :remarks, NOW()
+				)
+			`
 
 			_, err := tx.NamedExecContext(
 				ctx,
@@ -96,3 +94,4 @@ func (r *Repository) HasNoteForAppointment(
 
 	return count > 0, nil
 }
+

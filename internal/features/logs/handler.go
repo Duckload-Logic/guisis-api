@@ -1,7 +1,7 @@
 package logs
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,14 +10,14 @@ import (
 )
 
 type Handler struct {
-	service ServiceInterface
+	service *Service
 }
 
-func NewHandler(service ServiceInterface) *Handler {
+func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func (h *Handler) GetService() ServiceInterface {
+func (h *Handler) GetService() *Service {
 	return h.service
 }
 
@@ -41,16 +41,16 @@ func (h *Handler) GetService() ServiceInterface {
 // @Failure      500         {object}  map[string]string "Internal server error"
 // @Router       /system-logs [get]
 func (h *Handler) GetLogs(c *gin.Context) {
-	var req ListSystemLogsRequest
+	var req audit.ListSystemLogsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		log.Printf("[GetLogs] {Bind Query}: %v", err)
+		fmt.Printf("[GetLogs] {Bind Query}: %v\n", err)
 		response.SendFail(c, gin.H{"error": err.Error()})
 		return
 	}
 
 	result, err := h.service.ListLogs(c.Request.Context(), req)
 	if err != nil {
-		log.Printf("[GetLogs] {ListLogs}: %v", err)
+		fmt.Printf("[GetLogs] {Fetch Logs}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve system logs",
@@ -63,11 +63,10 @@ func (h *Handler) GetLogs(c *gin.Context) {
 	response.SendSuccess(c, result)
 }
 
-// GetAuditLogs returns only AUDIT category logs
-func (h *Handler) GetAuditLogs(c *gin.Context) {
-	var req ListSystemLogsRequest
+func (h *Handler) GetLogsAudit(c *gin.Context) {
+	var req audit.ListSystemLogsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		log.Printf("[GetAuditLogs] {Bind Query}: %v", err)
+		fmt.Printf("[GetLogsAudit] {Bind Query}: %v\n", err)
 		response.SendFail(c, gin.H{"error": err.Error()})
 		return
 	}
@@ -76,7 +75,7 @@ func (h *Handler) GetAuditLogs(c *gin.Context) {
 
 	result, err := h.service.ListLogs(c.Request.Context(), req)
 	if err != nil {
-		log.Printf("[GetAuditLogs] {ListLogs}: %v", err)
+		fmt.Printf("[GetLogsAudit] {Fetch Logs}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve audit logs",
@@ -89,11 +88,10 @@ func (h *Handler) GetAuditLogs(c *gin.Context) {
 	response.SendSuccess(c, result)
 }
 
-// GetSystemLogs returns only SYSTEM category logs
-func (h *Handler) GetSystemLogs(c *gin.Context) {
-	var req ListSystemLogsRequest
+func (h *Handler) GetLogsSystem(c *gin.Context) {
+	var req audit.ListSystemLogsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		log.Printf("[GetSystemLogs] {Bind Query}: %v", err)
+		fmt.Printf("[GetLogsSystem] {Bind Query}: %v\n", err)
 		response.SendFail(c, gin.H{"error": err.Error()})
 		return
 	}
@@ -102,7 +100,7 @@ func (h *Handler) GetSystemLogs(c *gin.Context) {
 
 	result, err := h.service.ListLogs(c.Request.Context(), req)
 	if err != nil {
-		log.Printf("[GetSystemLogs] {ListLogs}: %v", err)
+		fmt.Printf("[GetLogsSystem] {Fetch Logs}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve system logs",
@@ -116,10 +114,10 @@ func (h *Handler) GetSystemLogs(c *gin.Context) {
 }
 
 // GetSecurityLogs returns only SECURITY category logs
-func (h *Handler) GetSecurityLogs(c *gin.Context) {
-	var req ListSystemLogsRequest
+func (h *Handler) GetLogsSecurity(c *gin.Context) {
+	var req audit.ListSystemLogsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		log.Printf("[GetSecurityLogs] {Bind Query}: %v", err)
+		fmt.Printf("[GetLogsSecurity] {Bind Query}: %v\n", err)
 		response.SendFail(c, gin.H{"error": err.Error()})
 		return
 	}
@@ -128,7 +126,7 @@ func (h *Handler) GetSecurityLogs(c *gin.Context) {
 
 	result, err := h.service.ListLogs(c.Request.Context(), req)
 	if err != nil {
-		log.Printf("[GetSecurityLogs] {ListLogs}: %v", err)
+		fmt.Printf("[GetLogsSecurity] {Fetch Logs}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve security logs",
@@ -142,13 +140,17 @@ func (h *Handler) GetSecurityLogs(c *gin.Context) {
 }
 
 // GetLogStats returns log counts by category
-func (h *Handler) GetLogStats(c *gin.Context) {
+func (h *Handler) GetLogsStats(c *gin.Context) {
 	startDate := c.Query("start_date")
 	endDate := c.Query("end_date")
 
-	stats, err := h.service.GetStats(c.Request.Context(), startDate, endDate)
+	stats, err := h.service.GetStats(
+		c.Request.Context(),
+		startDate,
+		endDate,
+	)
 	if err != nil {
-		log.Printf("[GetLogStats] {GetStats}: %v", err)
+		fmt.Printf("[GetLogsStats] {GetStats}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve log stats",
@@ -162,10 +164,10 @@ func (h *Handler) GetLogStats(c *gin.Context) {
 }
 
 // GetActivityStats returns log counts grouped by hour for the last 24 hours
-func (h *Handler) GetActivityStats(c *gin.Context) {
+func (h *Handler) GetLogsActivity(c *gin.Context) {
 	stats, err := h.service.GetActivityStats(c.Request.Context())
 	if err != nil {
-		log.Printf("[GetActivityStats] {GetActivityStats}: %v", err)
+		fmt.Printf("[GetLogsActivity] {GetActivityStats}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve log activity stats",
@@ -179,22 +181,21 @@ func (h *Handler) GetActivityStats(c *gin.Context) {
 }
 
 // GetMyLogs retrieves activity logs for the currently authenticated user.
-func (h *Handler) GetMyLogs(c *gin.Context) {
+func (h *Handler) GetLogsMe(c *gin.Context) {
 	userEmail := c.MustGet("userEmail").(string)
 
-	var req ListSystemLogsRequest
+	var req audit.ListSystemLogsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
-		log.Printf("[GetMyLogs] {Bind Query}: %v", err)
+		fmt.Printf("[GetLogsMe] {Bind Query}: %v\n", err)
 		response.SendFail(c, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Force filter by current user's email
 	req.UserEmail = userEmail
 
 	result, err := h.service.ListLogs(c.Request.Context(), req)
 	if err != nil {
-		log.Printf("[GetMyLogs] {ListLogs}: %v", err)
+		fmt.Printf("[GetLogsMe] {Fetch Logs}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve your activity logs",
@@ -205,4 +206,38 @@ func (h *Handler) GetMyLogs(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, result)
+}
+
+// PostLogsCleanup godoc
+// @Summary      Clean up old system logs
+// @Description  Deletes logs older than N days. Super Admin only.
+// @Tags         SystemLogs
+// @Param        days query     int    false "Days of logs to keep (default 30)"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]string
+// @Router       /activity-meta/cleanup [post]
+func (h *Handler) PostLogsCleanup(c *gin.Context) {
+	daysStr := c.DefaultQuery("days", "30")
+	var days int
+	if _, err := fmt.Sscanf(daysStr, "%d", &days); err != nil {
+		response.SendFail(c, gin.H{"error": "Invalid days format"})
+		return
+	}
+
+	rows, err := h.service.DeleteLogsOlderThan(c.Request.Context(), days)
+	if err != nil {
+		fmt.Printf("[PostLogsCleanup] {Delete Logs}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to clean up logs",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{
+		"message":       fmt.Sprintf("Logs older than %d days cleaned up", days),
+		"rows_affected": rows,
+	})
 }

@@ -145,7 +145,9 @@ func (h *Handler) GetStudentByEmail(c *gin.Context) {
 		if verified, _ := isVerified.(bool); !verified {
 			response.SendFail(
 				c,
-				gin.H{"error": "Only formally verified Partner Systems can query by email"},
+				gin.H{
+					"error": "Only formally verified Partner Systems can query by email",
+				},
 				http.StatusForbidden,
 			)
 			return

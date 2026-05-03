@@ -16,31 +16,24 @@ func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) GetDB() *sqlx.DB {
-	return r.db
+func (r *Repository) WithTransaction(
+	ctx context.Context,
+	fn func(datastore.DB) error,
+) error {
+	return datastore.RunInTransaction(ctx, r.db, fn)
 }
 
 func (r *Repository) Create(
 	ctx context.Context,
 	tx datastore.DB,
 	client M2MClient,
-) (int, error) {
-	cols, vals := datastore.GetInsertStatement(&client, []string{})
-	query := fmt.Sprintf(
-		`INSERT INTO m2m_clients (%s) VALUES (%s)`,
-		cols, vals,
-	)
-	result, err := tx.NamedExecContext(ctx, query, client)
-	if err != nil {
-		return 0, fmt.Errorf("failed to create m2m client: %w", err)
-	}
+) error {
+	exclude := []string{"updated_at"}
+	cols, vals := datastore.GetInsertStatement(M2MClient{}, exclude)
+	query := fmt.Sprintf(`INSERT INTO m2m_clients (%s) VALUES (%s)`, cols, vals)
 
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, fmt.Errorf("failed to get last insert id: %w", err)
-	}
-
-	return int(id), nil
+	_, err := tx.NamedExecContext(ctx, query, client)
+	return err
 }
 
 func (r *Repository) GetByClientID(
@@ -48,12 +41,15 @@ func (r *Repository) GetByClientID(
 	clientID string,
 ) (*M2MClient, error) {
 	var client M2MClient
-	query := `SELECT * FROM m2m_clients WHERE client_id = ?`
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM m2m_clients
+		WHERE client_id = ? AND is_active = 1
+		LIMIT 1
+	`, datastore.GetColumns(M2MClient{}))
+
 	err := r.db.GetContext(ctx, &client, query, clientID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get m2m client by client_id: %w", err)
-	}
-	return &client, nil
+	return &client, err
 }
 
 func (r *Repository) GetActiveByUserID(
@@ -61,91 +57,59 @@ func (r *Repository) GetActiveByUserID(
 	userID string,
 ) (*M2MClient, error) {
 	var client M2MClient
-	query := `SELECT * FROM m2m_clients WHERE user_id = ? AND is_active = 1 LIMIT 1`
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM m2m_clients
+		WHERE user_id = ? AND is_active = 1
+		LIMIT 1
+	`, datastore.GetColumns(M2MClient{}))
+
 	err := r.db.GetContext(ctx, &client, query, userID)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"failed to get active m2m client by user_id: %w",
-			err,
-		)
-	}
-	return &client, nil
+	return &client, err
 }
 
-func (r *Repository) List(
+func (r *Repository) DeactivateAllForUser(
 	ctx context.Context,
+	tx datastore.DB,
 	userID string,
+) error {
+	query := `UPDATE m2m_clients SET is_active = 0 WHERE user_id = ?`
+	_, err := tx.ExecContext(ctx, query, userID)
+	return err
+}
+
+func (r *Repository) ListClients(
+	ctx context.Context,
 	includeRevoked bool,
 ) ([]M2MClient, error) {
 	var clients []M2MClient
-	query := `SELECT * FROM m2m_clients WHERE 1=1`
-	args := []interface{}{}
-	if userID != "" {
-		query += ` AND user_id = ?`
-		args = append(args, userID)
-	}
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM m2m_clients
+	`, datastore.GetColumns(M2MClient{}))
+
 	if !includeRevoked {
-		query += ` AND is_active = ?`
-		args = append(args, 1)
+		query += ` WHERE is_active = 1`
 	}
-	query += ` ORDER BY created_at DESC`
-	err := r.db.SelectContext(ctx, &clients, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list m2m clients: %w", err)
-	}
-	return clients, nil
+
+	err := r.db.SelectContext(ctx, &clients, query)
+	return clients, err
 }
 
-func (r *Repository) Revoke(
-	ctx context.Context,
-	tx datastore.DB,
-	id int,
-) error {
+func (r *Repository) DeactivateByID(ctx context.Context, id string) error {
 	query := `UPDATE m2m_clients SET is_active = 0 WHERE id = ?`
-	_, err := tx.ExecContext(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("failed to revoke m2m client: %w", err)
-	}
-	return nil
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
 }
 
-func (r *Repository) UpdateSecret(
-	ctx context.Context,
-	tx datastore.DB,
-	id int,
-	secretHash string,
-) error {
+func (r *Repository) UpdateSecret(ctx context.Context, id string, hashedSecret string) error {
 	query := `UPDATE m2m_clients SET client_secret_hash = ? WHERE id = ?`
-	_, err := tx.ExecContext(ctx, query, secretHash, id)
-	if err != nil {
-		return fmt.Errorf("failed to update client secret: %w", err)
-	}
-	return nil
+	_, err := r.db.ExecContext(ctx, query, hashedSecret, id)
+	return err
 }
 
-func (r *Repository) UpdateVerificationStatus(
-	ctx context.Context,
-	tx datastore.DB,
-	id int,
-	isVerified bool,
-) error {
-	query := `UPDATE m2m_clients SET is_verified = ? WHERE id = ?`
-	_, err := tx.ExecContext(ctx, query, isVerified, id)
-	if err != nil {
-		return fmt.Errorf("failed to update verification status: %w", err)
-	}
-	return nil
-}
-
-func (r *Repository) TouchLastUsed(
-	ctx context.Context,
-	tx datastore.DB,
-	id int,
-) error {
-	query := `UPDATE m2m_clients SET last_used_at = NOW() WHERE id = ?`
-	_, err := tx.ExecContext(ctx, query, id)
-	if err != nil {
-		return fmt.Errorf("failed to update last_used_at: %w", err)
-	}
-	return nil
+func (r *Repository) VerifyByID(ctx context.Context, id string) error {
+	query := `UPDATE m2m_clients SET is_verified = 1 WHERE id = ?`
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
 }

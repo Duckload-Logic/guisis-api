@@ -4,6 +4,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/analytics"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/appointments"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/locations"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/logs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/m2mclients"
@@ -19,7 +20,7 @@ type Repositories struct {
 	UserRepo               *users.Repository
 	StudentRepo            *students.Repository
 	NoteRepo               *notes.Repository
-	IntegrationStudentRepo *integrations.Repository
+	IntegrationStudentRepo integrations.RepositoryInterface
 	AppointmentRepo        *appointments.Repository
 	SlipRepo               *slips.Repository
 	LocationsRepo          *locations.Repository
@@ -27,6 +28,7 @@ type Repositories struct {
 	M2MClientRepo          *m2mclients.Repository
 	NotificationRepo       *notifications.Repository
 	SystemLogRepo          *logs.Repository
+	FileRepo               *files.Repository
 }
 
 func getRepositories(db *sqlx.DB) *Repositories {
@@ -42,5 +44,6 @@ func getRepositories(db *sqlx.DB) *Repositories {
 		M2MClientRepo:          m2mclients.NewRepository(db),
 		NotificationRepo:       notifications.NewRepository(db),
 		SystemLogRepo:          logs.NewRepository(db),
+		FileRepo:               files.NewRepository(db),
 	}
 }

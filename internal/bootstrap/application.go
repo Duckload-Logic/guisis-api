@@ -9,6 +9,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/email"
+	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/maintenance"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/storage"
 )
 
@@ -32,7 +33,10 @@ func Initialize(db *sqlx.DB, cfg *config.Config) (*Application, error) {
 					err,
 				)
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			ctx, cancel := context.WithTimeout(
+				context.Background(),
+				10*time.Second,
+			)
 			defer cancel()
 
 			if err := blobStorage.EnsureContainer(ctx); err != nil {
@@ -73,6 +77,13 @@ func Initialize(db *sqlx.DB, cfg *config.Config) (*Application, error) {
 
 	services := getServices(repos, fileStorage, cfg, redis, emailer)
 	handlers := getHandlers(services, cfg, redis)
+
+	// Start Background Maintenance Worker
+	maintenanceWorker := maintenance.NewMaintenanceWorker(
+		services.SystemLogService,
+		services.NotificationsService,
+	)
+	maintenanceWorker.Start(context.Background())
 
 	return &Application{
 		Handlers: handlers,

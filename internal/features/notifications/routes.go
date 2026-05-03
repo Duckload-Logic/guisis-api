@@ -19,12 +19,13 @@ func RegisterRoutes(
 
 	userRoutes := routes.Group("/")
 	userRoutes.Use(middleware.RoleMiddleware(
-		int(constants.StudentRoleID),
-		int(constants.AdminRoleID),
-		int(constants.SuperAdminRoleID),
+		constants.StudentRoleID,
+		constants.AdminRoleID,
+		constants.SuperAdminRoleID,
 	))
 	{
 		userRoutes.GET("/me", h.GetNotifications)
+		userRoutes.GET("/me/stream", h.GetNotificationsStream)
 
 		userRoutes.PATCH("/:id/read", h.PatchNotificationRead)
 	}

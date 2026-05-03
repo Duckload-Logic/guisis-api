@@ -2,7 +2,6 @@ package users
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,50 +9,37 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
-	"github.com/olazo-johnalbert/duckload-api/internal/features/logs"
 )
 
 type Handler struct {
-	service        ServiceInterface
+	service        *Service
 	sessionService *sessions.Service
-	logService     logs.ServiceInterface
+	logger         audit.Logger
+	logReader      audit.LogReader
 }
 
 // NewHandler creates a new users handler.
 func NewHandler(
-	service ServiceInterface,
+	service *Service,
 	sessionService *sessions.Service,
-	logService logs.ServiceInterface,
+	logger audit.Logger,
+	logReader audit.LogReader,
 ) *Handler {
 	return &Handler{
 		service:        service,
 		sessionService: sessionService,
-		logService:     logService,
+		logger:         logger,
+		logReader:      logReader,
 	}
 }
 
-// ========================================
-// |                                      |
-// |      RETRIEVE HANDLER FUNCTIONS      |
-// |                                      |
-// ========================================
-
-// GetMe godoc
-// @Summary      Get current user
-// @Description  Retrieves information about the currently authenticated user.
-// @Tags         Users
-// @Accept       json
-// @Produce      json
-// @Success      200      {object}  GetUserResponse        "Returns current user details"
-// @Failure      500      {object}  map[string]string     "Failed to get current user"
-// @Router       /users/me [get]
 // GetMe retrieves the currently authenticated user's information.
 func (h *Handler) GetMe(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 
 	resp, err := h.service.GetUserByID(c.Request.Context(), userID)
 	if err != nil {
-		log.Printf("[GetMe] {GetUserByID}: %v", err)
+		fmt.Printf("[GetMe] {GetUserByID}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to get current user",
@@ -66,23 +52,12 @@ func (h *Handler) GetMe(c *gin.Context) {
 	response.SendSuccess(c, resp)
 }
 
-// GetUserByEmail godoc
-// @Summary      Get user by email
-// @Description  Retrieves user information based on the provided email.
-// @Tags         Users
-// @Accept       json
-// @Produce      json
-// @Param        email   query     string true "User Email"
-// @Success      200      {object}  GetUserResponse        "Returns user details"
-// @Failure      400      {object}  map[string]string     "Email query parameter is required"
-// @Failure      500      {object}  map[string]string     "Failed to get user by email"
-// @Router       /users [get]
 // GetUserByEmail retrieves user information by their email address.
 func (h *Handler) GetUserByEmail(c *gin.Context) {
 	email := c.Query("email")
 	if email == "" {
-		log.Printf(
-			"[GetUserByEmail] {Check Query Email}: Email query parameter is required",
+		fmt.Printf(
+			"[GetUserByEmail] {Check Query}: Email parameter is required\n",
 		)
 		response.SendFail(
 			c,
@@ -95,7 +70,7 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 
 	resp, err := h.service.GetUserByEmail(c.Request.Context(), email, authType)
 	if err != nil {
-		log.Printf("[GetUserByEmail] {GetUserByEmail}: %v", err)
+		fmt.Printf("[GetUserByEmail] {GetUserByEmail}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to get user by email",
@@ -108,21 +83,9 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 	response.SendSuccess(c, resp)
 }
 
-// GetUsers godoc
-// @Summary      List all users
-// @Description  Retrieves a paginated list of all users with filtering options.
-// @Tags         Users
-// @Accept       json
-// @Produce      json
-// @Param        page       query     int     false  "Page number"
-// @Param        page_size  query     int     false  "Items per page"
-// @Param        role_id    query     int     false  "Filter by role"
-// @Param        search     query     string  false  "Search by name/email"
-// @Param        active     query     bool    false  "Filter by status"
-// @Success      200        {object}  ListUsersResponse
-// @Router       /users/all [get]
+// GetUsers retrieves a paginated list of all users.
 func (h *Handler) GetUsers(c *gin.Context) {
-	var params ListUsersParams
+	var params ListUsersRequest
 	if err := c.ShouldBindQuery(&params); err != nil {
 		response.SendFail(c, gin.H{"error": err.Error()})
 		return
@@ -130,7 +93,7 @@ func (h *Handler) GetUsers(c *gin.Context) {
 
 	resp, err := h.service.ListUsers(c.Request.Context(), params)
 	if err != nil {
-		log.Printf("[GetUsers] {ListUsers}: %v", err)
+		fmt.Printf("[GetUsers] {ListUsers}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to list users",
@@ -143,18 +106,11 @@ func (h *Handler) GetUsers(c *gin.Context) {
 	response.SendSuccess(c, resp)
 }
 
-// GetRoleDistribution godoc
-// @Summary      Get user role distribution
-// @Description  Returns the count of users for each role in the system.
-// @Tags         Users
-// @Accept       json
-// @Produce      json
-// @Success      200      {array}   RoleDistributionDTO
-// @Router       /users/distribution [get]
+// GetRoleDistribution returns the count of users for each role.
 func (h *Handler) GetRoleDistribution(c *gin.Context) {
 	resp, err := h.service.GetRoleDistribution(c.Request.Context())
 	if err != nil {
-		log.Printf("[GetRoleDistribution] {GetRoleDistribution}: %v", err)
+		fmt.Printf("[GetRoleDistribution] {GetRoleDistribution}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to get role distribution",
@@ -167,22 +123,16 @@ func (h *Handler) GetRoleDistribution(c *gin.Context) {
 	response.SendSuccess(c, resp)
 }
 
-func (h *Handler) PostBlockUser(c *gin.Context) {
+func (h *Handler) PostUserBlock(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		log.Printf(
-			"[BlockUser] {Check Param ID}: User ID parameter is required",
-		)
-		response.SendFail(
-			c,
-			gin.H{"error": "User ID parameter is required"},
-		)
+		response.SendFail(c, gin.H{"error": "User ID parameter is required"})
 		return
 	}
 
 	err := h.service.BlockUser(c.Request.Context(), userID)
 	if err != nil {
-		log.Printf("[BlockUser] {BlockUser}: %v", err)
+		fmt.Printf("[PostUserBlock] {BlockUser}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to block user",
@@ -195,22 +145,16 @@ func (h *Handler) PostBlockUser(c *gin.Context) {
 	response.SendSuccess(c, gin.H{"message": "User blocked successfully"})
 }
 
-func (h *Handler) PostUnblockUser(c *gin.Context) {
+func (h *Handler) PostUserUnblock(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
-		log.Printf(
-			"[PostUnblockUser] {Check Param ID}: User ID parameter is required",
-		)
-		response.SendFail(
-			c,
-			gin.H{"error": "User ID parameter is required"},
-		)
+		response.SendFail(c, gin.H{"error": "User ID parameter is required"})
 		return
 	}
 
 	err := h.service.UnblockUser(c.Request.Context(), userID)
 	if err != nil {
-		log.Printf("[UnblockUser] {UnblockUser}: %v", err)
+		fmt.Printf("[PostUserUnblock] {UnblockUser}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to unblock user",
@@ -230,10 +174,18 @@ func (h *Handler) GetUserSessions(c *gin.Context) {
 		return
 	}
 
-	sessions, err := h.sessionService.ListUserSessions(c.Request.Context(), targetUserID)
+	sessions, err := h.sessionService.ListUserSessions(
+		c.Request.Context(),
+		targetUserID,
+	)
 	if err != nil {
-		log.Printf("[GetUserSessions] {ListUserSessions}: %v", err)
-		response.SendError(c, "Failed to list user sessions", http.StatusInternalServerError, nil)
+		fmt.Printf("[GetUserSessions] {ListSessions}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to list user sessions",
+			http.StatusInternalServerError,
+			nil,
+		)
 		return
 	}
 
@@ -244,14 +196,26 @@ func (h *Handler) DeleteUserSession(c *gin.Context) {
 	targetUserID := c.Param("id")
 	jti := c.Param("session_id")
 	if targetUserID == "" || jti == "" {
-		response.SendFail(c, gin.H{"error": "User ID and Session ID are required"})
+		response.SendFail(
+			c,
+			gin.H{"error": "User ID and Session ID are required"},
+		)
 		return
 	}
 
-	err := h.sessionService.DeleteUserToken(c.Request.Context(), targetUserID, sessions.NewJTI(jti))
+	err := h.sessionService.DeleteUserToken(
+		c.Request.Context(),
+		targetUserID,
+		sessions.NewJTI(jti),
+	)
 	if err != nil {
-		log.Printf("[DeleteUserSession] {DeleteUserToken}: %v", err)
-		response.SendError(c, "Failed to revoke session", http.StatusInternalServerError, nil)
+		fmt.Printf("[DeleteUserSession] {DeleteToken}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to revoke session",
+			http.StatusInternalServerError,
+			nil,
+		)
 		return
 	}
 
@@ -259,14 +223,23 @@ func (h *Handler) DeleteUserSession(c *gin.Context) {
 	adminEmail := c.MustGet("userEmail").(string)
 	adminID := c.MustGet("userID").(string)
 
-	h.logService.Record(c.Request.Context(), h.logService.GetDB(), audit.LogEntry{
-		Level:    audit.LevelWarning,
-		Category: audit.CategorySecurity,
-		Action:   audit.ActionLogout, // Or add a new ActionSessionRevoked
-		Message:  fmt.Sprintf("Superadmin %s revoked session %s for user %s", adminEmail, jti, targetUserID),
-		UserID:   structs.StringToNullableString(adminID),
-		TargetID: structs.StringToNullableString(targetUserID),
-	})
+	h.logger.Record(
+		c.Request.Context(),
+		nil,
+		audit.LogEntry{
+			Level:    audit.LevelWarning,
+			Category: audit.CategorySecurity,
+			Action:   audit.ActionLogout,
+			Message: fmt.Sprintf(
+				"Superadmin %s revoked session %s for user %s",
+				adminEmail,
+				jti,
+				targetUserID,
+			),
+			UserID:   structs.StringToNullableString(adminID),
+			TargetID: structs.StringToNullableString(targetUserID),
+		},
+	)
 
 	response.SendSuccess(c, gin.H{"message": "Session revoked successfully"})
 }
@@ -278,29 +251,190 @@ func (h *Handler) GetUserActivity(c *gin.Context) {
 		return
 	}
 
-	// Fetch user email first because the logs repo mostly filters by email
+	// Fetch user email first
 	user, err := h.service.GetUserByID(c.Request.Context(), targetUserID)
 	if err != nil {
-		log.Printf("[GetUserActivity] {GetUserByID}: %v", err)
+		fmt.Printf("[GetUserActivity] {GetUserByID}: %v\n", err)
 		response.SendError(c, "Failed to find user", http.StatusNotFound, nil)
 		return
 	}
 
-	var req logs.ListSystemLogsRequest
+	var req audit.ListSystemLogsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		response.SendFail(c, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Force filter by target user's email
+	// Filter by target user's email
 	req.UserEmail = user.Email
 
-	result, err := h.logService.ListLogs(c.Request.Context(), req)
+	result, err := h.logReader.ListLogs(c.Request.Context(), req)
 	if err != nil {
-		log.Printf("[GetUserActivity] {ListLogs}: %v", err)
-		response.SendError(c, "Failed to retrieve user activity", http.StatusInternalServerError, nil)
+		fmt.Printf("[GetUserActivity] {ListLogs}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to retrieve user activity",
+			http.StatusInternalServerError,
+			nil,
+		)
 		return
 	}
 
 	response.SendSuccess(c, result)
+}
+
+func (h *Handler) PostUpdateRoles(c *gin.Context) {
+	var req UpdateRolesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+
+	adminID := c.MustGet("userID").(string)
+
+	err := h.service.UpdateUserRoles(c.Request.Context(), req, adminID)
+	if err != nil {
+		fmt.Printf("[PostUpdateRoles] {UpdateUserRoles}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to update user roles",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	// Audit log
+	adminEmail := c.MustGet("userEmail").(string)
+	h.logger.Record(
+		c.Request.Context(),
+		nil,
+		audit.LogEntry{
+			Level:    audit.LevelWarning,
+			Category: audit.CategorySecurity,
+			Action:   audit.ActionElevateRoles,
+			Message: fmt.Sprintf(
+				"Superadmin %s elevated/updated roles for user %s. Reason: %s, Ref: %s",
+				adminEmail,
+				req.UserID,
+				req.Reason,
+				req.ReferenceID,
+			),
+			UserID:   structs.StringToNullableString(adminID),
+			TargetID: structs.StringToNullableString(req.UserID),
+		},
+	)
+
+	response.SendSuccess(c, gin.H{"message": "User roles updated successfully"})
+}
+
+func (h *Handler) PostUserToWhitelist(c *gin.Context) {
+	var req AddUserToWhitelistRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+	err := h.service.AddUserToWhitelist(c.Request.Context(), req)
+	if err != nil {
+		fmt.Printf("[PostUserToWhitelist] {AddUserToWhitelist}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to add user to whitelist",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(
+		c,
+		gin.H{"message": "User added to whitelist successfully"},
+	)
+}
+
+func (h *Handler) PostRemoveUserFromWhitelist(c *gin.Context) {
+	var req RemoveUserFromWhitelistRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.service.RemoveUserFromWhitelist(c.Request.Context(), req)
+	if err != nil {
+		fmt.Printf(
+			"[PostRemoveUserFromWhitelist] {RemoveUserFromWhitelist}: %v\n", err,
+		)
+		response.SendError(
+			c,
+			"Failed to remove user from whitelist",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(
+		c,
+		gin.H{"message": "User removed from whitelist successfully"},
+	)
+}
+
+func (h *Handler) PostProfilePicture(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	fileID := c.Param("id")
+	if fileID == "" {
+		response.SendFail(c, gin.H{"error": "File ID is required"})
+		return
+	}
+
+	err := h.service.PostProfilePicture(c.Request.Context(), userID, fileID)
+	if err != nil {
+		fmt.Printf("[PostProfilePicture] {PostProfilePicture}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to associate profile picture",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(
+		c,
+		gin.H{"message": "Profile picture updated successfully"},
+	)
+}
+
+func (h *Handler) UploadProfilePicture(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		response.SendFail(c, gin.H{"error": "File is required"})
+		return
+	}
+
+	fileURL, err := h.service.UploadProfilePicture(
+		c.Request.Context(),
+		userID,
+		fileHeader,
+	)
+	if err != nil {
+		fmt.Printf("[UploadProfilePicture] {UploadProfilePicture}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to upload profile picture",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(
+		c,
+		gin.H{
+			"message": "Profile picture uploaded successfully",
+			"url":     fileURL,
+		},
+	)
 }

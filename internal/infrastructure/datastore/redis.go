@@ -64,3 +64,41 @@ func (r *RedisClient) Get(ctx context.Context, key string) (string, error) {
 func (r *RedisClient) Del(ctx context.Context, key string) error {
 	return r.Client.Del(ctx, key).Err()
 }
+
+func (r *RedisClient) SAdd(
+	ctx context.Context,
+	key string,
+	members ...interface{},
+) error {
+	return r.Client.SAdd(ctx, key, members...).Err()
+}
+
+func (r *RedisClient) SRem(
+	ctx context.Context,
+	key string,
+	members ...interface{},
+) error {
+	return r.Client.SRem(ctx, key, members...).Err()
+}
+
+func (r *RedisClient) SMembers(
+	ctx context.Context,
+	key string,
+) ([]string, error) {
+	return r.Client.SMembers(ctx, key).Result()
+}
+
+func (r *RedisClient) Expire(
+	ctx context.Context,
+	key string,
+	expiration time.Duration,
+) error {
+	return r.Client.Expire(ctx, key, expiration).Err()
+}
+
+func (r *RedisClient) Keys(
+	ctx context.Context,
+	pattern string,
+) ([]string, error) {
+	return r.Client.Keys(ctx, pattern).Result()
+}

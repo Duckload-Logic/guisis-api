@@ -1,7 +1,6 @@
 package slips
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -14,36 +13,42 @@ import (
 	"github.com/google/uuid"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
-	"github.com/olazo-johnalbert/duckload-api/internal/core/hash"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/students"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/storage"
 )
 
 const MaxFileSize = 5 * 1024 * 1024 // 5MB limit
-
 type Service struct {
-	repo         RepositoryInterface
-	logService   audit.Logger
-	notifService audit.Notifier
-	fileStorage  storage.FileStorage
-	userService  users.ServiceInterface
+	repo           *Repository
+	logService     audit.Logger
+	notifService   audit.Notifier
+	fileStorage    storage.FileStorage
+	userService    *users.Service
+	studentService *students.Service
+	filesService   *files.Service
 }
 
 func NewService(
-	repo RepositoryInterface,
+	repo *Repository,
 	logService audit.Logger,
 	notifService audit.Notifier,
 	fileStorage storage.FileStorage,
-	userService users.ServiceInterface,
+	userService *users.Service,
+	studentService *students.Service,
+	filesService *files.Service,
 ) *Service {
 	return &Service{
-		repo:         repo,
-		logService:   logService,
-		notifService: notifService,
-		fileStorage:  fileStorage,
-		userService:  userService,
+		repo:           repo,
+		logService:     logService,
+		notifService:   notifService,
+		fileStorage:    fileStorage,
+		userService:    userService,
+		studentService: studentService,
+		filesService:   filesService,
 	}
 }
 
@@ -77,24 +82,21 @@ func (s *Service) GetSlipByID(
 		return nil, fmt.Errorf("slip not found")
 	}
 
-	return &SlipDTO{
-		ID:    slip.ID,
-		IIRID: slip.IIRID,
-		User: users.GetUserResponse{
-			FirstName: slip.UserFirstName,
-			MiddleName: structs.FromSqlNull(
-				slip.UserMiddleName,
-			),
-			LastName: slip.UserLastName,
-			Email:    slip.UserEmail,
+	dto := &SlipDTO{
+		ID:     slip.ID,
+		UserID: slip.UserID,
+		IIRID:  slip.IIRID,
+		User: users.UserResponse{
+			FirstName:  slip.UserFirstName,
+			MiddleName: slip.UserMiddleName,
+			LastName:   slip.UserLastName,
+			Email:      slip.UserEmail,
 		},
 		StudentNumber: slip.StudentNumber,
 		Reason:        slip.Reason,
 		DateOfAbsence: slip.DateOfAbsence,
 		DateNeeded:    slip.DateNeeded,
-		AdminNotes: structs.FromSqlNull(
-			slip.AdminNotes,
-		),
+		AdminNotes:    slip.AdminNotes,
 		Category: SlipCategory{
 			ID:   slip.CategoryID,
 			Name: slip.CategoryName,
@@ -106,13 +108,18 @@ func (s *Service) GetSlipByID(
 		},
 		CreatedAt: slip.CreatedAt,
 		UpdatedAt: slip.UpdatedAt,
-	}, nil
+	}
+
+	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, []string{slip.UserID})
+	dto.StudentCORURL = corMap[slip.UserID]
+
+	return dto, nil
 }
 
 func (s *Service) GetUrgentSlips(
 	ctx context.Context,
-	req *ListSlipRequest,
-) (*ListSlipsDTO, error) {
+	req *ListSlipsRequest,
+) (*ListSlipsResponse, error) {
 	req.SetDefaults("urgency_score")
 
 	slips, err := s.repo.GetUrgentSlips(ctx, req)
@@ -120,25 +127,31 @@ func (s *Service) GetUrgentSlips(
 		return nil, err
 	}
 
+	// Batch fetch COR URLs
+	userIDs := make([]string, 0, len(slips))
+	for i := range slips {
+		if slips[i].UserID != "" {
+			userIDs = append(userIDs, slips[i].UserID)
+		}
+	}
+	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, userIDs)
+
 	var slipDTOs []SlipDTO
 	for s := range slips {
 		slipDTOs = append(slipDTOs, SlipDTO{
-			ID: slips[s].ID,
-			User: users.GetUserResponse{
-				ID:        "",
-				FirstName: slips[s].UserFirstName,
-				MiddleName: structs.FromSqlNull(
-					slips[s].UserMiddleName,
-				),
-				LastName: slips[s].UserLastName,
-				Email:    slips[s].UserEmail,
+			ID:     slips[s].ID,
+			UserID: slips[s].UserID,
+			IIRID:  slips[s].IIRID,
+			User: users.UserResponse{
+				FirstName:  slips[s].UserFirstName,
+				MiddleName: slips[s].UserMiddleName,
+				LastName:   slips[s].UserLastName,
+				Email:      slips[s].UserEmail,
 			},
 			Reason:        slips[s].Reason,
 			DateOfAbsence: slips[s].DateOfAbsence,
 			DateNeeded:    slips[s].DateNeeded,
-			AdminNotes: structs.FromSqlNull(
-				slips[s].AdminNotes,
-			),
+			AdminNotes:    slips[s].AdminNotes,
 			Category: SlipCategory{
 				ID:   slips[s].CategoryID,
 				Name: slips[s].CategoryName,
@@ -148,8 +161,9 @@ func (s *Service) GetUrgentSlips(
 				Name:     slips[s].StatusName,
 				ColorKey: slips[s].StatusColorKey,
 			},
-			CreatedAt: slips[s].CreatedAt,
-			UpdatedAt: slips[s].UpdatedAt,
+			StudentCORURL: corMap[slips[s].UserID],
+			CreatedAt:     slips[s].CreatedAt,
+			UpdatedAt:     slips[s].UpdatedAt,
 		})
 	}
 
@@ -159,7 +173,7 @@ func (s *Service) GetUrgentSlips(
 		return nil, fmt.Errorf("failed to get slips count: %w", err)
 	}
 
-	return &ListSlipsDTO{
+	return &ListSlipsResponse{
 		Slips: slipDTOs,
 		Meta:  structs.CalculateMetadata(total, req.Page, req.PageSize),
 	}, nil
@@ -168,7 +182,7 @@ func (s *Service) GetUrgentSlips(
 func (s *Service) GetSlipStats(
 	ctx context.Context,
 	iirID *string,
-	req *ListSlipRequest,
+	req *ListSlipsRequest,
 ) ([]SlipStatusCount, error) {
 	stats, err := s.repo.GetSlipStats(ctx, iirID, req)
 	if err != nil {
@@ -180,8 +194,8 @@ func (s *Service) GetSlipStats(
 
 func (s *Service) GetAllExcuseSlips(
 	ctx context.Context,
-	req ListSlipRequest,
-) (*ListSlipsDTO, error) {
+	req ListSlipsRequest,
+) (*ListSlipsResponse, error) {
 	req.SetDefaults("created_at")
 
 	slips, err := s.repo.GetAll(ctx, &req)
@@ -189,27 +203,32 @@ func (s *Service) GetAllExcuseSlips(
 		return nil, err
 	}
 
+	// Batch fetch COR URLs
+	userIDs := make([]string, 0, len(slips))
+	for i := range slips {
+		if slips[i].UserID != "" {
+			userIDs = append(userIDs, slips[i].UserID)
+		}
+	}
+	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, userIDs)
+
 	var slipDTOs []SlipDTO
 	for s := range slips {
 		slipDTOs = append(slipDTOs, SlipDTO{
-			ID:    slips[s].ID,
-			IIRID: slips[s].IIRID,
-			User: users.GetUserResponse{
-				ID:        "",
-				FirstName: slips[s].UserFirstName,
-				MiddleName: structs.FromSqlNull(
-					slips[s].UserMiddleName,
-				),
-				LastName: slips[s].UserLastName,
-				Email:    slips[s].UserEmail,
+			ID:     slips[s].ID,
+			UserID: slips[s].UserID,
+			IIRID:  slips[s].IIRID,
+			User: users.UserResponse{
+				FirstName:  slips[s].UserFirstName,
+				MiddleName: slips[s].UserMiddleName,
+				LastName:   slips[s].UserLastName,
+				Email:      slips[s].UserEmail,
 			},
 			StudentNumber: slips[s].StudentNumber,
 			Reason:        slips[s].Reason,
 			DateOfAbsence: slips[s].DateOfAbsence,
 			DateNeeded:    slips[s].DateNeeded,
-			AdminNotes: structs.FromSqlNull(
-				slips[s].AdminNotes,
-			),
+			AdminNotes:    slips[s].AdminNotes,
 			Category: SlipCategory{
 				ID:   slips[s].CategoryID,
 				Name: slips[s].CategoryName,
@@ -219,8 +238,9 @@ func (s *Service) GetAllExcuseSlips(
 				Name:     slips[s].StatusName,
 				ColorKey: slips[s].StatusColorKey,
 			},
-			CreatedAt: slips[s].CreatedAt,
-			UpdatedAt: slips[s].UpdatedAt,
+			StudentCORURL: corMap[slips[s].UserID],
+			CreatedAt:     slips[s].CreatedAt,
+			UpdatedAt:     slips[s].UpdatedAt,
 		})
 	}
 
@@ -229,7 +249,7 @@ func (s *Service) GetAllExcuseSlips(
 		return nil, fmt.Errorf("failed to get slips count: %w", err)
 	}
 
-	return &ListSlipsDTO{
+	return &ListSlipsResponse{
 		Slips: slipDTOs,
 		Meta:  structs.CalculateMetadata(total, req.Page, req.PageSize),
 	}, nil
@@ -238,8 +258,8 @@ func (s *Service) GetAllExcuseSlips(
 func (s *Service) GetExcuseSlipsByIIRID(
 	ctx context.Context,
 	iirID string,
-	req ListSlipRequest,
-) (*ListSlipsDTO, error) {
+	req ListSlipsRequest,
+) (*ListSlipsResponse, error) {
 	req.SetDefaults("created_at")
 
 	slips, err := s.repo.GetByIIRID(ctx, iirID, &req)
@@ -252,22 +272,18 @@ func (s *Service) GetExcuseSlipsByIIRID(
 		slipDTOs = append(slipDTOs, SlipDTO{
 			ID:    slips[s].ID,
 			IIRID: slips[s].IIRID,
-			User: users.GetUserResponse{
-				ID:        "",
-				FirstName: slips[s].UserFirstName,
-				MiddleName: structs.FromSqlNull(
-					slips[s].UserMiddleName,
-				),
-				LastName: slips[s].UserLastName,
-				Email:    slips[s].UserEmail,
+			User: users.UserResponse{
+				ID:         "",
+				FirstName:  slips[s].UserFirstName,
+				MiddleName: slips[s].UserMiddleName,
+				LastName:   slips[s].UserLastName,
+				Email:      slips[s].UserEmail,
 			},
 			StudentNumber: slips[s].StudentNumber,
 			Reason:        slips[s].Reason,
 			DateOfAbsence: slips[s].DateOfAbsence,
 			DateNeeded:    slips[s].DateNeeded,
-			AdminNotes: structs.FromSqlNull(
-				slips[s].AdminNotes,
-			),
+			AdminNotes:    slips[s].AdminNotes,
 			Category: SlipCategory{
 				ID:   slips[s].CategoryID,
 				Name: slips[s].CategoryName,
@@ -290,7 +306,7 @@ func (s *Service) GetExcuseSlipsByIIRID(
 		)
 	}
 
-	return &ListSlipsDTO{
+	return &ListSlipsResponse{
 		Slips: slipDTOs,
 		Meta:  structs.CalculateMetadata(total, req.Page, req.PageSize),
 	}, nil
@@ -310,7 +326,7 @@ func (s *Service) GetSlipAttachments(
 		// Keep FileURL as the URL path (e.g., /slips/{hash}/{filename})
 		// Don't convert it to filesystem path - the frontend needs the URL path
 		attachmentDTOs = append(attachmentDTOs, AttachmentDTO{
-			ID:       attachments[a].ID,
+			ID:       attachments[a].FileID,
 			FileName: attachments[a].FileName,
 			FileURL:  attachments[a].FileURL,
 		})
@@ -335,14 +351,7 @@ func (s *Service) GetAttachmentFile(
 	return attachment, nil
 }
 
-// SubmitExcuseSlip creates a new slip with attachments.
-func (s *Service) SubmitExcuseSlip(
-	ctx context.Context,
-	iirID string,
-	req CreateSlipRequest,
-	files []*multipart.FileHeader,
-) (*Slip, error) {
-	// Validate all files
+func (s *Service) validateFiles(files []*multipart.FileHeader) error {
 	allowedTypes := map[string]bool{
 		".pdf":  true,
 		".jpg":  true,
@@ -353,20 +362,71 @@ func (s *Service) SubmitExcuseSlip(
 	for _, file := range files {
 		// Check File Size
 		if file.Size > MaxFileSize {
-			return nil, fmt.Errorf(
+			return fmt.Errorf(
 				"file '%s' is too large: maximum 5MB allowed",
 				file.Filename,
 			)
 		}
 
-		// Check File Type
+		// Check File Type (Content-Aware)
+		f, err := file.Open()
+		if err != nil {
+			return fmt.Errorf("failed to open file %s", file.Filename)
+		}
+		defer f.Close()
+
+		// Read first 512 bytes to detect content type
+		buffer := make([]byte, 512)
+		_, _ = f.Read(buffer)
+		contentType := http.DetectContentType(buffer)
+
+		allowedMime := map[string]bool{
+			"application/pdf": true,
+			"image/jpeg":      true,
+			"image/png":       true,
+		}
+
+		if !allowedMime[contentType] {
+			return fmt.Errorf(
+				"invalid content type for '%s': expected PDF or Image, got %s",
+				file.Filename,
+				contentType,
+			)
+		}
+
+		// Double check extension just in case
 		ext := strings.ToLower(filepath.Ext(file.Filename))
 		if !allowedTypes[ext] {
-			return nil, fmt.Errorf(
-				"invalid file type for '%s': PDF and images only",
+			return fmt.Errorf(
+				"invalid file extension for '%s'",
 				file.Filename,
 			)
 		}
+	}
+	return nil
+}
+
+// SubmitExcuseSlip creates a new slip with attachments.
+func (s *Service) SubmitExcuseSlip(
+	ctx context.Context,
+	iirID string,
+	req CreateSlipRequest,
+	files []*multipart.FileHeader,
+) (*Slip, error) {
+	// Graduated Student Protocol: Lock records for Graduated or Archived students
+	isLocked, err := s.studentService.IsStudentLocked(ctx, iirID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check student status: %w", err)
+	}
+	if isLocked {
+		return nil, fmt.Errorf(
+			"cannot submit slip: student record is locked (Graduated/Archived)",
+		)
+	}
+
+	// Validate all files
+	if err := s.validateFiles(files); err != nil {
+		return nil, err
 	}
 
 	dateOfAbsence := strings.Split(req.DateOfAbsence, "T")[0]
@@ -383,59 +443,10 @@ func (s *Service) SubmitExcuseSlip(
 		)
 	}
 
-	folderHash := hash.GetSHA256Hash(
-		fmt.Sprintf(
-			"%s%s%s%d",
-			iirID,
-			dateOfAbsence,
-			strings.Split(req.DateNeeded, "T")[0],
-			time.Now().UnixNano(),
-		),
-		8,
-	)
-
-	var fileURLs []string
-
-	for _, file := range files {
-		ext := strings.ToLower(
-			filepath.Ext(file.Filename),
-		)
-		fileHash := hash.GetSHA256Hash(
-			fmt.Sprintf(
-				"%s%d",
-				file.Filename,
-				time.Now().UnixNano(),
-			),
-			16,
-		)
-		uniqueFileName := fileHash + ext
-
-		blobPath := fmt.Sprintf(
-			"slips/%s/%s",
-			folderHash,
-			uniqueFileName,
-		)
-
-		if err := s.uploadToBlob(
-			ctx,
-			file,
-			blobPath,
-		); err != nil {
-			return nil, fmt.Errorf(
-				"failed to upload %s: %w",
-				file.Filename,
-				err,
-			)
-		}
-
-		fileURLs = append(
-			fileURLs,
-			fmt.Sprintf(
-				"/slips/%s/%s",
-				folderHash,
-				uniqueFileName,
-			),
-		)
+	// Unified File Implementation: Use files features
+	uploadedFiles, err := s.filesService.UploadFiles(ctx, files, "slips")
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload files: %w", err)
 	}
 
 	slip := &Slip{
@@ -448,22 +459,20 @@ func (s *Service) SubmitExcuseSlip(
 		StatusID:      1,
 	}
 
-	err = datastore.RunInTransaction(
+	err = s.repo.WithTransaction(
 		ctx,
-		s.repo.GetDB(),
 		func(tx datastore.DB) error {
-			slipID, err := s.repo.CreateSlip(ctx, tx, slip)
+			_, err := s.repo.CreateSlip(ctx, tx, slip)
 			if err != nil {
 				return err
 			}
 
-			// Loop to create attachment records
-			for i, url := range fileURLs {
+			// Loop to create attachment records linked to files table
+			for _, f := range uploadedFiles {
 				attachment := &SlipAttachment{
-					ID:       uuid.New().String(),
-					SlipID:   slipID,
-					FileName: files[i].Filename,
-					FileURL:  url,
+					FileID:         f.ID,
+					SlipID:         structs.StringToNullableString(slip.ID),
+					AttachmentType: "OTHER",
 				}
 				if err := s.repo.SaveSlipAttachment(
 					ctx,
@@ -577,7 +586,19 @@ func (s *Service) UpdateExcuseSlip(
 	req CreateSlipRequest,
 	files []*multipart.FileHeader,
 ) (*Slip, error) {
-	// 1. Fetch existing slip and validate ownership/status
+	// Graduated Student Protocol: Lock records for Graduated or
+	// Archived students
+	isLocked, err := s.studentService.IsStudentLocked(ctx, iirID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check student status: %w", err)
+	}
+	if isLocked {
+		return nil, fmt.Errorf(
+			"cannot update slip: student record is locked (Graduated/Archived)",
+		)
+	}
+
+	// Fetch existing slip and validate ownership/status
 	existingSlip, err := s.repo.GetSlipByID(ctx, slipID)
 	if err != nil {
 		return nil, err
@@ -594,54 +615,26 @@ func (s *Service) UpdateExcuseSlip(
 		return nil, fmt.Errorf("cannot edit slip in current status")
 	}
 
-	// 2. Validate all files
-	allowedTypes := map[string]bool{
-		".pdf":  true,
-		".jpg":  true,
-		".jpeg": true,
-		".png":  true,
-	}
-	for _, file := range files {
-		if file.Size > MaxFileSize {
-			return nil, fmt.Errorf("file '%s' is too large", file.Filename)
-		}
-		ext := strings.ToLower(filepath.Ext(file.Filename))
-		if !allowedTypes[ext] {
-			return nil, fmt.Errorf("invalid file type for '%s'", file.Filename)
-		}
+	// Validate all files
+	if err := s.validateFiles(files); err != nil {
+		return nil, err
 	}
 
-	// 3. Delete old attachments from storage
+	// Delete old attachments from both slip records and files table
 	oldAttachments, err := s.repo.GetSlipAttachments(ctx, slipID)
 	if err == nil {
 		for _, att := range oldAttachments {
-			blobPath := strings.TrimPrefix(att.FileURL, "/")
-			_ = s.fileStorage.Delete(ctx, blobPath)
+			_ = s.filesService.DeleteFile(ctx, att.FileID)
 		}
 	}
 
-	// 4. Upload new files
-	folderHash := hash.GetSHA256Hash(
-		fmt.Sprintf("%s%d", iirID, time.Now().UnixNano()),
-		8,
-	)
-	var fileURLs []string
-	for _, file := range files {
-		ext := strings.ToLower(filepath.Ext(file.Filename))
-		fileHash := hash.GetSHA256Hash(
-			fmt.Sprintf("%s%d", file.Filename, time.Now().UnixNano()),
-			16,
-		)
-		uniqueFileName := fileHash + ext
-		blobPath := fmt.Sprintf("slips/%s/%s", folderHash, uniqueFileName)
-
-		if err := s.uploadToBlob(ctx, file, blobPath); err != nil {
-			return nil, fmt.Errorf("failed to upload %s: %w", file.Filename, err)
-		}
-		fileURLs = append(fileURLs, fmt.Sprintf("/slips/%s/%s", folderHash, uniqueFileName))
+	// Upload new files using centralized service
+	uploadedFiles, err := s.filesService.UploadFiles(ctx, files, "slips")
+	if err != nil {
+		return nil, fmt.Errorf("failed to upload files: %w", err)
 	}
 
-	// 5. Update database in transaction
+	// Update database in transaction
 	updatedSlip := &Slip{
 		ID:            slipID,
 		IIRID:         iirID,
@@ -652,9 +645,8 @@ func (s *Service) UpdateExcuseSlip(
 		StatusID:      1, // Reset to Pending
 	}
 
-	err = datastore.RunInTransaction(
+	err = s.repo.WithTransaction(
 		ctx,
-		s.repo.GetDB(),
 		func(tx datastore.DB) error {
 			// Delete old attachment records
 			if err := s.repo.DeleteSlipAttachments(ctx, tx, slipID); err != nil {
@@ -665,12 +657,11 @@ func (s *Service) UpdateExcuseSlip(
 				return err
 			}
 			// Save new attachments
-			for i, url := range fileURLs {
+			for _, f := range uploadedFiles {
 				attachment := &SlipAttachment{
-					ID:       uuid.New().String(),
-					SlipID:   &slipID,
-					FileName: files[i].Filename,
-					FileURL:  url,
+					FileID:         f.ID,
+					SlipID:         structs.StringToNullableString(slipID),
+					AttachmentType: "OTHER",
 				}
 				if err := s.repo.SaveSlipAttachment(ctx, tx, attachment); err != nil {
 					return err
@@ -683,6 +674,7 @@ func (s *Service) UpdateExcuseSlip(
 		return nil, err
 	}
 
+	studentUserID, _ := s.repo.GetUserIDBySlipID(ctx, slipID)
 	audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
 		Log: &audit.LogParams{
 			Level:    audit.LevelInfo,
@@ -695,31 +687,25 @@ func (s *Service) UpdateExcuseSlip(
 				NewValues:  updatedSlip,
 			},
 		},
+		Notifications: []audit.NotificationParams{
+			// Notification para sa Student
+			{
+				ReceiverID: structs.StringToNullableString(studentUserID),
+				Title:      "Slip Updated",
+				Message:    fmt.Sprintf("Your slip #%s has been updated", slipID),
+				Type:       constants.SlipEntityType,
+			},
+			// Notification para sa Counselor (if needed)
+			{
+				ReceiverID: structs.StringToNullableString(audit.ExtractUserID(ctx)),
+				Title:      "New Slip Update",
+				Message:    fmt.Sprintf("Student updated slip #%s", slipID),
+				Type:       constants.SlipEntityType,
+			},
+		},
 	})
 
 	return updatedSlip, nil
-}
-
-func (s *Service) uploadToBlob(
-	ctx context.Context,
-	fileHeader *multipart.FileHeader,
-	blobPath string,
-) error {
-	src, err := fileHeader.Open()
-	if err != nil {
-		return err
-	}
-	defer src.Close()
-
-	data, err := io.ReadAll(src)
-	if err != nil {
-		return err
-	}
-
-	contentType := http.DetectContentType(data)
-	reader := bytes.NewReader(data)
-
-	return s.fileStorage.Upload(ctx, blobPath, reader, contentType)
 }
 
 // DownloadAttachment streams the attachment from Azure Blob Storage.
@@ -736,8 +722,16 @@ func (s *Service) DownloadAttachment(
 		return nil, fmt.Errorf("attachment not found")
 	}
 
-	// Convert URL path "/slips/hash/file" to blob path "slips/hash/file"
-	blobPath := strings.TrimPrefix(attachment.FileURL, "/")
+	// Convert URL path "/uploads/slips/hash/file" to blob path "slips/hash/file"
+	blobPath := strings.TrimPrefix(attachment.FileURL, "/uploads/")
+	blobPath = strings.TrimPrefix(blobPath, "/")
+
+	// Security: Path Traversal Protection (Jail Check)
+	if strings.Contains(blobPath, "..") ||
+		!(strings.HasPrefix(blobPath, "slips/") ||
+			strings.HasPrefix(blobPath, "cors/")) {
+		return nil, fmt.Errorf("security: invalid file path detected")
+	}
 
 	if err := s.fileStorage.Download(ctx, blobPath, writer); err != nil {
 		return nil, fmt.Errorf("failed to download file: %w", err)
@@ -769,9 +763,8 @@ func (s *Service) UpdateExcuseSlipStatus(
 	// Fetch old state for audit trail
 	oldSlip, _ := s.repo.GetSlipByID(ctx, id)
 
-	return datastore.RunInTransaction(
+	return s.repo.WithTransaction(
 		ctx,
-		s.repo.GetDB(),
 		func(tx datastore.DB) error {
 			err := s.repo.UpdateStatus(ctx, tx, id, newStatus, adminNotes)
 			if err != nil {
@@ -836,8 +829,8 @@ func (s *Service) UpdateExcuseSlipStatus(
 					),
 					Title: "Admission Slip Updated Successfully",
 					Message: fmt.Sprintf(
-						"You have successfully updated the status of admission slip #%s to '%s'.",
-						id,
+						"You have successfully updated the status of admission slip %s to '%s'.",
+						structs.TruncateString(id, 7),
 						newStatus,
 					),
 					Type: constants.SlipEntityType,
@@ -877,26 +870,9 @@ func (s *Service) UpdateExcuseSlipStatus(
 	)
 }
 
-// func (s *Service) DeleteExcuseSlip(ctx context.Context, id int) error {
-// 	slip, err := s.repo.GetByID(ctx, id)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	if slip == nil {
-// 		return fmt.Errorf("excuse slip not found")
-// 	}
-
-// 	err = s.repo.Delete(ctx, id)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	if slip.FileURL != "" {
-// 		err := os.Remove(slip.FileURL)
-// 		if err != nil {
-// 			log.Printf("[Warning] Failed to delete file '%s': %v", slip.FileURL, err)
-// 		}
-// 	}
-
-// 	return nil
-// }
+func (s *Service) GetUserIDBySlipID(
+	ctx context.Context,
+	id string,
+) (string, error) {
+	return s.repo.GetUserIDBySlipID(ctx, id)
+}

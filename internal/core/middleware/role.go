@@ -8,61 +8,60 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 )
 
-// RoleMiddleware checks if the user's role is in the allowed list.
-// Optionally accepts a log service to record ACCESS_DENIED events.
-func RoleMiddleware(allowedRoles ...int) gin.HandlerFunc {
+func RoleMiddleware(allowedRoles ...constants.RoleID) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		roleID, exists := c.Get("roleID")
+		roleIDsVal, exists := c.Get("roleIDs")
 		if !exists {
 			c.AbortWithStatusJSON(
 				http.StatusForbidden,
-				gin.H{"error": "Role not found"},
+				gin.H{"error": "Roles not found"},
 			)
 			return
 		}
 
-		rid, ok := roleID.(int)
+		userRoles, ok := roleIDsVal.([]int)
 		if !ok {
 			c.AbortWithStatusJSON(
 				http.StatusForbidden,
-				gin.H{"error": "Invalid role type"},
+				gin.H{"error": "Invalid roles type"},
 			)
-			return
-		}
-
-		// Always allow super admin to bypass role checks
-		if rid == int(constants.SuperAdminRoleID) {
-			c.Next()
 			return
 		}
 
 		isAuthorized := false
-		for _, role := range allowedRoles {
-			if role == rid {
+		for _, urid := range userRoles {
+			if urid == int(constants.SuperAdminRoleID) {
 				isAuthorized = true
+				break
+			}
+
+			for _, allowed := range allowedRoles {
+				if int(allowed) == urid {
+					isAuthorized = true
+					break
+				}
+			}
+			if isAuthorized {
 				break
 			}
 		}
 
 		if !isAuthorized {
-			// Log access denied if log service is available
 			if logSvc, ok := c.Get(SecurityLoggerContextKey); ok {
 				if svc, ok := logSvc.(SecurityLogger); ok {
-					userEmail, _ := c.Get("userEmail")
+					userEmailVal, _ := c.Get("userEmail")
+					userEmail, _ := userEmailVal.(string)
 					svc.RecordSecurity(
 						c.Request.Context(),
 						"ACCESS_DENIED",
 						fmt.Sprintf(
-							"Access denied for %v (role %d) on %s %s",
+							"Access denied for %s (roles %v) on %s %s",
 							userEmail,
-							rid,
+							userRoles,
 							c.Request.Method,
 							c.Request.URL.Path,
 						),
-						fmt.Sprintf(
-							"%v",
-							userEmail,
-						),
+						userEmail,
 						c.ClientIP(),
 						c.Request.UserAgent(),
 					)

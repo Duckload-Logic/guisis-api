@@ -3,41 +3,51 @@ package appointments
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/datetime"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/notes"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/students"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
+	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/ai/classifier"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 
 	"github.com/google/uuid"
 )
 
 type Service struct {
-	repo         RepositoryInterface
-	notifService audit.Notifier
-	logService   audit.Logger
-	userService  users.ServiceInterface
-	noteService  notes.ServiceInterface
+	repo           *Repository
+	notifService   audit.Notifier
+	logService     audit.Logger
+	userService    *users.Service
+	noteService    *notes.Service
+	studentService *students.Service
+	classifier     classifier.ServiceInterface
 }
 
 func NewService(
-	repo RepositoryInterface,
+	repo *Repository,
 	notifService audit.Notifier,
 	logService audit.Logger,
-	userService users.ServiceInterface,
-	noteService notes.ServiceInterface,
+	userService *users.Service,
+	noteService *notes.Service,
+	studentService *students.Service,
+	cfg *config.Config,
 ) *Service {
 	return &Service{
-		repo:         repo,
-		notifService: notifService,
-		logService:   logService,
-		userService:  userService,
-		noteService:  noteService,
+		repo:           repo,
+		notifService:   notifService,
+		logService:     logService,
+		userService:    userService,
+		noteService:    noteService,
+		studentService: studentService,
+		classifier:     classifier.NewClient(http.DefaultClient, cfg.AIBaseUrl),
 	}
 }
 
@@ -51,21 +61,52 @@ func (s *Service) CreateAppointment(
 	ctx context.Context,
 	iirID string,
 	req AppointmentDTO,
+	cfg *config.Config,
 ) (*Appointment, error) {
 	appt := &Appointment{
 		ID:                    uuid.New().String(),
 		IIRID:                 iirID,
-		Reason:                structs.ToSqlNull(req.Reason),
+		Reason:                req.Reason,
 		WhenDate:              strings.Split(req.WhenDate, "T")[0],
 		TimeSlotID:            req.TimeSlot.ID,
 		AppointmentCategoryID: req.AppointmentCategory.ID,
 		StatusID:              1,
 	}
 
-	err := datastore.RunInTransaction(
+	// Graduated Student Protocol: Lock records for Graduated or Archived students
+	isLocked, err := s.studentService.IsStudentLocked(ctx, iirID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check student status: %w", err)
+	}
+	if isLocked {
+		return nil, fmt.Errorf(
+			"cannot create appointment: student record is locked (Graduated/Archived)",
+		)
+	}
+
+	// TODO: to be removed in future implementations
+	appt.UrgencyLevel = "MEDIUM"
+	appt.UrgencyScore = 0.0
+
+	classification, err := s.classifier.Classify(ctx, appt.Reason.String, cfg)
+	if err == nil {
+		appt.UrgencyLevel = classification.Level
+		appt.UrgencyScore = classification.Confidence
+	}
+
+	err = s.repo.WithTransaction(
 		ctx,
-		s.repo.GetDB(),
 		func(tx datastore.DB) error {
+			available, err := s.repo.IsSlotAvailableForUpdate(
+				ctx, tx, appt.WhenDate, appt.TimeSlotID,
+			)
+			if err != nil {
+				return err
+			}
+			if !available {
+				return fmt.Errorf("selected time slot is no longer available")
+			}
+
 			return s.repo.CreateAppointment(ctx, tx, appt)
 		},
 	)
@@ -159,22 +200,18 @@ func (s *Service) GetAppointmentByID(
 
 	dto := &AppointmentDTO{
 		ID: appt.ID,
-		User: users.GetUserResponse{
-			ID:        "",
-			FirstName: appt.UserFirstName,
-			MiddleName: structs.FromSqlNull(
-				appt.UserMiddleName,
-			),
-			LastName: appt.UserLastName,
-			Email:    appt.UserEmail,
+		User: users.UserResponse{
+			ID:         "",
+			FirstName:  appt.UserFirstName,
+			MiddleName: appt.UserMiddleName,
+			LastName:   appt.UserLastName,
+			Email:      appt.UserEmail,
 		},
 		IIRID:         appt.IIRID,
 		StudentNumber: appt.StudentNumber,
-		Reason:        structs.FromSqlNull(appt.Reason),
-		AdminNotes: structs.FromSqlNull(
-			appt.AdminNotes,
-		),
-		WhenDate: appt.WhenDate,
+		Reason:        appt.Reason,
+		AdminNotes:    appt.AdminNotes,
+		WhenDate:      appt.WhenDate,
 		TimeSlot: TimeSlot{
 			ID:   appt.TimeSlotID,
 			Time: appt.TimeSlotTime,
@@ -188,12 +225,21 @@ func (s *Service) GetAppointmentByID(
 			Name:     appt.StatusName,
 			ColorKey: appt.StatusColorKey,
 		},
-		CreatedAt: appt.CreatedAt,
-		UpdatedAt: appt.UpdatedAt,
+		UrgencyLevel: appt.UrgencyLevel,
+		UrgencyScore: appt.UrgencyScore,
+		CreatedAt:    appt.CreatedAt,
+		UpdatedAt:    appt.UpdatedAt,
 	}
 
 	hasNote, _ := s.noteService.HasNoteForAppointment(ctx, id)
 	dto.HasSignificantNote = hasNote
+
+	// Fetch student COR URL
+	userID, _ := s.repo.GetUserIDByAppointmentID(ctx, id)
+	if userID != "" {
+		corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, []string{userID})
+		dto.StudentCORURL = corMap[userID]
+	}
 
 	return dto, nil
 }
@@ -230,7 +276,7 @@ func (s *Service) GetDailyStatusCount(
 func (s *Service) ListAppointments(
 	ctx context.Context,
 	req ListAppointmentsRequest,
-) (*ListAppointmentsDTO, error) {
+) (*ListAppointmentsResponse, error) {
 	req.SetDefaults("created_at")
 
 	statusIDs := []string{}
@@ -252,43 +298,51 @@ func (s *Service) ListAppointments(
 		return nil, err
 	}
 
-	dtos := make([]AppointmentDTO, 0, len(appts))
-	for _, appt := range appts {
-		userDTO := users.GetUserResponse{
-			ID:        "",
-			Role:      users.Role{ID: 0, Name: ""},
-			FirstName: appt.UserFirstName,
-			MiddleName: structs.FromSqlNull(
-				appt.UserMiddleName,
-			),
-			LastName: appt.UserLastName,
+	// Batch fetch COR URLs
+	userIDs := make([]string, 0, len(appts))
+	for i := range appts {
+		if appts[i].UserID != "" {
+			userIDs = append(userIDs, appts[i].UserID)
 		}
+	}
+	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, userIDs)
+
+	dtos := make([]AppointmentDTO, 0, len(appts))
+	for i := range appts {
 		dto := AppointmentDTO{
-			ID:     appt.ID,
-			User:   userDTO,
-			Reason: structs.FromSqlNull(appt.Reason),
-			AdminNotes: structs.FromSqlNull(
-				appt.AdminNotes,
-			),
-			WhenDate: appt.WhenDate,
+			ID:     appts[i].ID,
+			UserID: appts[i].UserID,
+			User: users.UserResponse{
+				ID:         "",
+				FirstName:  appts[i].UserFirstName,
+				MiddleName: appts[i].UserMiddleName,
+				LastName:   appts[i].UserLastName,
+				Email:      appts[i].UserEmail,
+			},
+			Reason:     appts[i].Reason,
+			AdminNotes: appts[i].AdminNotes,
+			WhenDate:   appts[i].WhenDate,
 			TimeSlot: TimeSlot{
-				ID:   appt.TimeSlotID,
-				Time: appt.TimeSlotTime,
+				ID:   appts[i].TimeSlotID,
+				Time: appts[i].TimeSlotTime,
 			},
 			AppointmentCategory: AppointmentCategory{
-				ID:   appt.CategoryID,
-				Name: appt.CategoryName,
+				ID:   appts[i].CategoryID,
+				Name: appts[i].CategoryName,
 			},
 			Status: AppointmentStatus{
-				ID:       appt.StatusID,
-				Name:     appt.StatusName,
-				ColorKey: appt.StatusColorKey,
+				ID:       appts[i].StatusID,
+				Name:     appts[i].StatusName,
+				ColorKey: appts[i].StatusColorKey,
 			},
-			CreatedAt: appt.CreatedAt,
-			UpdatedAt: appt.UpdatedAt,
+			UrgencyLevel:  appts[i].UrgencyLevel,
+			UrgencyScore:  appts[i].UrgencyScore,
+			StudentCORURL: corMap[appts[i].UserID],
+			CreatedAt:     appts[i].CreatedAt,
+			UpdatedAt:     appts[i].UpdatedAt,
 		}
 
-		hasNote, _ := s.noteService.HasNoteForAppointment(ctx, appt.ID)
+		hasNote, _ := s.noteService.HasNoteForAppointment(ctx, appts[i].ID)
 		dto.HasSignificantNote = hasNote
 
 		dtos = append(dtos, dto)
@@ -305,7 +359,7 @@ func (s *Service) ListAppointments(
 		return nil, err
 	}
 
-	return &ListAppointmentsDTO{
+	return &ListAppointmentsResponse{
 		Appointments: dtos,
 		Meta:         structs.CalculateMetadata(total, req.Page, req.PageSize),
 	}, nil
@@ -315,7 +369,7 @@ func (s *Service) GetAppointmentsByUserID(
 	ctx context.Context,
 	userID string,
 	req ListAppointmentsRequest,
-) (*ListAppointmentsDTO, error) {
+) (*ListAppointmentsResponse, error) {
 	req.SetDefaults("created_at")
 
 	appts, err := s.repo.ListByUserID(
@@ -333,42 +387,37 @@ func (s *Service) GetAppointmentsByUserID(
 	}
 
 	dtos := make([]AppointmentDTO, 0, len(appts))
-	for _, appt := range appts {
-		userDTO := users.GetUserResponse{
-			Role:      users.Role{ID: 0, Name: ""},
-			ID:        "",
-			FirstName: appt.UserFirstName,
-			MiddleName: structs.FromSqlNull(
-				appt.UserMiddleName,
-			),
-			LastName: appt.UserLastName,
-		}
+	for i := range appts {
 		dto := AppointmentDTO{
-			ID:     appt.ID,
-			User:   userDTO,
-			Reason: structs.FromSqlNull(appt.Reason),
-			AdminNotes: structs.FromSqlNull(
-				appt.AdminNotes,
-			),
-			WhenDate: appt.WhenDate,
+			ID: appts[i].ID,
+			User: users.UserResponse{
+				ID:         "",
+				FirstName:  appts[i].UserFirstName,
+				MiddleName: appts[i].UserMiddleName,
+				LastName:   appts[i].UserLastName,
+				Email:      appts[i].UserEmail,
+			},
+			Reason:     appts[i].Reason,
+			AdminNotes: appts[i].AdminNotes,
+			WhenDate:   appts[i].WhenDate,
 			TimeSlot: TimeSlot{
-				ID:   appt.TimeSlotID,
-				Time: appt.TimeSlotTime,
+				ID:   appts[i].TimeSlotID,
+				Time: appts[i].TimeSlotTime,
 			},
 			AppointmentCategory: AppointmentCategory{
-				ID:   appt.CategoryID,
-				Name: appt.CategoryName,
+				ID:   appts[i].CategoryID,
+				Name: appts[i].CategoryName,
 			},
 			Status: AppointmentStatus{
-				ID:       appt.StatusID,
-				Name:     appt.StatusName,
-				ColorKey: appt.StatusColorKey,
+				ID:       appts[i].StatusID,
+				Name:     appts[i].StatusName,
+				ColorKey: appts[i].StatusColorKey,
 			},
-			CreatedAt: appt.CreatedAt,
-			UpdatedAt: appt.UpdatedAt,
+			CreatedAt: appts[i].CreatedAt,
+			UpdatedAt: appts[i].UpdatedAt,
 		}
 
-		hasNote, _ := s.noteService.HasNoteForAppointment(ctx, appt.ID)
+		hasNote, _ := s.noteService.HasNoteForAppointment(ctx, appts[i].ID)
 		dto.HasSignificantNote = hasNote
 
 		dtos = append(dtos, dto)
@@ -385,7 +434,7 @@ func (s *Service) GetAppointmentsByUserID(
 		return nil, err
 	}
 
-	return &ListAppointmentsDTO{
+	return &ListAppointmentsResponse{
 		Appointments: dtos,
 		Meta:         structs.CalculateMetadata(total, req.Page, req.PageSize),
 	}, nil
@@ -395,7 +444,7 @@ func (s *Service) GetAppointmentsByIIRID(
 	ctx context.Context,
 	iirID string,
 	req ListAppointmentsRequest,
-) (*ListAppointmentsDTO, error) {
+) (*ListAppointmentsResponse, error) {
 	req.SetDefaults("created_at")
 
 	appts, err := s.repo.ListByIIRID(
@@ -413,42 +462,37 @@ func (s *Service) GetAppointmentsByIIRID(
 	}
 
 	dtos := make([]AppointmentDTO, 0, len(appts))
-	for _, appt := range appts {
-		userDTO := users.GetUserResponse{
-			Role:      users.Role{ID: 0, Name: ""},
-			ID:        "",
-			FirstName: appt.UserFirstName,
-			MiddleName: structs.FromSqlNull(
-				appt.UserMiddleName,
-			),
-			LastName: appt.UserLastName,
-		}
+	for i := range appts {
 		dto := AppointmentDTO{
-			ID:     appt.ID,
-			User:   userDTO,
-			Reason: structs.FromSqlNull(appt.Reason),
-			AdminNotes: structs.FromSqlNull(
-				appt.AdminNotes,
-			),
-			WhenDate: appt.WhenDate,
+			ID: appts[i].ID,
+			User: users.UserResponse{
+				ID:         "",
+				FirstName:  appts[i].UserFirstName,
+				MiddleName: appts[i].UserMiddleName,
+				LastName:   appts[i].UserLastName,
+				Email:      appts[i].UserEmail,
+			},
+			Reason:     appts[i].Reason,
+			AdminNotes: appts[i].AdminNotes,
+			WhenDate:   appts[i].WhenDate,
 			TimeSlot: TimeSlot{
-				ID:   appt.TimeSlotID,
-				Time: appt.TimeSlotTime,
+				ID:   appts[i].TimeSlotID,
+				Time: appts[i].TimeSlotTime,
 			},
 			AppointmentCategory: AppointmentCategory{
-				ID:   appt.CategoryID,
-				Name: appt.CategoryName,
+				ID:   appts[i].CategoryID,
+				Name: appts[i].CategoryName,
 			},
 			Status: AppointmentStatus{
-				ID:       appt.StatusID,
-				Name:     appt.StatusName,
-				ColorKey: appt.StatusColorKey,
+				ID:       appts[i].StatusID,
+				Name:     appts[i].StatusName,
+				ColorKey: appts[i].StatusColorKey,
 			},
-			CreatedAt: appt.CreatedAt,
-			UpdatedAt: appt.UpdatedAt,
+			CreatedAt: appts[i].CreatedAt,
+			UpdatedAt: appts[i].UpdatedAt,
 		}
 
-		hasNote, _ := s.noteService.HasNoteForAppointment(ctx, appt.ID)
+		hasNote, _ := s.noteService.HasNoteForAppointment(ctx, appts[i].ID)
 		dto.HasSignificantNote = hasNote
 
 		dtos = append(dtos, dto)
@@ -465,7 +509,7 @@ func (s *Service) GetAppointmentsByIIRID(
 		return nil, err
 	}
 
-	return &ListAppointmentsDTO{
+	return &ListAppointmentsResponse{
 		Appointments: dtos,
 		Meta:         structs.CalculateMetadata(total, req.Page, req.PageSize),
 	}, nil
@@ -515,16 +559,15 @@ func (s *Service) UpdateAppointment(
 	appt := Appointment{
 		ID:                    id,
 		StatusID:              req.Status.ID,
-		Reason:                structs.ToSqlNull(req.Reason),
-		AdminNotes:           structs.ToSqlNull(req.AdminNotes),
+		Reason:                req.Reason,
+		AdminNotes:            req.AdminNotes,
 		WhenDate:              strings.Split(req.WhenDate, "T")[0],
 		TimeSlotID:            req.TimeSlot.ID,
 		AppointmentCategoryID: req.AppointmentCategory.ID,
 	}
 
-	err := datastore.RunInTransaction(
+	err := s.repo.WithTransaction(
 		ctx,
-		s.repo.GetDB(),
 		func(tx datastore.DB) error {
 			return s.repo.UpdateAppointment(ctx, tx, appt)
 		},
@@ -578,7 +621,9 @@ func (s *Service) UpdateAppointment(
 			),
 			Title: "Appointment Updated Successfully",
 			Message: fmt.Sprintf(
-				"You have successfully updated the status of appointment scheduled on %s at %s to '%s'.",
+				"You have successfully updated the status of "+
+					"appointment #%s scheduled on %s at %s to '%s'.",
+				structs.TruncateString(oldAppt.ID, 7),
 				datetime.FormatDate(newAppt.WhenDate),
 				datetime.FormatTime(newAppt.TimeSlotTime),
 				newAppt.StatusName,
@@ -622,9 +667,11 @@ func (s *Service) UpdateAppointment(
 							TargetType: structs.StringToNullableString(
 								constants.AppointmentEntityType,
 							),
-							Title:   "Action Required: Significant Note",
-							Message: "Appointment completed. Please record any significant notes or incidents for this student.",
-							Type:    constants.AppointmentEntityType,
+							Title: "Action Required: Significant Note",
+							Message: "Appointment completed. Please record " +
+								"any significant notes or incidents for this " +
+								"student.",
+							Type: constants.AppointmentEntityType,
 						},
 					},
 				},

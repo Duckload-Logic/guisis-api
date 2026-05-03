@@ -8,12 +8,12 @@ import (
 )
 
 type Service struct {
-	repo  RepositoryInterface
+	repo  *Repository
 	redis *datastore.RedisClient
 }
 
 func NewService(
-	repo RepositoryInterface,
+	repo *Repository,
 	redis *datastore.RedisClient,
 ) *Service {
 	return &Service{repo: repo, redis: redis}
@@ -21,13 +21,15 @@ func NewService(
 
 func (s *Service) GetDashboard(
 	ctx context.Context,
-) (*DashboardResponseDTO, error) {
-	total, err := s.repo.GetTotalStudents(ctx)
+	year int,
+	courseID int,
+) (*DashboardResponse, error) {
+	total, err := s.repo.GetTotalStudents(ctx, year, courseID)
 	if err != nil {
 		return nil, err
 	}
 
-	dashboard := &DashboardResponseDTO{
+	dashboard := &DashboardResponse{
 		TotalStudents:        total,
 		AgeDistribution:      []DemographicStatDTO{},
 		CivilStatus:          []DemographicStatDTO{},
@@ -44,56 +46,68 @@ func (s *Service) GetDashboard(
 		SeniorHigh:           []DemographicStatDTO{},
 		NatureOfSchooling:    []DemographicStatDTO{},
 		QuietStudyPlace:      []DemographicStatDTO{},
+		GenderDistribution:   []DemographicStatDTO{},
 	}
 
 	if total > 0 {
 		// Demographic data
-		rawAges, _ := s.repo.GetAgeStats(ctx)
+		rawGender, _ := s.repo.GetGenderStats(ctx, year, courseID)
+		dashboard.GenderDistribution = s.mapToDTO(rawGender, total)
+
+		rawAges, _ := s.repo.GetAgeStats(ctx, year, courseID)
 		dashboard.AgeDistribution = s.mapToDTO(rawAges, total)
 
-		rawCivilStatus, _ := s.repo.GetCivilStatusStats(ctx)
+		rawCivilStatus, _ := s.repo.GetCivilStatusStats(ctx, year, courseID)
 		dashboard.CivilStatus = s.mapToDTO(rawCivilStatus, total)
 
-		rawReligions, _ := s.repo.GetReligionStats(ctx)
+		rawReligions, _ := s.repo.GetReligionStats(ctx, year, courseID)
 		dashboard.Religions = s.mapToDTO(rawReligions, total)
 
-		rawCityAddress, _ := s.repo.GetCityAddressStats(ctx)
+		rawCityAddress, _ := s.repo.GetCityAddressStats(ctx, year, courseID)
 		dashboard.CityAddress = s.mapToDTO(rawCityAddress, total)
 
 		// Economic/Social data
-		rawMonthlyIncome, _ := s.repo.GetMonthlyIncomeStats(ctx)
+		rawMonthlyIncome, _ := s.repo.GetMonthlyIncomeStats(ctx, year, courseID)
 		dashboard.MonthlyIncome = s.mapToDTO(rawMonthlyIncome, total)
 
-		rawOrdinalPosition, _ := s.repo.GetOrdinalPositionStats(ctx)
+		rawOrdinalPosition, _ := s.repo.GetOrdinalPositionStats(
+			ctx,
+			year,
+			courseID,
+		)
 		dashboard.OrdinalPosition = s.mapToDTO(rawOrdinalPosition, total)
 
-		rawQuietPlace, _ := s.repo.GetQuietStudyPlaceStats(ctx)
+		rawQuietPlace, _ := s.repo.GetQuietStudyPlaceStats(ctx, year, courseID)
 		dashboard.QuietStudyPlace = s.mapToDTO(rawQuietPlace, total)
 
 		// Family data
-		rawFatherEd, _ := s.repo.GetFatherEducationStats(ctx)
+		rawFatherEd, _ := s.repo.GetFatherEducationStats(ctx, year, courseID)
 		dashboard.FatherEducation = s.mapToDTO(rawFatherEd, total)
 
-		rawMotherEd, _ := s.repo.GetMotherEducationStats(ctx)
+		rawMotherEd, _ := s.repo.GetMotherEducationStats(ctx, year, courseID)
 		dashboard.MotherEducation = s.mapToDTO(rawMotherEd, total)
 
-		rawParentsMarital, _ := s.repo.GetParentsMaritalStatusStats(ctx)
+		rawParentsMarital, _ := s.repo.GetParentsMaritalStatusStats(
+			ctx,
+			year,
+			courseID,
+		)
 		dashboard.ParentsMaritalStatus = s.mapToDTO(rawParentsMarital, total)
 
 		// Academic data
-		rawHSGWA, _ := s.repo.GetHSGWAStats(ctx)
+		rawHSGWA, _ := s.repo.GetHSGWAStats(ctx, year, courseID)
 		dashboard.HighSchoolGWA = s.mapToDTO(rawHSGWA, total)
 
-		rawElem, _ := s.repo.GetElementaryStats(ctx)
+		rawElem, _ := s.repo.GetElementaryStats(ctx, year, courseID)
 		dashboard.Elementary = s.mapToDTO(rawElem, total)
 
-		rawJHS, _ := s.repo.GetJuniorHighStats(ctx)
+		rawJHS, _ := s.repo.GetJuniorHighStats(ctx, year, courseID)
 		dashboard.JuniorHigh = s.mapToDTO(rawJHS, total)
 
-		rawSHS, _ := s.repo.GetSeniorHighStats(ctx)
+		rawSHS, _ := s.repo.GetSeniorHighStats(ctx, year, courseID)
 		dashboard.SeniorHigh = s.mapToDTO(rawSHS, total)
 
-		rawNature, _ := s.repo.GetNatureOfSchoolingStats(ctx)
+		rawNature, _ := s.repo.GetNatureOfSchoolingStats(ctx, year, courseID)
 		dashboard.NatureOfSchooling = s.mapToDTO(rawNature, total)
 	}
 
@@ -104,8 +118,8 @@ func (s *Service) GetAdminDashboard(
 	ctx context.Context,
 	timeRange string,
 	source string,
-) (*AdminDashboardResponseDTO, error) {
-	totalStudents, err := s.repo.GetTotalStudents(ctx)
+) (*AdminDashboardResponse, error) {
+	totalStudents, err := s.repo.GetTotalStudents(ctx, 0, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -138,14 +152,14 @@ func (s *Service) GetAdminDashboard(
 
 	// Count live sessions (session: prefix)
 	liveSessions := 0
-	if s.redis != nil && s.redis.Client != nil {
-		keys, err := s.redis.Client.Keys(ctx, "session:*").Result()
+	if s.redis != nil {
+		keys, err := s.redis.Keys(ctx, "session:*")
 		if err == nil {
 			liveSessions = len(keys)
 		}
 	}
 
-	return &AdminDashboardResponseDTO{
+	return &AdminDashboardResponse{
 		TotalStudents:     totalStudents,
 		TotalReports:      totalReports,
 		TotalAppointments: totalAppointments,
@@ -156,7 +170,7 @@ func (s *Service) GetAdminDashboard(
 }
 
 func (s *Service) mapToDTO(
-	rawStats []AggregatedStatModel,
+	rawStats []DemographicStat,
 	totalStudents int,
 ) []DemographicStatDTO {
 	dtos := make([]DemographicStatDTO, 0)

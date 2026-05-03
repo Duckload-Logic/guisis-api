@@ -16,52 +16,56 @@ func RegisterRoutes(
 ) {
 	routes := rg.Group("/slips")
 	routes.Use(middleware.AuthMiddleware(redis))
-	routes.Use(middleware.HydrateStudentContext(db))
+	routes.Use(middleware.HydrateStudentIIRContext(db))
+	routes.Use(middleware.HydrateStudentCORContext(db))
 	routes.Use(middleware.AuditContextMiddleware())
+	slipLookup := middleware.OwnershipMiddleware(db, "slipID")
 
 	adminOnly := routes.Group("")
 	adminOnly.Use(middleware.RoleMiddleware(
-		int(constants.AdminRoleID),
+		constants.AdminRoleID,
 	))
 	{
-		adminOnly.GET("", h.GetSlipList)
-		adminOnly.GET("/urgent", h.GetUrgentSlipList)
-		adminOnly.PATCH("/id/:id/status", h.PatchSlipStatus)
+		adminOnly.GET("", h.GetSlips)
+		adminOnly.GET("/urgent", h.GetSlipUrgent)
+		adminOnly.PATCH("/id/:slipID/status", h.PatchSlipStatus)
 	}
 
 	studentOnly := routes.Group("")
 	studentOnly.Use(middleware.RoleMiddleware(
-		int(constants.StudentRoleID),
+		constants.StudentRoleID,
 	))
 	{
-		studentOnly.GET("/me", h.GetSlipListByIIR)
+		studentOnly.GET("/me", h.GetSlipMe)
 		studentOnly.POST("", h.PostSlip)
-		studentOnly.PATCH("/id/:id", h.PatchSlip)
+		studentOnly.PATCH("/id/:slipID", slipLookup, h.PatchSlip)
 	}
 
 	sharedRoutes := routes.Group("")
 	sharedRoutes.Use(middleware.RoleMiddleware(
-		int(constants.AdminRoleID),
-		int(constants.StudentRoleID),
+		constants.AdminRoleID,
+		constants.StudentRoleID,
 	))
 	{
-		sharedRoutes.GET("/id/:id", h.GetSlipByID)
-		sharedRoutes.GET("/stats", h.GetSlipStatsList)
+		sharedRoutes.GET("/id/:slipID", slipLookup, h.GetSlipByID)
+		sharedRoutes.GET("/stats", h.GetSlipStats)
 		sharedRoutes.GET(
-			"/id/:id/attachments",
-			h.GetSlipAttachmentList,
+			"/id/:slipID/attachments",
+			slipLookup,
+			h.GetSlipAttachments,
 		)
 		sharedRoutes.GET(
-			"/id/:id/attachments/:attachmentId",
-			h.GetAttachmentFile,
+			"/id/:slipID/attachments/:attachmentId",
+			slipLookup,
+			h.GetSlipAttachmentContent,
 		)
 		sharedRoutes.GET(
 			"/lookups/statuses",
-			h.GetSlipStatusList,
+			h.GetSlipStatuses,
 		)
 		sharedRoutes.GET(
 			"/lookups/categories",
-			h.GetSlipCategoryList,
+			h.GetSlipCategories,
 		)
 	}
 }

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"database/sql"
 	"sync"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/appointments"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/locations"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/slips"
@@ -56,8 +56,10 @@ var (
 	appointmentStatusByName     map[string]int
 	admissionSlipStatusIDs      []int
 	admissionSlipStatusesByName map[string]int
-	appointmentCategoryIDs      []int
+	appointmentCategories       []map[string]string
 	admissionSlipCategoryIDs    []int
+	studentStatusIDs            []int
+	studentStatusByName         map[string]int
 	appointmentSlotMu           sync.Mutex
 	reservedAppointmentSlots    = make(map[string]struct{})
 )
@@ -65,16 +67,16 @@ var (
 type relatedPersonSeed struct {
 	ID            int
 	FirstName     string
-	MiddleName    sql.NullString
+	MiddleName    structs.NullableString
 	LastName      string
-	ContactNumber sql.NullString
+	ContactNumber structs.NullableString
 	AddressID     *int
 }
 
 type emergencyContactSeed struct {
 	ID             int
 	FirstName      string
-	MiddleName     sql.NullString
+	MiddleName     structs.NullableString
 	LastName       string
 	Number         string
 	RelationshipID int

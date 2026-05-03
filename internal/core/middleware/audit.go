@@ -37,12 +37,10 @@ func AuditContextMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		roleID := ""
-		if val, exists := c.Get("roleID"); exists {
-			if r, ok := val.(int); ok {
-				roleID = fmt.Sprintf("%d", r)
-			} else if rs, ok := val.(string); ok {
-				roleID = rs
+		roles := ""
+		if val, exists := c.Get("roleIDs"); exists {
+			if rids, ok := val.([]int); ok {
+				roles = fmt.Sprintf("%v", rids)
 			}
 		}
 
@@ -52,7 +50,7 @@ func AuditContextMiddleware() gin.HandlerFunc {
 			userAgent,
 			userID,
 			userEmail.(string),
-			roleID,
+			roles,
 			traceID,
 		)
 		c.Request = c.Request.WithContext(ctx)

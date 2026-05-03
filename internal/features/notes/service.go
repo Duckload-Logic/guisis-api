@@ -2,21 +2,21 @@ package notes
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 )
 
 type Service struct {
-	repo         RepositoryInterface
+	repo         *Repository
 	logService   audit.Logger
 	notifService audit.Notifier
 }
 
 func NewService(
-	repo RepositoryInterface,
+	repo *Repository,
 	logService audit.Logger,
 	notifService audit.Notifier,
 ) *Service {
@@ -31,10 +31,7 @@ func (s *Service) GetStudentSignificantNotes(
 	ctx context.Context,
 	iirID string,
 ) ([]SignificantNoteDTO, error) {
-	notes, err := s.repo.GetStudentSignificantNotes(
-		ctx,
-		iirID,
-	)
+	notes, err := s.repo.GetStudentSignificantNotes(ctx, iirID)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to get student significant notes: %w",
@@ -42,7 +39,7 @@ func (s *Service) GetStudentSignificantNotes(
 		)
 	}
 
-	var noteDTOs []SignificantNoteDTO
+	noteDTOs := make([]SignificantNoteDTO, 0, len(notes))
 	for _, n := range notes {
 		noteDTOs = append(noteDTOs, SignificantNoteDTO{
 			ID:            n.ID,
@@ -64,11 +61,10 @@ func (s *Service) CreateSignificantNote(
 ) error {
 	note := &SignificantNote{
 		ID:    uuid.New().String(),
-		IIRID: sql.NullString{String: iirID, Valid: true},
-		AppointmentID: sql.NullString{
-			String: noteReq.AppointmentID,
-			Valid:  noteReq.AppointmentID != "",
-		},
+		IIRID: structs.StringToNullableString(iirID),
+		AppointmentID: structs.StringToNullableString(
+			noteReq.AppointmentID,
+		),
 		Note:    noteReq.Note,
 		Remarks: noteReq.Remarks,
 	}

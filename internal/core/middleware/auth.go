@@ -91,15 +91,31 @@ func validateSession(
 
 func validateM2MPath(c *gin.Context, clientID string) bool {
 	fullPath := c.Request.URL.Path
-	if !strings.HasPrefix(fullPath, "/api/v1/integrations/students") {
+
+	// Prevent simple path traversal attempts
+	if strings.Contains(fullPath, "..") {
 		log.Printf(
-			"[AuthMiddleware] {Security}: M2M %s unauthorized path: %s",
+			"[Security] {M2M Path Traversal Attempt}: client %s tried %s",
 			clientID,
 			fullPath,
 		)
 		c.AbortWithStatusJSON(
 			http.StatusForbidden,
-			gin.H{"error": "M2M clients are restricted to student integration routes"},
+			gin.H{"error": "Unauthorized path access"},
+		)
+		return false
+	}
+
+	allowedPrefix := "/api/v1/integrations"
+	if !strings.HasPrefix(fullPath, allowedPrefix) {
+		log.Printf(
+			"[Security] {M2M Out-of-Scope Access}: client %s tried %s",
+			clientID,
+			fullPath,
+		)
+		c.AbortWithStatusJSON(
+			http.StatusForbidden,
+			gin.H{"error": "M2M clients are restricted to integration routes"},
 		)
 		return false
 	}
@@ -113,7 +129,7 @@ func setContextInfo(c *gin.Context, claims *tokens.Claims) {
 	} else {
 		c.Set("userID", claims.UserID)
 		c.Set("userEmail", claims.UserEmail)
-		c.Set("roleID", claims.RoleID)
+		c.Set("roleIDs", claims.RoleIDs)
 	}
 	c.Set("tokenType", claims.TokenType)
 	if claims.IDPUserID != "" {

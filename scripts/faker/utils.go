@@ -9,17 +9,18 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 )
 
-func randomMiddleName() sql.NullString {
+func randomMiddleName() structs.NullableString {
 	return nullStringIf(gofakeit.Bool(), gofakeit.FirstName())
 }
 
-func nullStringIf(cond bool, val string) sql.NullString {
+func nullStringIf(cond bool, val string) structs.NullableString {
 	if cond && val != "" {
-		return sql.NullString{String: val, Valid: true}
+		return structs.NullableString{String: val, Valid: true}
 	}
-	return sql.NullString{Valid: false}
+	return structs.NullableString{Valid: false}
 }
 
 func fakePasswordHash() string {
@@ -27,26 +28,26 @@ func fakePasswordHash() string {
 	return "$2y$10$gxeDD.IKlEkqJmqmyVxy6eU9tFvC4ZK8KL3VZc2ex3BvNLo8DL5Dq"
 }
 
-func stringToNullString(s string) sql.NullString {
+func stringToNullString(s string) structs.NullableString {
 	if s == "" {
-		return sql.NullString{Valid: false}
+		return structs.NullableString{Valid: false}
 	}
-	return sql.NullString{String: s, Valid: true}
+	return structs.NullableString{String: s, Valid: true}
 }
 
-func stringToNullTime(s string) sql.NullTime {
+func stringToNullTime(s string) structs.NullableTime {
 	if s == "" {
-		return sql.NullTime{Valid: false}
+		return structs.NullableTime{Valid: false}
 	}
 	t, err := time.Parse("2006-01-02 15:04:05", s)
 	if err != nil {
 		// attempt date only
 		t, err = time.Parse("2006-01-02", s)
 		if err != nil {
-			return sql.NullTime{Valid: false}
+			return structs.NullableTime{Valid: false}
 		}
 	}
-	return sql.NullTime{Time: t, Valid: true}
+	return structs.FromSqlNullTime(sql.NullTime{Time: t, Valid: true})
 }
 
 // helper: random choice from slice

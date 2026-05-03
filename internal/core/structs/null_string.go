@@ -2,6 +2,7 @@ package structs
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 )
 
@@ -27,6 +28,24 @@ func (ns *NullableString) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (ns *NullableString) Scan(value interface{}) error {
+	var s sql.NullString
+	if err := s.Scan(value); err != nil {
+		return err
+	}
+
+	ns.String = s.String
+	ns.Valid = s.Valid
+	return nil
+}
+
+func (ns NullableString) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return ns.String, nil
+}
+
 func (ns NullableString) MarshalJSON() ([]byte, error) {
 	if !ns.Valid {
 		return []byte("null"), nil
@@ -39,6 +58,13 @@ func StringToNullableString(s string) NullableString {
 		return NullableString{Valid: false}
 	}
 	return NullableString{String: s, Valid: true}
+}
+
+func PointerToNullableString(ps *string) NullableString {
+	if ps == nil || *ps == "" {
+		return NullableString{Valid: false}
+	}
+	return NullableString{String: *ps, Valid: true}
 }
 
 func FromSqlNull(ns sql.NullString) NullableString {
@@ -64,6 +90,23 @@ func (ni *NullableInt64) UnmarshalJSON(data []byte) error {
 	ni.Int64 = i
 	ni.Valid = true
 	return nil
+}
+
+func (ni *NullableInt64) Scan(value interface{}) error {
+	var i sql.NullInt64
+	if err := i.Scan(value); err != nil {
+		return err
+	}
+	ni.Int64 = i.Int64
+	ni.Valid = i.Valid
+	return nil
+}
+
+func (ni NullableInt64) Value() (driver.Value, error) {
+	if !ni.Valid {
+		return nil, nil
+	}
+	return ni.Int64, nil
 }
 
 func (ni NullableInt64) MarshalJSON() ([]byte, error) {

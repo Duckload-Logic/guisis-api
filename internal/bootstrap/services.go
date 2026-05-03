@@ -8,6 +8,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/features/analytics"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/appointments"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/auth"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/locations"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/logs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/m2mclients"
@@ -20,22 +21,24 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/email"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/gotenberg"
+	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/ocr"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/storage"
 )
 
 type Services struct {
-	AuthService               auth.ServiceInterface
-	UserService               users.ServiceInterface
-	LocationsService          locations.ServiceInterface
-	StudentService            students.ServiceInterface
-	NoteService               notes.ServiceInterface
+	AuthService               *auth.Service
+	UserService               *users.Service
+	LocationsService          *locations.Service
+	StudentService            *students.Service
+	FileService               *files.Service
+	NoteService               *notes.Service
 	IntegrationStudentService integrations.ServiceInterface
-	AppointmentService        appointments.ServiceInterface
-	SlipService               slips.ServiceInterface
-	AnalyticsService          analytics.ServiceInterface
-	M2MClientService          m2mclients.ServiceInterface
-	NotificationsService      notifications.ServiceInterface
-	SystemLogService          logs.ServiceInterface
+	AppointmentService        *appointments.Service
+	SlipService               *slips.Service
+	AnalyticsService          *analytics.Service
+	M2MClientService          *m2mclients.Service
+	NotificationsService      *notifications.Service
+	SystemLogService          *logs.Service
 	SessionService            *sessions.Service
 }
 
@@ -47,14 +50,27 @@ func getServices(
 	emailer email.Emailer,
 ) *Services {
 	notificationsService := notifications.NewService(repos.NotificationRepo)
-	userService := users.NewService(repos.UserRepo)
+	sessionService := sessions.NewService(redis)
+	gotenbergClient := gotenberg.NewClient(cfg.GotenbergURL)
+	pdfService := pdf.NewService(gotenbergClient)
+
+	ocrClient := ocr.NewClient(cfg.AIBaseUrl, "") // Assuming no API key for now
+
+	fileService := files.NewService(
+		repos.FileRepo,
+		fileStorage,
+		ocrClient,
+	)
+
+	userService := users.NewService(repos.UserRepo, sessionService, fileService)
 	systemLogService := logs.NewService(
 		repos.SystemLogRepo,
 		notificationsService,
 		userService,
 	)
+
 	tokenService := tokens.NewService()
-	sessionService := sessions.NewService(redis)
+
 	m2mClientService := m2mclients.NewService(
 		repos.M2MClientRepo,
 		systemLogService,
@@ -68,15 +84,14 @@ func getServices(
 		sessionService,
 		emailer,
 	)
-	locationsService := locations.NewService(repos.LocationsRepo)
 
-	gotenbergClient := gotenberg.NewClient(cfg.GotenbergURL)
-	pdfService := pdf.NewService(gotenbergClient)
+	locationsService := locations.NewService(repos.LocationsRepo)
 
 	studentService := students.NewService(
 		repos.StudentRepo,
 		locationsService,
 		userService,
+		fileService,
 		systemLogService,
 		notificationsService,
 		cfg,
@@ -96,6 +111,8 @@ func getServices(
 		systemLogService,
 		userService,
 		noteService,
+		studentService,
+		cfg,
 	)
 	slipService := slips.NewService(
 		repos.SlipRepo,
@@ -103,6 +120,8 @@ func getServices(
 		notificationsService,
 		fileStorage,
 		userService,
+		studentService,
+		fileService,
 	)
 	analyticsService := analytics.NewService(repos.AnalyticsRepo, redis)
 
@@ -114,6 +133,7 @@ func getServices(
 		NoteService:               noteService,
 		IntegrationStudentService: integrationStudentService,
 		AppointmentService:        appointmentService,
+		FileService:               fileService,
 		SlipService:               slipService,
 		AnalyticsService:          analyticsService,
 		M2MClientService:          m2mClientService,

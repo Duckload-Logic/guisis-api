@@ -13,6 +13,7 @@ type ListStudentsRequest struct {
 	CourseID  int `form:"course_id,omitempty"`
 	GenderID  int `form:"gender_id,omitempty"`
 	YearLevel int `form:"year_level,omitempty"`
+	StatusID  int `form:"status_id,omitempty"`
 }
 
 type ListStudentsResponse struct {
@@ -33,10 +34,13 @@ type StudentProfileDTO struct {
 	Course        Course                 `json:"course"`
 	Section       int                    `json:"section"`
 	YearLevel     int                    `json:"yearLevel"`
+	Status        StudentStatus          `json:"status"`
+	StudentCORURL string                 `json:"studentCorUrl,omitempty"`
 }
 
 type ComprehensiveProfileDTO struct {
-	IIRID   string `json:"iirId,omitempty"`
+	IIRID         string `json:"iirId,omitempty"`
+	StudentCORURL string `json:"studentCorUrl,omitempty"`
 	Student struct {
 		BasicInfo              StudentBasicInfoViewDTO `json:"basicInfo"`
 		StudentPersonalInfoDTO `json:"personalInfo"`
@@ -99,7 +103,23 @@ type StudentPersonalInfoDTO struct {
 	EmployerAddress  structs.NullableString `json:"employerAddress,omitempty"`
 	MobileNumber     string                 `json:"mobileNumber"               binding:"required"`
 	TelephoneNumber  structs.NullableString `json:"telephoneNumber,omitempty"`
+	Status           StudentStatus          `json:"status"                     binding:"required"`
+	GraduationYear   *int                   `json:"graduationYear,omitempty"`
 	EmergencyContact EmergencyContactDTO    `json:"emergencyContact,omitempty"`
+}
+
+type BulkUpdateStatusRequest struct {
+	IIRIDs            []string `json:"iirIds"`
+	ExcludedIIRIDs    []string `json:"excludedIirIds"`
+	SelectAllMatching bool     `json:"selectAllMatching"`
+	StatusID          int      `json:"statusId"                 binding:"required"`
+	GraduationYear    *int     `json:"graduationYear,omitempty"`
+	Filters           struct {
+		Search     string `json:"search"`
+		CourseID   int    `json:"courseId"`
+		YearLevel  int    `form:"yearLevel"`
+		EnrollYear int    `json:"enrollYear"`
+	} `json:"filters"`
 }
 
 type EmergencyContactDTO struct {

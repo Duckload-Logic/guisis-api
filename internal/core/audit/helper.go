@@ -74,6 +74,16 @@ func Dispatch(
 				receiverID = structs.StringToNullableString(id)
 			}
 
+			// Safety check: Don't try to send if we still don't have a receiver
+			if !receiverID.Valid || receiverID.String == "" {
+				log.Printf(
+					"[Audit:Dispatch] {Skip Notification}: "+
+						"No valid receiver found (Actor ID: '%s')",
+					id,
+				)
+				continue
+			}
+
 			notif := NotificationEntry{
 				ReceiverID: receiverID,
 				ActorID:    structs.StringToNullableString(id),

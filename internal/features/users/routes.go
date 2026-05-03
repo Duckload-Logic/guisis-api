@@ -17,41 +17,56 @@ func RegisterRoutes(
 	userRoutes := rg.Group("/users")
 	userRoutes.Use(middleware.AuthMiddleware(redis))
 	userRoutes.Use(middleware.RoleMiddleware(
-		int(constants.SuperAdminRoleID),
-		int(constants.AdminRoleID),
-		int(constants.StudentRoleID),
+		constants.SuperAdminRoleID,
+		constants.AdminRoleID,
+		constants.StudentRoleID,
 	))
 
 	userRoutes.GET("/me", h.GetMe)
-	userRoutes.GET("", h.GetUserByEmail)
+	userRoutes.POST("/profile-picture/:id", h.PostProfilePicture)
+	userRoutes.POST("/profile-picture/upload", h.UploadProfilePicture)
+
+	adminOnly := userRoutes.Group("")
+	adminOnly.Use(middleware.RoleMiddleware(
+		constants.SuperAdminRoleID,
+		constants.AdminRoleID,
+	))
+	{
+		adminOnly.GET("", h.GetUserByEmail)
+	}
+
 	userRoutes.GET("/all",
-		middleware.RoleMiddleware(int(constants.SuperAdminRoleID)),
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
 		h.GetUsers,
 	)
 	userRoutes.GET("/distribution",
-		middleware.RoleMiddleware(int(constants.SuperAdminRoleID)),
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
 		h.GetRoleDistribution,
 	)
 	userRoutes.POST("/:id/block",
-		middleware.RoleMiddleware(int(constants.SuperAdminRoleID)),
-		h.PostBlockUser,
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
+		h.PostUserBlock,
 	)
 	userRoutes.POST("/:id/unblock",
-		middleware.RoleMiddleware(int(constants.SuperAdminRoleID)),
-		h.PostUnblockUser,
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
+		h.PostUserUnblock,
 	)
 
 	// Session & Activity Audit (Super Admin only)
 	userRoutes.GET("/:id/sessions",
-		middleware.RoleMiddleware(int(constants.SuperAdminRoleID)),
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
 		h.GetUserSessions,
 	)
 	userRoutes.DELETE("/:id/sessions/:session_id",
-		middleware.RoleMiddleware(int(constants.SuperAdminRoleID)),
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
 		h.DeleteUserSession,
 	)
 	userRoutes.GET("/:id/activity",
-		middleware.RoleMiddleware(int(constants.SuperAdminRoleID)),
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
 		h.GetUserActivity,
+	)
+	userRoutes.POST("/update-roles",
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
+		h.PostUpdateRoles,
 	)
 }

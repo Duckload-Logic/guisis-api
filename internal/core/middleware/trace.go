@@ -13,6 +13,8 @@ func TraceMiddleware() gin.HandlerFunc {
 		traceID := c.GetHeader("X-Trace-ID")
 		if traceID == "" {
 			traceID = uuid.New().String()
+		} else if len(traceID) > 64 {
+			traceID = traceID[:64]
 		}
 
 		// Set in Gin context for potential use in handlers

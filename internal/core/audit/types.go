@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
@@ -88,18 +89,20 @@ const (
 
 // Security log actions — track authentication and access events
 const (
-	ActionLoginSuccess      = "LOGIN_SUCCESS"
-	ActionLoginFailed       = "LOGIN_FAILED"
-	ActionLogout            = "LOGOUT"
-	ActionTokenRefreshed    = "TOKEN_REFRESHED"
-	ActionAccessDenied      = "ACCESS_DENIED"
-	ActionRateLimitExceeded = "RATE_LIMIT_EXCEEDED"
-	ActionInvalidToken      = "INVALID_TOKEN"
-	ActionM2MClientUsed     = "M2M_CLIENT_USED"
-	ActionM2MClientInvalid  = "M2M_CLIENT_INVALID"
-	ActionM2MAuthSuccess    = "M2M_AUTH_SUCCESS"
-	ActionM2MAuthFailed     = "M2M_AUTH_FAILED"
-	ActionM2MTokenRefreshed = "M2M_TOKEN_REFRESHED" // nolint:gosec
+	ActionLoginSuccess       = "LOGIN_SUCCESS"
+	ActionLoginFailed        = "LOGIN_FAILED"
+	ActionLogout             = "LOGOUT"
+	ActionTokenRefreshed     = "TOKEN_REFRESHED"
+	ActionAccessDenied       = "ACCESS_DENIED"
+	ActionRateLimitExceeded  = "RATE_LIMIT_EXCEEDED"
+	ActionInvalidToken       = "INVALID_TOKEN"
+	ActionM2MClientUsed      = "M2M_CLIENT_USED"
+	ActionM2MClientInvalid   = "M2M_CLIENT_INVALID"
+	ActionM2MAuthSuccess     = "M2M_AUTH_SUCCESS"
+	ActionM2MAuthFailed      = "M2M_AUTH_FAILED"
+	ActionM2MTokenRefreshed  = "M2M_TOKEN_REFRESHED" // nolint:gosec
+	ActionElevateRoles       = "ELEVATE_ROLES"
+	ActionElevateRolesFailed = "ELEVATE_ROLES_FAILED"
 )
 
 // LogEntry is the input struct used by other services to record a log.
@@ -148,4 +151,58 @@ type LogMetadata struct {
 	OldValues  interface{} `json:"oldValues,omitempty"`
 	NewValues  interface{} `json:"newValues,omitempty"`
 	Error      string      `json:"error,omitempty"`
+}
+
+// ListSystemLogsRequest holds query parameters for listing system logs
+type ListSystemLogsRequest struct {
+	structs.PaginationRequest
+	Level       string `form:"level,omitempty"        binding:"omitempty,oneof=INFO WARNING ERROR CRITICAL"`
+	Category    string `form:"category,omitempty"     binding:"omitempty,oneof=AUDIT SYSTEM SECURITY"`
+	Action      string `form:"action,omitempty"`
+	UserEmail   string `form:"user_email,omitempty"`
+	TargetType  string `form:"target_type,omitempty"`
+	TargetEmail string `form:"target_email,omitempty"`
+	StartDate   string `form:"start_date,omitempty"`
+	EndDate     string `form:"end_date,omitempty"`
+}
+
+// ListSystemLogsDTO is the paginated response for system logs
+type ListSystemLogsDTO struct {
+	Logs []SystemLogDTO             `json:"logs"`
+	Meta structs.PaginationMetadata `json:"meta"`
+}
+
+// SystemLogDTO is the response DTO for a single system log entry
+type SystemLogDTO struct {
+	ID       int    `json:"id"`
+	Level    string `json:"level"`
+	Category string `json:"category"`
+	Action   string `json:"action"`
+	Message  string `json:"message"`
+
+	UserID     structs.NullableString `json:"userId,omitempty"`
+	TargetID   structs.NullableString `json:"targetId,omitempty"`
+	TargetType structs.NullableString `json:"targetType,omitempty"`
+
+	UserEmail   structs.NullableString `json:"userEmail,omitempty"`
+	TargetEmail structs.NullableString `json:"targetEmail,omitempty"`
+
+	IPAddress structs.NullableString `json:"ipAddress,omitempty"`
+	UserAgent structs.NullableString `json:"userAgent,omitempty"`
+	Metadata  json.RawMessage        `json:"metadata,omitempty"`
+	TraceID   structs.NullableString `json:"traceId,omitempty"`
+	CreatedAt time.Time              `json:"createdAt"`
+}
+
+// LogStatsDTO returns summary counts by category
+type LogStatsDTO struct {
+	Category string `json:"category" db:"category"`
+	Count    int    `json:"count"    db:"count"`
+}
+
+// LogActivityDTO holds activity stats grouped by hour
+type LogActivityDTO struct {
+	Time     string `json:"time"     db:"time"`
+	Requests int    `json:"requests" db:"requests"`
+	Errors   int    `json:"errors"   db:"errors"`
 }

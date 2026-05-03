@@ -2,24 +2,26 @@ package appointments
 
 import (
 	"database/sql"
-	"log"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 )
 
 type Handler struct {
-	service ServiceInterface
+	service *Service
+	cfg     *config.Config
 }
 
 // NewHandler creates a new appointments handler.
-func NewHandler(service ServiceInterface) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, cfg *config.Config) *Handler {
+	return &Handler{service: service, cfg: cfg}
 }
 
 // getIIRIDFromContext extracts iirID from context or aborts
@@ -56,17 +58,10 @@ func getIIRIDFromContext(c *gin.Context) (string, bool) {
 // @Failure      500  {object} map[string]string
 // @Router       /appointments/lookups/categories [get]
 // GetAppointmentCategoryList retrieves all appointment concern categories.
-func (h *Handler) GetAppointmentCategoryList(
-	c *gin.Context,
-) {
-	categories, err := h.service.GetConcernCategories(
-		c.Request.Context(),
-	)
+func (h *Handler) GetAppointmentCategories(c *gin.Context) {
+	categories, err := h.service.GetConcernCategories(c.Request.Context())
 	if err != nil {
-		log.Printf(
-			"[GetAppointmentCategoryList] {Fetch Categories}: %v",
-			err,
-		)
+		fmt.Printf("[GetAppointmentCategories] {Fetch Categories}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve categories",
@@ -89,7 +84,7 @@ func (h *Handler) GetAppointmentCategoryList(
 // @Failure      400  {object} map[string]string
 // @Failure      500  {object} map[string]string
 // @Router       /appointments/calendar/stats [get]
-func (h *Handler) GetDailyStatusCountList(c *gin.Context) {
+func (h *Handler) GetAppointmentDailyStats(c *gin.Context) {
 	var req ListAppointmentsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		response.SendFail(c, gin.H{"error": "Invalid query parameters"})
@@ -97,21 +92,13 @@ func (h *Handler) GetDailyStatusCountList(c *gin.Context) {
 	}
 
 	if req.StartDate == "" {
-		response.SendFail(c, gin.H{
-			"error": "start_date parameter required",
-		})
+		response.SendFail(c, gin.H{"error": "start_date parameter required"})
 		return
 	}
 
-	dsc, err := h.service.GetDailyStatusCount(
-		c,
-		req.StartDate,
-	)
+	dsc, err := h.service.GetDailyStatusCount(c.Request.Context(), req.StartDate)
 	if err != nil {
-		log.Printf(
-			"[GetDailyStatusCountList] {Fetch Daily Stats}: %v",
-			err,
-		)
+		fmt.Printf("[GetAppointmentDailyStats] {Fetch Daily Stats}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve statistics",
@@ -149,15 +136,10 @@ func (h *Handler) PostAppointment(c *gin.Context) {
 	}
 
 	appt, err := h.service.CreateAppointment(
-		c.Request.Context(),
-		iirID,
-		req,
+		c.Request.Context(), iirID, req, h.cfg,
 	)
 	if err != nil {
-		log.Printf(
-			"[PostAppointment] {Create Appointment}: %v",
-			err,
-		)
+		fmt.Printf("[PostAppointment] {Create Appointment}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to create appointment",
@@ -186,21 +168,15 @@ func (h *Handler) PostAppointment(c *gin.Context) {
 // @Failure      500  {object}  map[string]string
 // @Router       /appointments/id/{id} [get]
 func (h *Handler) GetAppointmentByID(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("appointmentID")
 	if id == "" {
 		response.SendFail(c, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	appt, err := h.service.GetAppointmentByID(
-		c.Request.Context(),
-		id,
-	)
+	appt, err := h.service.GetAppointmentByID(c.Request.Context(), id)
 	if err != nil {
-		log.Printf(
-			"[GetAppointmentByID] {Fetch Appointment}: %v",
-			err,
-		)
+		fmt.Printf("[GetAppointmentByID] {Fetch Appointment}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve appointment",
@@ -235,22 +211,16 @@ func (h *Handler) GetAppointmentByID(c *gin.Context) {
 // @Failure      400     {object}  map[string]string
 // @Failure      500     {object}  map[string]string
 // @Router       /appointments [get]
-func (h *Handler) GetAppointmentList(c *gin.Context) {
+func (h *Handler) GetAppointments(c *gin.Context) {
 	var req ListAppointmentsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		response.SendFail(c, gin.H{"error": "Invalid query parameters"})
 		return
 	}
 
-	appts, err := h.service.ListAppointments(
-		c.Request.Context(),
-		req,
-	)
+	appts, err := h.service.ListAppointments(c.Request.Context(), req)
 	if err != nil {
-		log.Printf(
-			"[GetAppointmentList] {Fetch All Appointments}: %v",
-			err,
-		)
+		fmt.Printf("[GetAppointments] {Fetch Appointments}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve appointments",
@@ -273,22 +243,16 @@ func (h *Handler) GetAppointmentList(c *gin.Context) {
 // @Failure      400  {object} map[string]string
 // @Failure      500  {object} map[string]string
 // @Router       /appointments/lookups/slots [get]
-func (h *Handler) GetAvailableTimeSlotList(c *gin.Context) {
+func (h *Handler) GetAppointmentSlots(c *gin.Context) {
 	date := c.Query("date")
 	if date == "" {
 		response.SendFail(c, gin.H{"error": "date parameter required"})
 		return
 	}
 
-	slots, err := h.service.GetAvailableTimeSlots(
-		c.Request.Context(),
-		date,
-	)
+	slots, err := h.service.GetAvailableTimeSlots(c.Request.Context(), date)
 	if err != nil {
-		log.Printf(
-			"[GetAvailableTimeSlotList] {Fetch Slots}: %v",
-			err,
-		)
+		fmt.Printf("[GetAppointmentSlots] {Fetch Slots}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve time slots",
@@ -309,15 +273,10 @@ func (h *Handler) GetAvailableTimeSlotList(c *gin.Context) {
 // @Success      200  {object} []AppointmentStatus
 // @Failure      500  {object} map[string]string
 // @Router       /appointments/lookups/statuses [get]
-func (h *Handler) GetAppointmentStatusList(c *gin.Context) {
-	statuses, err := h.service.GetAppointmentStatuses(
-		c.Request.Context(),
-	)
+func (h *Handler) GetAppointmentStatuses(c *gin.Context) {
+	statuses, err := h.service.GetAppointmentStatuses(c.Request.Context())
 	if err != nil {
-		log.Printf(
-			"[GetAppointmentStatusList] {Fetch Statuses}: %v",
-			err,
-		)
+		fmt.Printf("[GetAppointmentStatuses] {Fetch Statuses}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve statuses",
@@ -339,7 +298,7 @@ func (h *Handler) GetAppointmentStatusList(c *gin.Context) {
 // @Failure      403  {object} map[string]string
 // @Failure      500  {object} map[string]string
 // @Router       /appointments/me [get]
-func (h *Handler) GetAppointmentListByIIR(c *gin.Context) {
+func (h *Handler) GetAppointmentMe(c *gin.Context) {
 	iirID, ok := getIIRIDFromContext(c)
 	if !ok {
 		return
@@ -352,15 +311,10 @@ func (h *Handler) GetAppointmentListByIIR(c *gin.Context) {
 	}
 
 	appointments, err := h.service.GetAppointmentsByIIRID(
-		c.Request.Context(),
-		iirID,
-		req,
+		c.Request.Context(), iirID, req,
 	)
 	if err != nil {
-		log.Printf(
-			"[GetAppointmentListByIIR] {Fetch Appointments}: %v",
-			err,
-		)
+		fmt.Printf("[GetAppointmentMe] {Fetch Appointments}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve appointments",
@@ -381,12 +335,20 @@ func (h *Handler) GetAppointmentListByIIR(c *gin.Context) {
 // @Success      200  {object} []StatusCount
 // @Failure      500  {object} map[string]string
 // @Router       /appointments/stats [get]
-func (h *Handler) GetAppointmentStatsList(c *gin.Context) {
+func (h *Handler) GetAppointmentStats(c *gin.Context) {
 	iirIDVal, exists := c.Get("iirID")
-	roleID := c.MustGet("roleID").(int)
+	roleIDs := c.MustGet("roleIDs").([]int)
+
+	isStudent := false
+	for _, rid := range roleIDs {
+		if rid == int(constants.StudentRoleID) {
+			isStudent = true
+			break
+		}
+	}
 
 	var iirIDPtr *string
-	if roleID == int(constants.StudentRoleID) {
+	if isStudent {
 		if !exists {
 			response.SendFail(c, gin.H{
 				"error": "Please complete your IIR profile",
@@ -413,15 +375,10 @@ func (h *Handler) GetAppointmentStatsList(c *gin.Context) {
 	}
 
 	stats, err := h.service.GetAppointmentStats(
-		c.Request.Context(),
-		req,
-		iirIDPtr,
+		c.Request.Context(), req, iirIDPtr,
 	)
 	if err != nil {
-		log.Printf(
-			"[GetAppointmentStatsList] {Fetch Stats}: %v",
-			err,
-		)
+		fmt.Printf("[GetAppointmentStats] {Fetch Stats}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve statistics",
@@ -451,14 +408,18 @@ type CancelAppointmentRequest struct {
 	Reason string `json:"reason"`
 }
 
-func (h *Handler) PostCancelAppointment(c *gin.Context) {
-	id := c.Param("id")
+func (h *Handler) PostAppointmentCancel(c *gin.Context) {
+	id := c.Param("appointmentID")
 	userID := audit.ExtractUserID(c.Request.Context())
 
-	// Validate ownership
 	ownerID, err := h.service.GetUserIDByAppointmentID(c.Request.Context(), id)
 	if err != nil {
-		response.SendError(c, "Failed to verify ownership", http.StatusInternalServerError, nil)
+		response.SendError(
+			c,
+			"Failed to verify ownership",
+			http.StatusInternalServerError,
+			nil,
+		)
 		return
 	}
 	if ownerID != userID {
@@ -466,24 +427,36 @@ func (h *Handler) PostCancelAppointment(c *gin.Context) {
 		return
 	}
 
-	// Fetch appointment to check status
 	appt, err := h.service.GetAppointmentByID(c.Request.Context(), id)
 	if err != nil {
-		response.SendError(c, "Failed to fetch appointment", http.StatusInternalServerError, nil)
+		response.SendError(
+			c,
+			"Failed to fetch appointment",
+			http.StatusInternalServerError,
+			nil,
+		)
 		return
 	}
 
-	// Only allow cancellation of Pending or Scheduled appointments
 	statusName := strings.ToLower(appt.Status.Name)
 	if statusName != "pending" && statusName != "scheduled" {
-		response.SendFail(c, gin.H{"error": "Only pending or scheduled appointments can be cancelled"})
+		response.SendFail(
+			c,
+			gin.H{
+				"error": "Only pending or scheduled appointments can be cancelled",
+			},
+		)
 		return
 	}
 
-	// Fetch all statuses to find 'Cancelled'
 	statuses, err := h.service.GetAppointmentStatuses(c.Request.Context())
 	if err != nil {
-		response.SendError(c, "Failed to fetch statuses", http.StatusInternalServerError, nil)
+		response.SendError(
+			c,
+			"Failed to fetch statuses",
+			http.StatusInternalServerError,
+			nil,
+		)
 		return
 	}
 
@@ -496,43 +469,55 @@ func (h *Handler) PostCancelAppointment(c *gin.Context) {
 	}
 
 	if cancelStatusID == 0 {
-		response.SendError(c, "Cancelled status not found", http.StatusInternalServerError, nil)
+		response.SendError(
+			c,
+			"Cancelled status not found",
+			http.StatusInternalServerError,
+			nil,
+		)
 		return
 	}
 
 	var req CancelAppointmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// We allow empty body for backward compatibility or simple cancellations
-		// but if body is present, it should be valid JSON
 		if err.Error() != "EOF" {
-			log.Printf("[PostCancelAppointment] {BindJSON}: %v", err)
+			fmt.Printf("[PostAppointmentCancel] {Bind Request}: %v\n", err)
 		}
 	}
 
-	// Update appointment status
 	updateReq := *appt
 	updateReq.Status.ID = cancelStatusID
 
 	if req.Reason != "" {
+		msg := "Student Cancellation: " + req.Reason
 		if updateReq.AdminNotes.Valid && updateReq.AdminNotes.String != "" {
-			updateReq.AdminNotes.String += "\nStudent Cancellation: " + req.Reason
+			updateReq.AdminNotes.String += "\n" + msg
 		} else {
-			updateReq.AdminNotes = structs.StringToNullableString("Student Cancellation: " + req.Reason)
+			updateReq.AdminNotes = structs.StringToNullableString(msg)
 		}
 	}
 
-	if err := h.service.UpdateAppointment(c.Request.Context(), id, updateReq); err != nil {
-		log.Printf("[PostCancelAppointment] {Update}: %v", err)
-		response.SendError(c, "Failed to cancel appointment", http.StatusInternalServerError, nil)
+	if err := h.service.UpdateAppointment(
+		c.Request.Context(), id, updateReq,
+	); err != nil {
+		fmt.Printf("[PostAppointmentCancel] {Update}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to cancel appointment",
+			http.StatusInternalServerError,
+			nil,
+		)
 		return
 	}
 
-	response.SendSuccess(c, gin.H{"message": "Appointment cancelled successfully"})
+	response.SendSuccess(c, gin.H{
+		"message": "Appointment cancelled successfully",
+	})
 }
 
 // PatchAppointment godoc
 func (h *Handler) PatchAppointment(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("appointmentID")
 	if id == "" {
 		response.SendFail(c, gin.H{"error": "Invalid ID format"})
 		return
@@ -545,9 +530,7 @@ func (h *Handler) PatchAppointment(c *gin.Context) {
 	}
 
 	if err := h.service.UpdateAppointment(
-		c.Request.Context(),
-		id,
-		req,
+		c.Request.Context(), id, req,
 	); err != nil {
 		if err == sql.ErrNoRows {
 			response.SendFail(
@@ -557,10 +540,7 @@ func (h *Handler) PatchAppointment(c *gin.Context) {
 			)
 			return
 		}
-		log.Printf(
-			"[PatchAppointment] {Update Appointment}: %v",
-			err,
-		)
+		fmt.Printf("[PatchAppointment] {Update Appointment}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to update appointment",

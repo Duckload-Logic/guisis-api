@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"strings"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
@@ -13,13 +13,13 @@ import (
 )
 
 type Service struct {
-	repo         RepositoryInterface
+	repo         *Repository
 	notifService audit.Notifier
 	userSvc      audit.UserGetter
 }
 
 func NewService(
-	repo RepositoryInterface,
+	repo *Repository,
 	notifService audit.Notifier,
 	userSvc audit.UserGetter,
 ) *Service {
@@ -34,8 +34,6 @@ func (s *Service) GetDB() datastore.DB {
 	return s.repo.GetDB()
 }
 
-// Record logs a system log entry. Fails silently (logs error)
-// to avoid disrupting the parent operation.
 func (s *Service) Record(
 	ctx context.Context,
 	tx datastore.DB,
@@ -46,7 +44,6 @@ func (s *Service) Record(
 		level = audit.LevelInfo
 	}
 
-	// Safety net: extract trace ID from context if not provided
 	if !entry.TraceID.Valid || entry.TraceID.String == "" {
 		_, _, _, _, _, trace := audit.ExtractMeta(ctx)
 		if trace != "" {
@@ -54,29 +51,45 @@ func (s *Service) Record(
 		}
 	}
 
+	var metaStr string
+	if entry.Metadata != nil {
+		s.sanitizeMetadata(entry.Metadata)
+		b, _ := json.Marshal(entry.Metadata)
+		metaStr = string(b)
+	}
+
 	sysLog := &SystemLog{
 		Level:       level,
 		Category:    entry.Category,
 		Action:      entry.Action,
 		Message:     entry.Message,
-		UserID:      structs.ToSqlNull(entry.UserID),
-		TargetID:    structs.ToSqlNull(entry.TargetID),
-		TargetType:  structs.ToSqlNull(entry.TargetType),
-		UserEmail:   structs.ToSqlNull(entry.UserEmail),
-		TargetEmail: structs.ToSqlNull(entry.TargetEmail),
-		IPAddress:   structs.ToSqlNull(entry.IPAddress),
-		UserAgent:   structs.ToSqlNull(entry.UserAgent),
-		TraceID:     structs.ToSqlNull(entry.TraceID),
-		Metadata:    toNullString(entry.Metadata),
+		UserID:      entry.UserID,
+		TargetID:    entry.TargetID,
+		TargetType:  entry.TargetType,
+		UserEmail:   entry.UserEmail,
+		TargetEmail: entry.TargetEmail,
+		IPAddress:   entry.IPAddress,
+		UserAgent:   entry.UserAgent,
+		TraceID:     entry.TraceID,
+		Metadata:    structs.StringToNullableString(metaStr),
 	}
 
 	if err := s.repo.Record(ctx, tx, sysLog); err != nil {
-		log.Printf("[Record] {Database Insertion}: %v", err)
+		fmt.Printf("[Record] {Database Insertion}: %v\n", err)
 		return
 	}
 
-	// Notify Superadmins for critical events
-	if level == audit.LevelError {
+	if level == audit.LevelError && func(action string) bool {
+		excluded := map[string]bool{
+			audit.ActionLoginFailed:           true,
+			audit.ActionInvalidToken:          true,
+			audit.ActionAccessDenied:          true,
+			audit.ActionRateLimitExceeded:     true,
+			audit.ActionM2MAuthFailed:         true,
+			audit.ActionM2MClientVerifyFailed: true,
+		}
+		return !excluded[action]
+	}(entry.Action) {
 		s.notifySuperadmins(ctx, entry)
 	}
 }
@@ -86,10 +99,9 @@ func (s *Service) notifySuperadmins(ctx context.Context, entry audit.LogEntry) {
 		return
 	}
 
-	// Fetch Superadmin IDs (Role ID 3)
 	adminIDs, err := s.userSvc.GetUserIDsByRole(ctx, 3)
 	if err != nil {
-		log.Printf("[notifySuperadmins] {Fetch Admins}: %v", err)
+		fmt.Printf("[notifySuperadmins] {Fetch Admins}: %v\n", err)
 		return
 	}
 
@@ -111,14 +123,11 @@ func (s *Service) notifySuperadmins(ctx context.Context, entry audit.LogEntry) {
 			),
 			Type: constants.SystemEntityType,
 		}); err != nil {
-			log.Printf("[notifySuperadmins] {Send Notification}: %v", err)
+			fmt.Printf("[notifySuperadmins] {Send Notification}: %v\n", err)
 		}
 	}
 }
 
-// RecordSecurity is a convenience method that satisfies the
-// middleware.SecurityLogger interface.
-// It records a security-category log entry with the given fields.
 func (s *Service) RecordSecurity(
 	ctx context.Context,
 	tx datastore.DB,
@@ -136,11 +145,10 @@ func (s *Service) RecordSecurity(
 	})
 }
 
-// ListLogs returns a paginated list of system logs with filters
 func (s *Service) ListLogs(
 	ctx context.Context,
-	req ListSystemLogsRequest,
-) (*ListSystemLogsDTO, error) {
+	req audit.ListSystemLogsRequest,
+) (*audit.ListSystemLogsDTO, error) {
 	req.SetDefaults("created_at")
 
 	results, err := s.repo.List(
@@ -166,41 +174,39 @@ func (s *Service) ListLogs(
 		return nil, fmt.Errorf("failed to count system logs: %w", err)
 	}
 
-	return &ListSystemLogsDTO{
+	return &audit.ListSystemLogsDTO{
 		Logs: dtos,
 		Meta: structs.CalculateMetadata(total, req.Page, req.PageSize),
 	}, nil
 }
 
-// GetStats returns log counts by category
 func (s *Service) GetStats(
 	ctx context.Context,
 	startDate, endDate string,
-) ([]LogStatsDTO, error) {
+) ([]audit.LogStatsDTO, error) {
 	return s.repo.GetStats(ctx, startDate, endDate)
 }
 
-// GetActivityStats returns log counts grouped by hour for the last 24 hours
 func (s *Service) GetActivityStats(
 	ctx context.Context,
-) ([]LogActivityDTO, error) {
+) ([]audit.LogActivityDTO, error) {
 	return s.repo.GetActivityStats(ctx)
 }
 
-func (s *Service) mapLogsToDTOs(logs []SystemLog) []SystemLogDTO {
-	dtos := make([]SystemLogDTO, 0, len(logs))
+func (s *Service) mapLogsToDTOs(logs []SystemLog) []audit.SystemLogDTO {
+	dtos := make([]audit.SystemLogDTO, 0, len(logs))
 
 	for _, l := range logs {
-		dto := SystemLogDTO{
+		dto := audit.SystemLogDTO{
 			ID:        l.ID,
 			Category:  l.Category,
 			Action:    l.Action,
 			Message:   l.Message,
-			UserID:    structs.FromSqlNull(l.UserID),
-			UserEmail: structs.FromSqlNull(l.UserEmail),
-			IPAddress: structs.FromSqlNull(l.IPAddress),
-			UserAgent: structs.FromSqlNull(l.UserAgent),
-			TraceID:   structs.FromSqlNull(l.TraceID),
+			UserID:    l.UserID,
+			UserEmail: l.UserEmail,
+			IPAddress: l.IPAddress,
+			UserAgent: l.UserAgent,
+			TraceID:   l.TraceID,
 			CreatedAt: l.CreatedAt,
 		}
 
@@ -212,4 +218,44 @@ func (s *Service) mapLogsToDTOs(logs []SystemLog) []SystemLogDTO {
 	}
 
 	return dtos
+}
+
+func (s *Service) DeleteLogsOlderThan(
+	ctx context.Context,
+	days int,
+) (int64, error) {
+	return s.repo.DeleteLogsOlderThan(ctx, days)
+}
+
+func (s *Service) sanitizeMetadata(meta *audit.LogMetadata) {
+	if meta == nil {
+		return
+	}
+	s.sanitizeValue(meta.OldValues)
+	s.sanitizeValue(meta.NewValues)
+}
+
+func (s *Service) sanitizeValue(val interface{}) {
+	m, ok := val.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	sensitiveKeys := []string{
+		"password",
+		"secret",
+		"token",
+		"key",
+		"authorization",
+		"credential",
+	}
+	for k := range m {
+		lowerK := strings.ToLower(k)
+		for _, sk := range sensitiveKeys {
+			if strings.Contains(lowerK, sk) {
+				delete(m, k)
+				break
+			}
+		}
+	}
 }

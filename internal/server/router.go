@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-contrib/cors"
@@ -47,7 +48,13 @@ func NewRouter(
 	corsConfig := cors.Config{
 		AllowOriginFunc: func(origin string) bool {
 			if cfg.IsProduction {
-				return strings.HasSuffix(origin, ".dllbsit2027.com")
+				target := "dllbsit2027.com"
+				parsed, err := url.Parse(origin)
+				if err != nil {
+					return false
+				}
+				host := parsed.Hostname()
+				return host == target || strings.HasSuffix(host, "."+target)
 			}
 
 			return strings.HasPrefix(origin, "http://localhost")
@@ -73,6 +80,11 @@ func NewRouter(
 	}
 
 	g.Use(cors.New(corsConfig))
+
+	// Security & DoS Protection
+	g.Use(middleware.BodySizeLimitMiddleware(2 << 20)) // 2MB limit for JSON payloads
+	g.Use(middleware.SecurityHeadersMiddleware())
+
 	g.Use(func(c *gin.Context) {
 		c.Set(
 			middleware.SecurityLoggerContextKey,
@@ -85,6 +97,9 @@ func NewRouter(
 
 	limiter := middleware.NewIPRateLimiter(5, 30)
 	g.Use(middleware.RateLimitMiddleware(limiter))
+
+	// Stricter limiter for sensitive auth routes
+	authLimiter := middleware.NewIPRateLimiter(1, 5)
 
 	apiV1Routes := g.Group("/api/v1")
 
@@ -102,20 +117,22 @@ func NewRouter(
 	})
 
 	if !cfg.IsProduction {
-		apiV1Routes.Static("./uploads", "./uploads")
+		apiV1Routes.Static("/uploads", cfg.LocalUploadDIR)
 	}
 
 	apiV1Routes.GET("/", func(c *gin.Context) {
 		c.JSON(
 			http.StatusOK,
-			gin.H{"message": "PUPT-OGOS API version 1.0 initialized"},
+			gin.H{"message": "GuiSIS API version 1.0 initialized"},
 		)
 	})
 	apiV1Routes.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
 	})
 
-	auth.RegisterRoutes(apiV1Routes, handlers.AuthHandler, handlers.Redis)
+	authGroup := apiV1Routes.Group("")
+	authGroup.Use(middleware.RateLimitMiddleware(authLimiter))
+	auth.RegisterRoutes(authGroup, handlers.AuthHandler, handlers.Redis)
 	users.RegisterRoutes(db, apiV1Routes, handlers.UserHandler, handlers.Redis)
 	locations.RegisterRoutes(
 		apiV1Routes,
