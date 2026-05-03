@@ -20,12 +20,17 @@ func RegisterRoutes(
 		middleware.RoleMiddleware(
 			constants.AdminRoleID,
 			constants.SuperAdminRoleID,
+			constants.DeveloperRoleID,
 		),
 		h.GetAdminDashboard,
 	)
 
 	analyticsRoutes.GET("/dashboard",
-		middleware.RoleMiddleware(constants.AdminRoleID),
+		middleware.RoleMiddleware(
+			constants.AdminRoleID,
+			constants.SuperAdminRoleID,
+			constants.DeveloperRoleID,
+		),
 		h.GetDashboard,
 	)
 }

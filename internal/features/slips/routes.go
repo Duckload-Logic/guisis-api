@@ -24,6 +24,8 @@ func RegisterRoutes(
 	adminOnly := routes.Group("")
 	adminOnly.Use(middleware.RoleMiddleware(
 		constants.AdminRoleID,
+		constants.SuperAdminRoleID,
+		constants.DeveloperRoleID,
 	))
 	{
 		adminOnly.GET("", h.GetSlips)
@@ -34,6 +36,9 @@ func RegisterRoutes(
 	studentOnly := routes.Group("")
 	studentOnly.Use(middleware.RoleMiddleware(
 		constants.StudentRoleID,
+		constants.AdminRoleID,
+		constants.SuperAdminRoleID,
+		constants.DeveloperRoleID,
 	))
 	{
 		studentOnly.GET("/me", h.GetSlipMe)
@@ -45,6 +50,8 @@ func RegisterRoutes(
 	sharedRoutes.Use(middleware.RoleMiddleware(
 		constants.AdminRoleID,
 		constants.StudentRoleID,
+		constants.SuperAdminRoleID,
+		constants.DeveloperRoleID,
 	))
 	{
 		sharedRoutes.GET("/id/:slipID", slipLookup, h.GetSlipByID)
