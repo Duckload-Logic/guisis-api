@@ -275,7 +275,7 @@ func (h *Handler) GetAuthorizeURL(c *gin.Context) {
 		return
 	}
 
-	response.SendSuccess(c, gin.H{"url": authURL})
+	c.Redirect(http.StatusFound, authURL)
 }
 
 // PostIDPToken handles the callback/token exchange from the IDP.

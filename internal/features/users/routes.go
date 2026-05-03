@@ -32,13 +32,10 @@ func RegisterRoutes(
 		constants.AdminRoleID,
 	))
 	{
-		adminOnly.GET("", h.GetUserByEmail)
+		adminOnly.GET("", h.GetUsers)
+		adminOnly.GET("/search", h.GetUserByEmail)
 	}
 
-	userRoutes.GET("/all",
-		middleware.RoleMiddleware(constants.SuperAdminRoleID),
-		h.GetUsers,
-	)
 	userRoutes.GET("/distribution",
 		middleware.RoleMiddleware(constants.SuperAdminRoleID),
 		h.GetRoleDistribution,
