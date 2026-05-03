@@ -105,8 +105,19 @@ func extractStudentContext(c *gin.Context) (string, bool) {
 		return "", false
 	}
 
-	roleIDs, ok := roleIDsVal.([]int)
-	if !ok {
+	var roleIDs []int
+	switch v := roleIDsVal.(type) {
+	case []int:
+		roleIDs = v
+	case []interface{}:
+		for _, item := range v {
+			if f, ok := item.(float64); ok {
+				roleIDs = append(roleIDs, int(f))
+			} else if i, ok := item.(int); ok {
+				roleIDs = append(roleIDs, i)
+			}
+		}
+	default:
 		return "", false
 	}
 
