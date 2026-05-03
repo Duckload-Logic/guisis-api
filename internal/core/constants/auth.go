@@ -3,7 +3,7 @@ package constants
 import "time"
 
 const (
-	ClaimsIssuer = "pupt-ogos-api"
+	ClaimsIssuer = "guisis-api"
 )
 
 type AuthType string

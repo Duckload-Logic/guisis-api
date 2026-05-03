@@ -87,7 +87,7 @@ func OTP_TEMPLATE(otp string) string {
     <div class="container">
 		<div style="position: absolute; top: 0; left: 0; width: 100%; height: 8px; background-color: #630b0b;"></div>
 		<div class="header">
-			<div class="logo"><img src="https://pupt-ogos.dllbsit2027.com/logo.svg" width="50" height="50"> PUPT-OGOS</div>
+			<div class="logo"><img src="https://guisis.dllbsit2027.com/logo.svg" width="50" height="50"> GuiSIS</div>
 		</div>
         <div class="title">One-Time Password</div>
         <div class="subtitle">Please use the code below to verify your identity</div>

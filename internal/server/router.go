@@ -123,7 +123,7 @@ func NewRouter(
 	apiV1Routes.GET("/", func(c *gin.Context) {
 		c.JSON(
 			http.StatusOK,
-			gin.H{"message": "PUPT-OGOS API version 1.0 initialized"},
+			gin.H{"message": "GuiSIS API version 1.0 initialized"},
 		)
 	})
 	apiV1Routes.GET("/health", func(c *gin.Context) {
