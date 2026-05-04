@@ -11,6 +11,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
 )
 
 type Handler struct {
@@ -220,7 +221,21 @@ func (h *Handler) PostRefreshToken(c *gin.Context) {
 		return
 	}
 
-	accessTokenJTI := c.MustGet("accessTokenJTI").(sessions.JTIDTO)
+	// Manual extraction of JTI from the (possibly expired) access token cookie.
+	// We need this to identify the session in Redis.
+	tokenString, err := c.Cookie(constants.AccessTokenCookieName)
+	if err != nil {
+		response.SendError(c, "Access token missing", http.StatusUnauthorized, nil)
+		return
+	}
+
+	claims, err := tokens.NewService().ParseTokenUnverified(tokenString)
+	if err != nil {
+		response.SendError(c, "Invalid access token", http.StatusUnauthorized, nil)
+		return
+	}
+
+	accessTokenJTI := sessions.NewJTI(claims.ID)
 	ipAddress := c.ClientIP()
 	userAgent := c.Request.UserAgent()
 
@@ -280,18 +295,20 @@ func (h *Handler) GetAuthorizeURL(c *gin.Context) {
 
 // PostIDPToken handles the callback/token exchange from the IDP.
 func (h *Handler) PostIDPToken(c *gin.Context) {
-	code := c.Query("code")
-	if code == "" {
-		response.SendFail(c, gin.H{"error": "Authorization code is missing"})
+	var req IDPTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Printf("[PostIDPToken] {Binding Error}: %v\n", err)
+		response.SendFail(c, gin.H{"error": "Authorization code is required"})
 		return
 	}
+
+	code := req.Code
 
 	ipAddress := c.ClientIP()
 	userAgent := c.Request.UserAgent()
 
 	accessToken, refreshToken,
-		userID, email,
-		role, err := h.service.PostIDPTokenExchange(
+		_, _, _, err := h.service.PostIDPTokenExchange(
 		c.Request.Context(),
 		code,
 		h.cfg,
@@ -330,15 +347,8 @@ func (h *Handler) PostIDPToken(c *gin.Context) {
 		true,
 	)
 
-	// Redirect to frontend with basic info
-	frontendURL := fmt.Sprintf(
-		"%s/auth/callback?userID=%s&email=%s&role=%s",
-		h.cfg.AppFrontendUrl,
-		userID,
-		email,
-		role,
-	)
-	c.Redirect(http.StatusFound, frontendURL)
+	// Return success for AJAX flow; cookies are already set.
+	response.SendSuccess(c, gin.H{"message": "IDP authentication successful"})
 }
 
 // GetMe returns current user information.

@@ -41,8 +41,6 @@ type Config struct {
 	MailPitPort int
 
 	AIBaseUrl string
-
-	AppFrontendUrl string
 }
 
 func LoadConfig() *Config {
@@ -97,8 +95,6 @@ func LoadConfig() *Config {
 		}(),
 
 		AIBaseUrl: os.Getenv("AI_BASE_URL"),
-
-		AppFrontendUrl: os.Getenv("APP_FRONTEND_URL"),
 	}
 
 	validateConfig(config)
