@@ -477,7 +477,7 @@
                 <span class="field-label">Address:</span>
                 <span class="field-fill">
                     {{.EmergencyContact.Address.StreetDetail}}{{if and .EmergencyContact.Address.StreetDetail .EmergencyContact.Address.Barangay.Name}}, {{end}}
-                    Barangay {{.EmergencyContact.Address.Barangay.Name}}, {{.EmergencyContact.Address.City.Name}}, {{.EmergencyContact.Address.Province.Name}}
+                    Barangay {{.EmergencyContact.Address.Barangay.Name}}, {{.EmergencyContact.Address.City.Name}}{{if .EmergencyContact.Address.Province}}, {{.EmergencyContact.Address.Province.Name}}{{end}}
                 </span>
             </div>
             <div class="w-200 flex-row-no-gap align-end ml-10">
