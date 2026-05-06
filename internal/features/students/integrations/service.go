@@ -129,7 +129,7 @@ func (s *Service) GetPersonalInfoByStudentNumber(
 		},
 		DateOfBirth:  student.DateOfBirth,
 		PlaceOfBirth: student.PlaceOfBirth,
-		HeightFt:     student.HeightFt,
+		HeightM:      float32(student.HeightM),
 		WeightKg:     student.WeightKg,
 	}, nil
 }

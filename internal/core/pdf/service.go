@@ -202,15 +202,15 @@ func getRelationHelpers() template.FuncMap {
 
 				switch role {
 				case "Father":
-					if isParent && relName == "Father" {
+					if (isParent && relName == "Father") || relName == "Father" {
 						return p.Interface()
 					}
 				case "Mother":
-					if isParent && relName == "Mother" {
+					if (isParent && relName == "Mother") || relName == "Mother" {
 						return p.Interface()
 					}
 				case "Guardian":
-					if isGuardian {
+					if isGuardian || relName == "Guardian" {
 						return p.Interface()
 					}
 				}

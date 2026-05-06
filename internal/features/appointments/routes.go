@@ -41,10 +41,11 @@ func RegisterRoutes(
 	))
 	{
 		studentOnly.GET("/me", h.GetAppointmentMe)
-		studentOnly.POST("", h.PostAppointment)
+		studentOnly.POST("", middleware.RequireCOR(), h.PostAppointment)
 		studentOnly.POST(
 			"/id/:appointmentID/cancel",
 			appointmentLookup,
+			middleware.RequireCOR(),
 			h.PostAppointmentCancel,
 		)
 	}
@@ -65,6 +66,7 @@ func RegisterRoutes(
 		sharedRoutes.PATCH(
 			"/id/:appointmentID",
 			appointmentLookup,
+			middleware.RequireCOR(),
 			h.PatchAppointment,
 		)
 	}

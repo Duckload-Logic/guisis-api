@@ -89,6 +89,39 @@ func HydrateStudentCORContext(db *sqlx.DB) gin.HandlerFunc {
 	}
 }
 
+// RequireCOR ensures that a student has uploaded a COR before proceeding.
+// Non-student roles bypass this check automatically.
+func RequireCOR() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		_, isStudent := extractStudentContext(c)
+		if !isStudent {
+			// Admins and developers bypass this requirement
+			c.Next()
+			return
+		}
+
+		_, exists := c.Get("corID")
+		if !exists {
+			// Instead of aborting with generic 403, we provide a
+			// structured fail response
+			c.AbortWithStatusJSON(
+				http.StatusForbidden,
+				gin.H{
+					"status": "fail",
+					"data": gin.H{
+						"error": "A valid Certificate of Registration (COR) " +
+							"is required to proceed. Please upload your " +
+							"COR in your profile.",
+					},
+				},
+			)
+			return
+		}
+
+		c.Next()
+	}
+}
+
 func extractStudentContext(c *gin.Context) (string, bool) {
 	userIDVal, exists := c.Get("userID")
 	if !exists {

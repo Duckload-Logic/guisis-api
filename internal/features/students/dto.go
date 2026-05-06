@@ -89,7 +89,7 @@ type StudentPersonalInfoDTO struct {
 	Gender           Gender                 `json:"gender"                     binding:"required"`
 	CivilStatus      CivilStatusType        `json:"civilStatus"                binding:"required"`
 	Religion         Religion               `json:"religion"                   binding:"required"`
-	HeightFt         float64                `json:"heightFt"                   binding:"required"`
+	HeightM          float64                `json:"heightM"                   binding:"required"`
 	WeightKg         float64                `json:"weightKg"                   binding:"required"`
 	Complexion       string                 `json:"complexion"                 binding:"required"`
 	HighSchoolGWA    float64                `json:"highSchoolGWA"              binding:"required"`
@@ -168,7 +168,7 @@ type RelatedPersonDTO struct {
 	MiddleName       structs.NullableString  `json:"middleName,omitempty"`
 	SuffixName       structs.NullableString  `json:"suffixName,omitempty"`
 	DateOfBirth      string                  `json:"dateOfBirth,omitempty"     binding:"omitempty"`
-	EducationalLevel string                  `json:"educationalLevel"          binding:"required"`
+	EducationalLevel string                  `json:"educationalLevel"`
 	Occupation       structs.NullableString  `json:"occupation,omitempty"`
 	EmployerName     structs.NullableString  `json:"employerName,omitempty"`
 	EmployerAddress  structs.NullableString  `json:"employerAddress,omitempty"`
@@ -187,7 +187,7 @@ type FamilyBackgroundDTO struct {
 	EmployedSiblings      *int                   `json:"employedSiblings"                binding:"required"`
 	OrdinalPosition       int                    `json:"ordinalPosition"                 binding:"required"`
 	HaveQuietPlaceToStudy bool                   `json:"haveQuietPlaceToStudy"`
-	SiblingSupportTypes   []SibilingSupportType  `json:"siblingSupportTypes"             binding:"required"`
+	SiblingSupportTypes   []SibilingSupportType  `json:"siblingSupportTypes"`
 	IsSharingRoom         bool                   `json:"isSharingRoom"`
 	RoomSharingDetails    structs.NullableString `json:"roomSharingDetails,omitempty"`
 	NatureOfResidence     NatureOfResidenceType  `json:"natureOfResidence"               binding:"required"`

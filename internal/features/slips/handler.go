@@ -85,7 +85,7 @@ func (h *Handler) PostSlip(c *gin.Context) {
 
 	var files []*multipart.FileHeader
 	fieldNames := []string{
-		"files", "cor", "excuseLetter", "parentId", "medicalCert",
+		"files", "excuseLetter", "parentId", "medicalCert",
 	}
 
 	for _, field := range fieldNames {
@@ -471,7 +471,6 @@ func (h *Handler) PatchSlip(c *gin.Context) {
 	var files []*multipart.FileHeader
 	fieldNames := []string{
 		"files",
-		"cor",
 		"excuseLetter",
 		"parentId",
 		"medicalCert",

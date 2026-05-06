@@ -486,7 +486,7 @@ func (s *Service) GetStudentPersonalInfo(
 		Gender:           *gender,
 		CivilStatus:      *civilStatus,
 		Religion:         *religion,
-		HeightFt:         personalInfo.HeightFt,
+		HeightM:          personalInfo.HeightM,
 		WeightKg:         personalInfo.WeightKg,
 		Complexion:       personalInfo.Complexion,
 		HighSchoolGWA:    personalInfo.HighSchoolGWA,
@@ -867,7 +867,7 @@ func (s *Service) saveComprehensiveProfile(
 		GenderID:        req.Student.Gender.ID,
 		CivilStatusID:   req.Student.CivilStatus.ID,
 		ReligionID:      req.Student.Religion.ID,
-		HeightFt:        req.Student.HeightFt,
+		HeightM:         req.Student.HeightM,
 		WeightKg:        req.Student.WeightKg,
 		Complexion:      req.Student.Complexion,
 		HighSchoolGWA:   req.Student.HighSchoolGWA,
@@ -1005,6 +1005,99 @@ func (s *Service) saveComprehensiveProfile(
 			StudentFinanceID: sfID,
 			SupportTypeID:    st.ID,
 		})
+	}
+
+	// 9. Related Persons
+	_ = s.repo.DeleteStudentRelatedPersons(ctx, tx, iirID)
+	for _, rpDTO := range req.Family.RelatedPersons {
+		rpID, err := s.repo.UpsertRelatedPerson(ctx, tx, &RelatedPerson{
+			FirstName:        rpDTO.FirstName,
+			MiddleName:       rpDTO.MiddleName,
+			LastName:         rpDTO.LastName,
+			SuffixName:       rpDTO.SuffixName,
+			DateOfBirth:      rpDTO.DateOfBirth,
+			EducationalLevel: rpDTO.EducationalLevel,
+			Occupation:       rpDTO.Occupation,
+			EmployerName:     rpDTO.EmployerName,
+			EmployerAddress:  rpDTO.EmployerAddress,
+		})
+		if err != nil {
+			return "", err
+		}
+
+		err = s.repo.UpsertStudentRelatedPerson(ctx, tx, &StudentRelatedPerson{
+			IIRID:           iirID,
+			RelatedPersonID: rpID,
+			RelationshipID:  rpDTO.Relationship.ID,
+			IsParent:        rpDTO.IsParent,
+			IsGuardian:      rpDTO.IsGuardian,
+			IsLiving:        rpDTO.IsLiving,
+		})
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// 10. Consultations
+	_ = s.repo.DeleteStudentConsultationsByIIRID(ctx, tx, iirID)
+	for _, cDTO := range req.Health.Consultations {
+		_, err = s.repo.UpsertStudentConsultation(ctx, tx, &StudentConsultation{
+			IIRID:            iirID,
+			ProfessionalType: cDTO.ProfessionalType,
+			HasConsulted:     cDTO.HasConsulted,
+			WhenDate:         cDTO.WhenDate,
+			ForWhat:          cDTO.ForWhat,
+		})
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// 11. Activities
+	_ = s.repo.DeleteStudentActivitiesByIIRID(ctx, tx, iirID)
+	for _, aDTO := range req.Interests.Activities {
+		_, err = s.repo.CreateStudentActivity(ctx, tx, &StudentActivity{
+			IIRID:              iirID,
+			OptionID:           aDTO.ActivityOption.ID,
+			OtherSpecification: aDTO.OtherSpecification,
+			Role:               aDTO.Role,
+			RoleSpecification:  aDTO.RoleSpecification,
+		})
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// 12. Subject Preferences
+	_ = s.repo.DeleteStudentSubjectPreferencesByIIRID(ctx, tx, iirID)
+	for _, sspDTO := range req.Interests.SubjectPreferences {
+		if strings.TrimSpace(sspDTO.SubjectName) == "" {
+			continue
+		}
+		_, err = s.repo.CreateStudentSubjectPreference(ctx, tx, &StudentSubjectPreference{
+			IIRID:       iirID,
+			SubjectName: sspDTO.SubjectName,
+			IsFavorite:  sspDTO.IsFavorite,
+		})
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// 13. Hobbies
+	_ = s.repo.DeleteStudentHobbiesByIIRID(ctx, tx, iirID)
+	for _, hDTO := range req.Interests.Hobbies {
+		if strings.TrimSpace(hDTO.HobbyName) == "" {
+			continue
+		}
+		_, err = s.repo.CreateStudentHobby(ctx, tx, &StudentHobby{
+			IIRID:        iirID,
+			HobbyName:    hDTO.HobbyName,
+			PriorityRank: hDTO.PriorityRank,
+		})
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return iirID, nil

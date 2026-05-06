@@ -42,8 +42,13 @@ func RegisterRoutes(
 	))
 	{
 		studentOnly.GET("/me", h.GetSlipMe)
-		studentOnly.POST("", h.PostSlip)
-		studentOnly.PATCH("/id/:slipID", slipLookup, h.PatchSlip)
+		studentOnly.POST("", middleware.RequireCOR(), h.PostSlip)
+		studentOnly.PATCH(
+			"/id/:slipID",
+			slipLookup,
+			middleware.RequireCOR(),
+			h.PatchSlip,
+		)
 	}
 
 	sharedRoutes := routes.Group("")
