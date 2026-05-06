@@ -839,6 +839,17 @@ func (s *Service) SubmitStudentIIR(
 	return iirID, nil
 }
 
+func (s *Service) validateDate(dateStr string, fieldName string) error {
+	if dateStr == "" {
+		return fmt.Errorf("%s is required", fieldName)
+	}
+	_, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return fmt.Errorf("invalid date format for %s: must be YYYY-MM-DD", fieldName)
+	}
+	return nil
+}
+
 func (s *Service) saveComprehensiveProfile(
 	ctx context.Context,
 	tx datastore.DB,
@@ -848,6 +859,11 @@ func (s *Service) saveComprehensiveProfile(
 	iirID := req.IIRID
 	if iirID == "" {
 		iirID = uuid.New().String()
+	}
+
+	// Validate Critical Dates
+	if err := s.validateDate(req.Student.DateOfBirth, "Student Date of Birth"); err != nil {
+		return "", err
 	}
 
 	// 1. IIR Record Header
@@ -1003,13 +1019,22 @@ func (s *Service) saveComprehensiveProfile(
 	for _, st := range req.Family.Finance.FinancialSupportTypes {
 		_ = s.repo.CreateStudentFinancialSupport(ctx, tx, &StudentFinancialSupport{
 			StudentFinanceID: sfID,
-			SupportTypeID:    st.ID,
+			SupportTypeID:      st.ID,
 		})
 	}
 
 	// 9. Related Persons
 	_ = s.repo.DeleteStudentRelatedPersons(ctx, tx, iirID)
 	for _, rpDTO := range req.Family.RelatedPersons {
+		// Validate DOB if not empty or if required
+		if rpDTO.DateOfBirth != "" {
+			if err := s.validateDate(rpDTO.DateOfBirth, "Related Person Date of Birth"); err != nil {
+				return "", err
+			}
+		} else {
+			// If it's mandatory in DB, we MUST provide a valid date.
+			return "", fmt.Errorf("date of birth is required for related person: %s %s", rpDTO.FirstName, rpDTO.LastName)
+		}
 		rpID, err := s.repo.UpsertRelatedPerson(ctx, tx, &RelatedPerson{
 			FirstName:        rpDTO.FirstName,
 			MiddleName:       rpDTO.MiddleName,
