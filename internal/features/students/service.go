@@ -958,10 +958,13 @@ func (s *Service) saveComprehensiveProfile(
 
 	_ = s.repo.DeleteStudentSiblingSupportsByFamilyID(ctx, tx, fbID)
 	for _, sst := range req.Family.SiblingSupportTypes {
-		_ = s.repo.CreateStudentSiblingSupport(ctx, tx, &StudentSiblingSupport{
+		err = s.repo.CreateStudentSiblingSupport(ctx, tx, &StudentSiblingSupport{
 			FamilyBackgroundID: fbID,
 			SupportTypeID:      sst.ID,
 		})
+		if err != nil {
+			return "", err
+		}
 	}
 
 	// 6. Educational Background
@@ -976,7 +979,7 @@ func (s *Service) saveComprehensiveProfile(
 
 	_ = s.repo.DeleteSchoolDetailsByEBID(ctx, tx, ebID)
 	for _, sd := range req.Education.School {
-		_, _ = s.repo.UpsertSchoolDetails(ctx, tx, &SchoolDetails{
+		_, err = s.repo.UpsertSchoolDetails(ctx, tx, &SchoolDetails{
 			EducationalLevelID: sd.EducationalLevel.ID,
 			SchoolName:         sd.SchoolName,
 			SchoolAddress:      sd.SchoolAddress,
@@ -986,6 +989,9 @@ func (s *Service) saveComprehensiveProfile(
 			Awards:             sd.Awards,
 			EBID:               ebID,
 		})
+		if err != nil {
+			return "", err
+		}
 	}
 
 	// 7. Health Record
@@ -1017,10 +1023,13 @@ func (s *Service) saveComprehensiveProfile(
 
 	_ = s.repo.DeleteStudentFinancialSupportsByFinanceID(ctx, tx, sfID)
 	for _, st := range req.Family.Finance.FinancialSupportTypes {
-		_ = s.repo.CreateStudentFinancialSupport(ctx, tx, &StudentFinancialSupport{
+		err = s.repo.CreateStudentFinancialSupport(ctx, tx, &StudentFinancialSupport{
 			StudentFinanceID: sfID,
-			SupportTypeID:      st.ID,
+			SupportTypeID:    st.ID,
 		})
+		if err != nil {
+			return "", err
+		}
 	}
 
 	// 9. Related Persons
@@ -1081,18 +1090,11 @@ func (s *Service) saveComprehensiveProfile(
 	// 11. Activities
 	_ = s.repo.DeleteStudentActivitiesByIIRID(ctx, tx, iirID)
 	for _, aDTO := range req.Interests.Activities {
-		role := aDTO.Role
-		if role == "" {
-			role = "Member"
-		} else if role == "Others" {
-			role = "Other"
-		}
-
 		_, err = s.repo.CreateStudentActivity(ctx, tx, &StudentActivity{
 			IIRID:              iirID,
 			OptionID:           aDTO.ActivityOption.ID,
 			OtherSpecification: aDTO.OtherSpecification,
-			Role:               role,
+			Role:               aDTO.Role,
 			RoleSpecification:  aDTO.RoleSpecification,
 		})
 		if err != nil {
@@ -1102,22 +1104,13 @@ func (s *Service) saveComprehensiveProfile(
 
 	// 12. Subject Preferences
 	_ = s.repo.DeleteStudentSubjectPreferencesByIIRID(ctx, tx, iirID)
-	seenSubjects := make(map[string]bool)
 	for _, sspDTO := range req.Interests.SubjectPreferences {
-		name := strings.TrimSpace(sspDTO.SubjectName)
-		if name == "" {
+		if strings.TrimSpace(sspDTO.SubjectName) == "" {
 			continue
 		}
-
-		// Prevent duplicate subjects for the same student
-		if seenSubjects[name] {
-			continue
-		}
-		seenSubjects[name] = true
-
 		_, err = s.repo.CreateStudentSubjectPreference(ctx, tx, &StudentSubjectPreference{
 			IIRID:       iirID,
-			SubjectName: name,
+			SubjectName: sspDTO.SubjectName,
 			IsFavorite:  sspDTO.IsFavorite,
 		})
 		if err != nil {
