@@ -1081,11 +1081,18 @@ func (s *Service) saveComprehensiveProfile(
 	// 11. Activities
 	_ = s.repo.DeleteStudentActivitiesByIIRID(ctx, tx, iirID)
 	for _, aDTO := range req.Interests.Activities {
+		role := aDTO.Role
+		if role == "" {
+			role = "Member"
+		} else if role == "Others" {
+			role = "Other"
+		}
+
 		_, err = s.repo.CreateStudentActivity(ctx, tx, &StudentActivity{
 			IIRID:              iirID,
 			OptionID:           aDTO.ActivityOption.ID,
 			OtherSpecification: aDTO.OtherSpecification,
-			Role:               aDTO.Role,
+			Role:               role,
 			RoleSpecification:  aDTO.RoleSpecification,
 		})
 		if err != nil {
@@ -1095,13 +1102,22 @@ func (s *Service) saveComprehensiveProfile(
 
 	// 12. Subject Preferences
 	_ = s.repo.DeleteStudentSubjectPreferencesByIIRID(ctx, tx, iirID)
+	seenSubjects := make(map[string]bool)
 	for _, sspDTO := range req.Interests.SubjectPreferences {
-		if strings.TrimSpace(sspDTO.SubjectName) == "" {
+		name := strings.TrimSpace(sspDTO.SubjectName)
+		if name == "" {
 			continue
 		}
+
+		// Prevent duplicate subjects for the same student
+		if seenSubjects[name] {
+			continue
+		}
+		seenSubjects[name] = true
+
 		_, err = s.repo.CreateStudentSubjectPreference(ctx, tx, &StudentSubjectPreference{
 			IIRID:       iirID,
-			SubjectName: sspDTO.SubjectName,
+			SubjectName: name,
 			IsFavorite:  sspDTO.IsFavorite,
 		})
 		if err != nil {
