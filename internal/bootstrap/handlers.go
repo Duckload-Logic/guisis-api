@@ -6,6 +6,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/features/analytics"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/appointments"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/auth"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/locations"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/logs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/m2mclients"
@@ -32,6 +33,7 @@ type Handlers struct {
 	M2MClientHandler          *m2mclients.Handler
 	NotificationsHandler      *notifications.Handler
 	SystemLogHandler          *logs.Handler
+	FileHandler               *files.Handler
 	Redis                     *datastore.RedisClient
 }
 
@@ -74,6 +76,7 @@ func getHandlers(
 		M2MClientHandler:     m2mclients.NewHandler(services.M2MClientService),
 		NotificationsHandler: notificationsHandler,
 		SystemLogHandler:     systemLogHandler,
+		FileHandler:          files.NewHandler(services.FileService),
 		Redis:                redis,
 	}
 }

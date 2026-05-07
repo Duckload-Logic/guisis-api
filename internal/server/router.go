@@ -16,6 +16,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/features/analytics"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/appointments"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/auth"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/locations"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/logs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/m2mclients"
@@ -116,9 +117,7 @@ func NewRouter(
 		)(c)
 	})
 
-	if !cfg.IsProduction {
-		apiV1Routes.Static("/uploads", cfg.LocalUploadDIR)
-	}
+	files.RegisterRoutes(apiV1Routes, handlers.FileHandler, handlers.Redis)
 
 	apiV1Routes.GET("/", func(c *gin.Context) {
 		c.JSON(
