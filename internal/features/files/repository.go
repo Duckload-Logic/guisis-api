@@ -31,7 +31,7 @@ func (r *Repository) GetFileByID(
 	id string,
 ) (*File, error) {
 	var file File
-	query := `SELECT id, file_name, file_url, file_type, file_size, mime_type, created_at, updated_at, deleted_at FROM files WHERE id = ?`
+	query := `SELECT id, file_name, file_url, file_type, file_size, mime_type, created_at, updated_at FROM files WHERE id = ?`
 	err := r.db.GetContext(ctx, &file, query, id)
 	if err != nil {
 		return nil, err
