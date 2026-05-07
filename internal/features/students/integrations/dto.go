@@ -44,7 +44,7 @@ type OGOSStudentPersonalInfoDTO struct {
 	Gender       students.Gender `json:"gender"`
 	DateOfBirth  string          `json:"dateOfBirth"`
 	PlaceOfBirth string          `json:"placeOfBirth"`
-	HeightM      float32         `json:"heightM"`
+	HeightM      float32         `json:"heightFt"`
 	WeightKg     float32         `json:"weightKg"`
 }
 
