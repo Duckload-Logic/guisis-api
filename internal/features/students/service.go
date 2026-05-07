@@ -1104,13 +1104,23 @@ func (s *Service) saveComprehensiveProfile(
 
 	// 12. Subject Preferences
 	_ = s.repo.DeleteStudentSubjectPreferencesByIIRID(ctx, tx, iirID)
+	seenSubjects := make(map[string]bool)
 	for _, sspDTO := range req.Interests.SubjectPreferences {
-		if strings.TrimSpace(sspDTO.SubjectName) == "" {
+		subjName := strings.TrimSpace(sspDTO.SubjectName)
+		if subjName == "" {
 			continue
 		}
+
+		// Case-insensitive deduplication
+		key := strings.ToLower(subjName)
+		if seenSubjects[key] {
+			continue
+		}
+		seenSubjects[key] = true
+
 		_, err = s.repo.CreateStudentSubjectPreference(ctx, tx, &StudentSubjectPreference{
 			IIRID:       iirID,
-			SubjectName: sspDTO.SubjectName,
+			SubjectName: subjName,
 			IsFavorite:  sspDTO.IsFavorite,
 		})
 		if err != nil {
