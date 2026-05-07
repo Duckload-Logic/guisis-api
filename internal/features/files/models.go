@@ -12,7 +12,7 @@ type File struct {
 	MimeType  string    `db:"mime_type"  json:"mimeType"`
 	CreatedAt time.Time `db:"created_at" json:"createdAt"`
 	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
-	DeletedAt time.Time `db:"deleted_at" json:"deletedAt,omitempty"`
+	DeletedAt *time.Time `db:"deleted_at" json:"deletedAt,omitempty"`
 }
 
 // OCRResult represents the result of an OCR process.

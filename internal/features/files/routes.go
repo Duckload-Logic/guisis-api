@@ -10,5 +10,8 @@ func RegisterRoutes(
 	h *Handler,
 	redis *datastore.RedisClient,
 ) {
-	rg.GET("/uploads/*path", h.GetFile)
+	files := rg.Group("/uploads")
+	{
+		files.GET("/*path", h.GetFile)
+	}
 }
