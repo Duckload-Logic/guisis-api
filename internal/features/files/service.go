@@ -243,3 +243,21 @@ func (s *Service) DeleteFile(ctx context.Context, id string) error {
 
 	return nil
 }
+
+func (s *Service) DownloadFile(
+	ctx context.Context,
+	fileURL string,
+	writer io.Writer,
+) (string, error) {
+	file, err := s.repo.GetFileByURL(ctx, fileURL)
+	if err != nil {
+		return "", fmt.Errorf("[FileService] {DownloadFile Meta}: %w", err)
+	}
+
+	blobPath := strings.TrimPrefix(file.FileURL, "/uploads/")
+	if err := s.storage.Download(ctx, blobPath, writer); err != nil {
+		return "", fmt.Errorf("[FileService] {DownloadFile Storage}: %w", err)
+	}
+
+	return file.MimeType, nil
+}

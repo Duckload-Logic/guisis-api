@@ -159,7 +159,7 @@ type StudentPersonalInfo struct {
 	ReligionID    int `db:"religion_id"     json:"religionId"`
 
 	// Physical Attributes
-	HeightFt   float64 `db:"height_ft"   json:"heightFt"`
+	HeightM    float64 `db:"height_m"    json:"heightM"`
 	WeightKg   float64 `db:"weight_kg"   json:"weightKg"`
 	Complexion string  `db:"complexion" json:"complexion"`
 

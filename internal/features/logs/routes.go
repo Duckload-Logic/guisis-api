@@ -13,7 +13,7 @@ func RegisterRoutes(
 	redis *datastore.RedisClient,
 ) {
 	// Base group for all activity logs
-	activityGroup := rg.Group("/activity-meta")
+	activityGroup := rg.Group("/logs")
 	activityGroup.Use(middleware.AuthMiddleware(redis))
 
 	// User-specific activity route (No role check, just auth)
@@ -28,7 +28,7 @@ func RegisterRoutes(
 		adminOnly.GET("/system", h.GetLogsSystem)
 		adminOnly.GET("/security", h.GetLogsSecurity)
 		adminOnly.GET("/stats", h.GetLogsStats)
-		adminOnly.GET("/activity-stats", h.GetLogsActivity)
+		adminOnly.GET("/activity", h.GetLogsActivity)
 		adminOnly.POST("/cleanup", h.PostLogsCleanup)
 	}
 }

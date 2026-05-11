@@ -420,15 +420,12 @@ func insertPersonalInfo(
 	genderID := randomChoice(genderIDs).(int)
 
 	info := &students.StudentPersonalInfo{
-		IIRID:         iirID,
-		StudentNumber: studentNumber,
-		GenderID:      genderID,
-		CivilStatusID: civilStatusID,
-		ReligionID:    randomChoice(religionIDs).(int),
-		HeightFt: gofakeit.Float64Range(
-			4.5,
-			6.5,
-		),
+		IIRID:           iirID,
+		StudentNumber:   studentNumber,
+		GenderID:        genderID,
+		CivilStatusID:   civilStatusID,
+		ReligionID:      randomChoice(religionIDs).(int),
+		HeightM:         gofakeit.Float64Range(1.37, 1.98),
 		WeightKg:        gofakeit.Float64Range(40, 100),
 		Complexion:      gofakeit.Color(),
 		HighSchoolGWA:   gofakeit.Float64Range(75, 98),

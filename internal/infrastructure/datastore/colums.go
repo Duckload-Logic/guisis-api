@@ -47,7 +47,12 @@ func GetOnDuplicateKeyUpdateStatement(
 ) string {
 	cols := strings.Split(GetColumns(s), ", ")
 	var updates []string
+	hasID := false
 	for _, col := range cols {
+		if col == "id" {
+			hasID = true
+			continue
+		}
 		if !contains(exclude, col) &&
 			!contains(excludeOnUpsert, col) {
 			updates = append(
@@ -55,6 +60,10 @@ func GetOnDuplicateKeyUpdateStatement(
 				fmt.Sprintf("%s = VALUES(%s)", col, col),
 			)
 		}
+	}
+
+	if hasID {
+		updates = append(updates, "id = LAST_INSERT_ID(id)")
 	}
 
 	return strings.Join(updates, ", ")

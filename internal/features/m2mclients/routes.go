@@ -34,7 +34,6 @@ func RegisterRoutes(
 			constants.DeveloperRoleID,
 		))
 		{
-			common.GET("", h.GetM2MClients)
 			common.GET("/me", h.GetMyM2MClient)
 			common.POST("/:id/secret", h.PostM2MClientSecret)
 			common.DELETE("/:id", h.DeleteM2MClient)
@@ -46,6 +45,7 @@ func RegisterRoutes(
 			middleware.RoleMiddleware(constants.SuperAdminRoleID),
 		)
 		{
+			adminOnly.GET("", h.GetM2MClients)
 			adminOnly.PATCH("/:id/verify", h.PatchM2MClientVerify)
 		}
 

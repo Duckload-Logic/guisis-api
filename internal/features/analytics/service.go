@@ -119,26 +119,19 @@ func (s *Service) GetAdminDashboard(
 	timeRange string,
 	source string,
 ) (*AdminDashboardResponse, error) {
-	totalStudents, err := s.repo.GetTotalStudents(ctx, 0, 0)
-	if err != nil {
-		return nil, err
-	}
+	totalStudents, _ := s.repo.GetTotalStudents(ctx, 0, 0)
+	studentsTrend, _ := s.repo.GetStudentsTrend(ctx)
 
-	totalReports, err := s.repo.GetTotalReports(ctx)
-	if err != nil {
-		return nil, err
-	}
+	totalReports, _ := s.repo.GetTotalReports(ctx)
+	reportsTrend, _ := s.repo.GetReportsTrend(ctx)
 
-	totalAppointments, err := s.repo.GetTotalAppointments(ctx)
-	if err != nil {
-		return nil, err
-	}
+	totalAppointments, _ := s.repo.GetTotalAppointments(ctx)
+	appointmentsTrend, _ := s.repo.GetAppointmentsTrend(ctx)
 
-	totalSlips, err := s.repo.GetTotalSlips(ctx)
-	if err != nil {
-		return nil, err
-	}
+	totalSlips, _ := s.repo.GetTotalSlips(ctx)
+	slipsTrend, _ := s.repo.GetSlipsTrend(ctx)
 
+	var err error
 	var monthlyVisitors []MonthlyVisitorStatDTO
 	if source == "system" {
 		monthlyVisitors, err = s.repo.GetMonthlyVisitorStats(ctx, timeRange)
@@ -161,9 +154,13 @@ func (s *Service) GetAdminDashboard(
 
 	return &AdminDashboardResponse{
 		TotalStudents:     totalStudents,
+		StudentsTrend:     studentsTrend,
 		TotalReports:      totalReports,
+		ReportsTrend:      reportsTrend,
 		TotalAppointments: totalAppointments,
+		AppointmentsTrend: appointmentsTrend,
 		TotalSlips:        totalSlips,
+		SlipsTrend:        slipsTrend,
 		LiveSessions:      liveSessions,
 		MonthlyVisitors:   monthlyVisitors,
 	}, nil

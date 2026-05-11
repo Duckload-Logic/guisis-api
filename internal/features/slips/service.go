@@ -437,10 +437,13 @@ func (s *Service) SubmitExcuseSlip(
 		)
 	}
 
-	if parsedDate.After(time.Now()) {
-		return nil, fmt.Errorf(
-			"absence date cannot be in future",
-		)
+	// Evaluate current day in Philippine Time (UTC+8)
+	loc := time.FixedZone("PHT", 8*3600)
+	now := time.Now().In(loc)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+	if parsedDate.After(today) {
+		return nil, fmt.Errorf("absence date cannot be in future")
 	}
 
 	// Unified File Implementation: Use files features
@@ -618,6 +621,21 @@ func (s *Service) UpdateExcuseSlip(
 	// Validate all files
 	if err := s.validateFiles(files); err != nil {
 		return nil, err
+	}
+
+	dateOfAbsence := strings.Split(req.DateOfAbsence, "T")[0]
+	parsedDate, err := time.Parse("2006-01-02", dateOfAbsence)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date format: YYYY-MM-DD")
+	}
+
+	// Evaluate current day in Philippine Time (UTC+8)
+	loc := time.FixedZone("PHT", 8*3600)
+	now := time.Now().In(loc)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+	if parsedDate.After(today) {
+		return nil, fmt.Errorf("absence date cannot be in future")
 	}
 
 	// Delete old attachments from both slip records and files table

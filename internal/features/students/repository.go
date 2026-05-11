@@ -1213,6 +1213,16 @@ func (r *Repository) UpsertStudentConsultation(
 	return int(lastID), nil
 }
 
+func (r *Repository) DeleteStudentConsultationsByIIRID(
+	ctx context.Context,
+	tx datastore.DB,
+	iirID string,
+) error {
+	query := `DELETE FROM student_consultations WHERE iir_id = ?`
+	_, err := tx.ExecContext(ctx, query, iirID)
+	return err
+}
+
 func (r *Repository) UpsertStudentFinance(
 	ctx context.Context,
 	tx datastore.DB,

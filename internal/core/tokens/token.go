@@ -31,11 +31,23 @@ func (s *Service) GenerateToken(
 	tokenType string,
 	expireSeconds int,
 ) (string, *Claims, error) {
+	return s.GenerateM2MToken(userEmail, userID, roleIDs, tokenType, "", expireSeconds)
+}
+
+func (s *Service) GenerateM2MToken(
+	userEmail string,
+	userID string,
+	roleIDs []int,
+	tokenType string,
+	m2mClientID string,
+	expireSeconds int,
+) (string, *Claims, error) {
 	claims := &Claims{
-		UserEmail: userEmail,
-		UserID:    userID,
-		RoleIDs:   roleIDs,
-		TokenType: tokenType,
+		UserEmail:   userEmail,
+		UserID:      userID,
+		RoleIDs:     roleIDs,
+		TokenType:   tokenType,
+		M2MClientID: m2mClientID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(
 				time.Duration(expireSeconds) * time.Second),
@@ -46,7 +58,6 @@ func (s *Service) GenerateToken(
 		},
 	}
 
-	// Create the token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString(s.secret)
 	return signed, claims, err

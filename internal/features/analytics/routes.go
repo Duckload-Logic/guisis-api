@@ -16,16 +16,30 @@ func RegisterRoutes(
 	analyticsRoutes.Use(middleware.AuditContextMiddleware())
 	analyticsRoutes.Use(middleware.AuthMiddleware(redis))
 
-	analyticsRoutes.GET("/dashboard",
-		middleware.RoleMiddleware(constants.AdminRoleID),
-		h.GetDashboard,
+	analyticsRoutes.GET("",
+		middleware.RoleMiddleware(
+			constants.AdminRoleID,
+			constants.SuperAdminRoleID,
+			constants.DeveloperRoleID,
+		),
+		h.GetAdminDashboard,
 	)
 
 	analyticsRoutes.GET("/admin-dashboard",
 		middleware.RoleMiddleware(
 			constants.AdminRoleID,
 			constants.SuperAdminRoleID,
+			constants.DeveloperRoleID,
 		),
 		h.GetAdminDashboard,
+	)
+
+	analyticsRoutes.GET("/dashboard",
+		middleware.RoleMiddleware(
+			constants.AdminRoleID,
+			constants.SuperAdminRoleID,
+			constants.DeveloperRoleID,
+		),
+		h.GetDashboard,
 	)
 }

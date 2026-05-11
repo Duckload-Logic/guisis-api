@@ -390,7 +390,7 @@
         <div class="flex-row mt-5">
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Height (m):</span>
-                <span class="field-fill">{{printf "%.2f" .HeightFt}}</span>
+                <span class="field-fill">{{printf "%.2f" .HeightM}}</span>
             </div>
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Weight:</span>
@@ -411,7 +411,10 @@
                 <span class="field-label">City Address:</span>
                 <span class="field-fill">
                     {{range .Addresses}}{{if eq .AddressType "Residential"}}
-                    {{.Address.StreetDetail}}, {{.Address.Barangay.Name}}, {{.Address.City.Name}}
+
+                    {{.Address.StreetDetail}}{{if and .Address.StreetDetail .Address.Barangay.Name}}, {{end}}
+                    Barangay {{.Address.Barangay.Name}}{{if and .Address.Barangay.Name .Address.City.Name}}, {{end}}
+                    {{.Address.City.Name}}{{if .Address.Province}}, {{.Address.Province.Name}}{{end}}
                     {{end}}{{end}}
                 </span>
             </div>
@@ -426,8 +429,9 @@
                 <span class="field-label">Provincial Address:</span>
                 <span class="field-fill">
                     {{range .Addresses}}{{if eq .AddressType "Provincial"}}
-                    {{.Address.StreetDetail}}, {{.Address.Barangay.Name}}, {{.Address.City.Name}}, {{if
-                    .Address.Province}}{{.Address.Province.Name}}{{end}}
+                    {{.Address.StreetDetail}}{{if and .Address.StreetDetail .Address.Barangay.Name}}, {{end}}
+                    Barangay {{.Address.Barangay.Name}}{{if and .Address.Barangay.Name .Address.City.Name}}, {{end}}
+                    {{.Address.City.Name}}{{if .Address.Province}}, {{.Address.Province.Name}}{{end}}
                     {{end}}{{end}}
                 </span>
             </div>
@@ -471,7 +475,10 @@
         <div class="flex-row mt-5">
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Address:</span>
-                <span class="field-fill">{{.EmergencyContact.Address.StreetDetail}}</span>
+                <span class="field-fill">
+                    {{.EmergencyContact.Address.StreetDetail}}{{if and .EmergencyContact.Address.StreetDetail .EmergencyContact.Address.Barangay.Name}}, {{end}}
+                    Barangay {{.EmergencyContact.Address.Barangay.Name}}, {{.EmergencyContact.Address.City.Name}}{{if .EmergencyContact.Address.Province}}, {{.EmergencyContact.Address.Province.Name}}{{end}}
+                </span>
             </div>
             <div class="w-200 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Relationship:</span>

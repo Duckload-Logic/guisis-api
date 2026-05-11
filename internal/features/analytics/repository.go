@@ -84,6 +84,46 @@ func (r *Repository) GetTotalSlips(ctx context.Context) (int, error) {
 	return total, err
 }
 
+func (r *Repository) GetStudentsTrend(ctx context.Context) (int, error) {
+	var total int
+	err := r.db.GetContext(
+		ctx,
+		&total,
+		"SELECT COUNT(*) FROM student_personal_info WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+	)
+	return total, err
+}
+
+func (r *Repository) GetReportsTrend(ctx context.Context) (int, error) {
+	var total int
+	err := r.db.GetContext(
+		ctx,
+		&total,
+		"SELECT COUNT(*) FROM significant_notes WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+	)
+	return total, err
+}
+
+func (r *Repository) GetAppointmentsTrend(ctx context.Context) (int, error) {
+	var total int
+	err := r.db.GetContext(
+		ctx,
+		&total,
+		"SELECT COUNT(*) FROM appointments WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+	)
+	return total, err
+}
+
+func (r *Repository) GetSlipsTrend(ctx context.Context) (int, error) {
+	var total int
+	err := r.db.GetContext(
+		ctx,
+		&total,
+		"SELECT COUNT(*) FROM admission_slips WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+	)
+	return total, err
+}
+
 func (r *Repository) GetMonthlyVisitorStats(
 	ctx context.Context,
 	timeRange string,

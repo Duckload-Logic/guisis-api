@@ -85,7 +85,7 @@ func (h *Handler) PostSlip(c *gin.Context) {
 
 	var files []*multipart.FileHeader
 	fieldNames := []string{
-		"files", "cor", "excuseLetter", "parentId", "medicalCert",
+		"files", "excuseLetter", "parentId", "medicalCert",
 	}
 
 	for _, field := range fieldNames {
@@ -164,18 +164,36 @@ func (h *Handler) GetSlipStats(c *gin.Context) {
 		return
 	}
 
-	roleIDs := c.MustGet("roleIDs").([]int)
-	var iirIDPtr *string
-
-	isStudent := false
-	for _, rid := range roleIDs {
-		if rid == int(constants.StudentRoleID) {
-			isStudent = true
-			break
+	roleIDsVal, _ := c.Get("roleIDs")
+	var roleIDs []int
+	switch v := roleIDsVal.(type) {
+	case []int:
+		roleIDs = v
+	case []interface{}:
+		for _, item := range v {
+			if f, ok := item.(float64); ok {
+				roleIDs = append(roleIDs, int(f))
+			} else if i, ok := item.(int); ok {
+				roleIDs = append(roleIDs, i)
+			}
 		}
 	}
 
-	if isStudent {
+	isStudent := false
+	isAdmin := false
+	for _, rid := range roleIDs {
+		if rid == int(constants.StudentRoleID) {
+			isStudent = true
+		}
+		if rid == int(constants.AdminRoleID) ||
+			rid == int(constants.SuperAdminRoleID) ||
+			rid == int(constants.DeveloperRoleID) {
+			isAdmin = true
+		}
+	}
+
+	var iirIDPtr *string
+	if isStudent && !isAdmin {
 		iirID, ok := getIIRIDFromContext(c)
 		if !ok {
 			return
@@ -453,7 +471,6 @@ func (h *Handler) PatchSlip(c *gin.Context) {
 	var files []*multipart.FileHeader
 	fieldNames := []string{
 		"files",
-		"cor",
 		"excuseLetter",
 		"parentId",
 		"medicalCert",

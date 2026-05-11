@@ -44,7 +44,10 @@ func (h *Handler) GetDashboard(c *gin.Context) {
 }
 
 func (h *Handler) GetAdminDashboard(c *gin.Context) {
-	timeRange := c.DefaultQuery("range", "monthly")
+	timeRange := c.Query("filter")
+	if timeRange == "" {
+		timeRange = c.DefaultQuery("range", "monthly")
+	}
 	source := c.DefaultQuery("source", "appointments")
 
 	dashboardData, err := h.service.GetAdminDashboard(

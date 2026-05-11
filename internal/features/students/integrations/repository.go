@@ -165,7 +165,7 @@ func (r *Repository) GetPersonalInfoByStudentNumber(
 			g.gender_name AS gender_name,
 			sp.date_of_birth AS date_of_birth,
 			sp.place_of_birth AS place_of_birth,
-			sp.height_ft AS height_ft,
+			sp.height_m AS height_m,
 			sp.weight_kg AS weight_kg
 		FROM student_personal_info sp
 		JOIN genders g ON sp.gender_id = g.id

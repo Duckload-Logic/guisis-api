@@ -96,6 +96,20 @@ func (r *Repository) CreateBulk(
 	return ids, nil
 }
 
+func (r *Repository) GetFileByURL(
+	ctx context.Context,
+	fileURL string,
+) (*File, error) {
+	var file File
+	query := `SELECT id, file_name, file_url, file_type, file_size, mime_type, created_at, updated_at, deleted_at FROM files WHERE file_url = ?`
+	err := r.db.GetContext(ctx, &file, query, fileURL)
+	if err != nil {
+		return nil, err
+	}
+
+	return &file, nil
+}
+
 func (r *Repository) Delete(
 	ctx context.Context,
 	tx datastore.DB,

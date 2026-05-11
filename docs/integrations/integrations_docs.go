@@ -17,7 +17,7 @@ const docTemplateintegrations = `{
     "paths": {
         "/auth/m2m/refresh": {
             "post": {
-                "description": "Refreshes an existing M2M session using a valid refresh token.",
+                "description": "Use refresh token to get a new access token",
                 "consumes": [
                     "application/json"
                 ],
@@ -25,17 +25,17 @@ const docTemplateintegrations = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "M2M Clients"
                 ],
-                "summary": "M2M Token Refresh",
+                "summary": "Get new M2M access token using refresh token",
                 "parameters": [
                     {
-                        "description": "Refresh Token",
-                        "name": "request",
+                        "description": "Refresh token",
+                        "name": "refreshToken",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/m2mclients.M2MRefreshTokenRequest"
+                            "$ref": "#/definitions/m2mclients.RefreshTokenRequest"
                         }
                     }
                 ],
@@ -43,17 +43,17 @@ const docTemplateintegrations = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/m2mclients.M2MTokenSuccessResponse"
+                            "$ref": "#/definitions/m2mclients.M2MTokenResponse"
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "401": {
+                        "description": "Invalid refresh token",
                         "schema": {
                             "$ref": "#/definitions/response.CommonErrorResponse"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/response.CommonErrorResponse"
                         }
@@ -63,7 +63,7 @@ const docTemplateintegrations = `{
         },
         "/auth/m2m/token": {
             "post": {
-                "description": "Exchanges client credentials (client_id and client_secret) for an M2M access token.",
+                "description": "Authenticate with client ID and client secret to get access and refresh tokens",
                 "consumes": [
                     "application/json"
                 ],
@@ -71,13 +71,13 @@ const docTemplateintegrations = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "M2M Clients"
                 ],
-                "summary": "M2M Token Exchange",
+                "summary": "Get M2M access token using client credentials",
                 "parameters": [
                     {
-                        "description": "M2M Credentials",
-                        "name": "request",
+                        "description": "Client credentials",
+                        "name": "credentials",
                         "in": "body",
                         "required": true,
                         "schema": {
@@ -89,17 +89,78 @@ const docTemplateintegrations = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/m2mclients.M2MTokenSuccessResponse"
+                            "$ref": "#/definitions/m2mclients.M2MTokenResponse"
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "401": {
+                        "description": "Invalid client credentials",
                         "schema": {
                             "$ref": "#/definitions/response.CommonErrorResponse"
                         }
                     },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/response.CommonErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/integrations/students/profile": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get student information by their email",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "External Students"
+                ],
+                "summary": "Get student by Email",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Student Email",
+                        "name": "email",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/integrations.StudentSuccessResponse"
+                        }
+                    },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.CommonErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.CommonErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.CommonErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/response.CommonErrorResponse"
                         }
@@ -546,7 +607,7 @@ const docTemplateintegrations = `{
         "locations.Barangay": {
             "type": "object",
             "properties": {
-                "cityId": {
+                "cityCode": {
                     "type": "integer"
                 },
                 "code": {
@@ -567,7 +628,7 @@ const docTemplateintegrations = `{
                     "type": "string"
                 },
                 "district": {
-                    "type": "string"
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "id": {
                     "type": "integer"
@@ -576,16 +637,16 @@ const docTemplateintegrations = `{
                     "type": "string"
                 },
                 "provinceCode": {
-                    "type": "string"
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "regionCode": {
-                    "type": "string"
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "type": {
-                    "type": "string"
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "zipCode": {
-                    "type": "string"
+                    "$ref": "#/definitions/structs.NullableString"
                 }
             }
         },
@@ -616,17 +677,6 @@ const docTemplateintegrations = `{
                     "type": "integer"
                 },
                 "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "m2mclients.M2MRefreshTokenRequest": {
-            "type": "object",
-            "required": [
-                "refreshToken"
-            ],
-            "properties": {
-                "refreshToken": {
                     "type": "string"
                 }
             }
@@ -664,15 +714,14 @@ const docTemplateintegrations = `{
                 }
             }
         },
-        "m2mclients.M2MTokenSuccessResponse": {
+        "m2mclients.RefreshTokenRequest": {
             "type": "object",
+            "required": [
+                "refreshToken"
+            ],
             "properties": {
-                "data": {
-                    "$ref": "#/definitions/m2mclients.M2MTokenResponse"
-                },
-                "status": {
-                    "type": "string",
-                    "example": "success"
+                "refreshToken": {
+                    "type": "string"
                 }
             }
         },

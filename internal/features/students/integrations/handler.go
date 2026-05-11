@@ -138,22 +138,6 @@ func (h *Handler) GetStudentByEmail(c *gin.Context) {
 		return
 	}
 
-	// For M2M calls, ensure the client is formally verified (Partner status)
-	isM2M, _ := c.Get("isM2M")
-	isVerified, _ := c.Get("isVerified")
-	if m2m, _ := isM2M.(bool); m2m {
-		if verified, _ := isVerified.(bool); !verified {
-			response.SendFail(
-				c,
-				gin.H{
-					"error": "Only formally verified Partner Systems can query by email",
-				},
-				http.StatusForbidden,
-			)
-			return
-		}
-	}
-
 	student, err := h.service.GetStudentByEmail(
 		c.Request.Context(),
 		email,

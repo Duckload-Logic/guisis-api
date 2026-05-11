@@ -337,18 +337,39 @@ func (h *Handler) GetAppointmentMe(c *gin.Context) {
 // @Router       /appointments/stats [get]
 func (h *Handler) GetAppointmentStats(c *gin.Context) {
 	iirIDVal, exists := c.Get("iirID")
-	roleIDs := c.MustGet("roleIDs").([]int)
+	roleIDsVal, _ := c.Get("roleIDs")
+
+	// Flexible type assertion for multi-role arrays
+	var roleIDs []int
+	switch v := roleIDsVal.(type) {
+	case []int:
+		roleIDs = v
+	case []interface{}:
+		for _, item := range v {
+			if f, ok := item.(float64); ok {
+				roleIDs = append(roleIDs, int(f))
+			} else if i, ok := item.(int); ok {
+				roleIDs = append(roleIDs, i)
+			}
+		}
+	}
 
 	isStudent := false
+	isAdmin := false
 	for _, rid := range roleIDs {
 		if rid == int(constants.StudentRoleID) {
 			isStudent = true
-			break
+		}
+		if rid == int(constants.AdminRoleID) ||
+			rid == int(constants.SuperAdminRoleID) ||
+			rid == int(constants.DeveloperRoleID) {
+			isAdmin = true
 		}
 	}
 
 	var iirIDPtr *string
-	if isStudent {
+	// Only force student-specific stats if user is a student AND NOT an admin/developer
+	if isStudent && !isAdmin {
 		if !exists {
 			response.SendFail(c, gin.H{
 				"error": "Please complete your IIR profile",

@@ -52,6 +52,22 @@ func (r *Repository) GetByClientID(
 	return &client, err
 }
 
+func (r *Repository) GetByID(
+	ctx context.Context,
+	id string,
+) (*M2MClient, error) {
+	var client M2MClient
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM m2m_clients
+		WHERE id = ?
+		LIMIT 1
+	`, datastore.GetColumns(M2MClient{}))
+
+	err := r.db.GetContext(ctx, &client, query, id)
+	return &client, err
+}
+
 func (r *Repository) GetActiveByUserID(
 	ctx context.Context,
 	userID string,

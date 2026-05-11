@@ -22,6 +22,7 @@ func RegisterRoutes(
 		constants.StudentRoleID,
 		constants.AdminRoleID,
 		constants.SuperAdminRoleID,
+		constants.DeveloperRoleID,
 	))
 	{
 		userRoutes.GET("/me", h.GetNotifications)
