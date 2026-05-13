@@ -543,3 +543,83 @@ func (h *Handler) PatchSlipStatus(c *gin.Context) {
 
 	response.SendSuccess(c, gin.H{"message": "Status updated successfully"})
 }
+
+// PostClaimTicket godoc
+// @Summary      Claim/Verify a ticket
+// @Description  Allows a counselor to verify a student's ticket on-site.
+// @Tags         ExcuseSlips
+// @Accept       json
+// @Produce      json
+// @Param        body body      TicketClaimRequest  true  "Ticket code"
+// @Success      200  {object} map[string]string
+// @Failure      400  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /slips/tickets/claim [post]
+func (h *Handler) PostClaimTicket(c *gin.Context) {
+	var req TicketClaimRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Printf("[PostClaimTicket] {Bind Request}: %v\n", err)
+		response.SendFail(c, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	userID := c.GetString("userID")
+	err := h.service.ClaimTicket(c.Request.Context(), req.TicketCode, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			response.SendFail(
+				c,
+				gin.H{"error": "Ticket not found"},
+				http.StatusNotFound,
+			)
+			return
+		}
+		if strings.Contains(err.Error(), "already verified") {
+			response.SendFail(c, gin.H{"error": err.Error()})
+			return
+		}
+		fmt.Printf("[PostClaimTicket] {Claim Ticket}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to claim ticket",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{"message": "Ticket verified successfully"})
+}
+
+// GetTicketDetails godoc
+// @Summary      Get slip details by ticket code
+// @Description  Allows a counselor to view slip details before verification.
+// @Tags         ExcuseSlips
+// @Produce      json
+// @Param        code path      string  true  "Ticket code"
+// @Success      200  {object} Slip
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /slips/tickets/{code} [get]
+func (h *Handler) GetTicketDetails(c *gin.Context) {
+	code := c.Param("code")
+	if code == "" {
+		response.SendFail(c, gin.H{"error": "Ticket code is required"})
+		return
+	}
+
+	slip, err := h.service.GetSlipByTicketCode(c.Request.Context(), code)
+	if err != nil {
+		fmt.Printf("[GetTicketDetails] {Get Slip}: %v\n", err)
+		response.SendError(c, "Failed to get ticket details", http.StatusInternalServerError, nil)
+		return
+	}
+
+	if slip == nil {
+		response.SendFail(c, gin.H{"error": "Ticket not found"}, http.StatusNotFound)
+		return
+	}
+
+	response.SendSuccess(c, slip)
+}

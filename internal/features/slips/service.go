@@ -861,6 +861,66 @@ func (s *Service) UpdateExcuseSlipStatus(
 				return err
 			}
 
+			emails := []audit.EmailParams{}
+			ticketCode := ""
+
+			// Handle ticket and email for Approved status
+			if newStatus == "Approved" {
+				ticket, err := s.repo.GetTicketBySlipID(ctx, id)
+				if err != nil {
+					fmt.Printf("[UpdateExcuseSlipStatus] {Get Ticket}: %v\n", err)
+				}
+
+				if ticket == nil {
+					// Generate new ticket
+					ticketCode = fmt.Sprintf(
+						"SLIP-%d-%s",
+						time.Now().Year(),
+						strings.ToUpper(uuid.New().String()[:8]),
+					)
+					newTicket := &AdmissionTicket{
+						ID:              uuid.New().String(),
+						AdmissionSlipID: id,
+						TicketCode:      ticketCode,
+					}
+					if err := s.repo.CreateTicket(ctx, tx, newTicket); err != nil {
+						return err
+					}
+				} else {
+					ticketCode = ticket.TicketCode
+				}
+
+				// Always send approval email
+				emails = append(emails, audit.EmailParams{
+					To:           []string{oldSlip.UserEmail},
+					Subject:      "Your Admission Slip Has Been Approved!",
+					TemplatePath: "slip.html",
+					TemplateData: map[string]interface{}{
+						"IsApproved": true,
+						"TicketCode": ticketCode,
+					},
+				})
+			} else {
+				emails = append(emails, audit.EmailParams{
+					To:           []string{oldSlip.UserEmail},
+					Subject:      "Admission Slip Status Updated",
+					TemplatePath: "slip.html",
+					TemplateData: map[string]interface{}{
+						"IsApproved": false,
+						"StudentName": fmt.Sprintf(
+							"%s %s",
+							oldSlip.UserFirstName,
+							oldSlip.UserLastName,
+						),
+						"Category":      oldSlip.CategoryName,
+						"DateOfAbsence": datetime.FormatDate(oldSlip.DateOfAbsence),
+						"DateNeeded":    datetime.FormatDate(oldSlip.DateNeeded),
+						"Status":        newStatus,
+						"AdminNotes":    adminNotes,
+					},
+				})
+			}
+
 			// Fetch student UserID for notification
 			studentUserID, _ := s.repo.GetUserIDBySlipID(ctx, id)
 
@@ -920,25 +980,7 @@ func (s *Service) UpdateExcuseSlipStatus(
 						},
 					},
 					Notifications: notifications,
-					Email: []audit.EmailParams{
-						{
-							To:           []string{oldSlip.UserEmail},
-							Subject:      "Admission Slip Status Updated",
-							TemplatePath: "slip.html",
-							TemplateData: map[string]interface{}{
-								"StudentName": fmt.Sprintf(
-									"%s %s",
-									oldSlip.UserFirstName,
-									oldSlip.UserLastName,
-								),
-								"Category":      oldSlip.CategoryName,
-								"DateOfAbsence": datetime.FormatDate(oldSlip.DateOfAbsence),
-								"DateNeeded":    datetime.FormatDate(oldSlip.DateNeeded),
-								"Status":        newStatus,
-								"AdminNotes":    adminNotes,
-							},
-						},
-					},
+					Email:         emails,
 				},
 			)
 			return nil
@@ -953,12 +995,73 @@ func (s *Service) GetUserIDBySlipID(
 	return s.repo.GetUserIDBySlipID(ctx, id)
 }
 
+func (s *Service) ClaimTicket(
+	ctx context.Context,
+	code string,
+	counselorID string,
+) error {
+	ticket, err := s.repo.GetTicketByCode(ctx, code)
+	if err != nil {
+		return err
+	}
+	if ticket == nil {
+		return fmt.Errorf("ticket not found")
+	}
+	if ticket.IsVerified {
+		return fmt.Errorf("ticket already verified")
+	}
+
+	return s.repo.WithTransaction(
+		ctx,
+		func(tx datastore.DB) error {
+			if err := s.repo.UpdateTicketVerification(
+				ctx,
+				tx,
+				ticket.ID,
+				counselorID,
+			); err != nil {
+				return err
+			}
+
+			// Audit the verification
+			audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
+				Tx: tx,
+				Log: &audit.LogParams{
+					Level:    audit.LevelInfo,
+					Category: audit.CategoryAudit,
+					Action:   audit.ActionSlipStatusUpdated,
+					Message:  fmt.Sprintf("Ticket #%s verified", code),
+					Metadata: &audit.LogMetadata{
+						EntityType: "ticket",
+						EntityID:   ticket.ID,
+					},
+				},
+			})
+			return nil
+		},
+	)
+}
+
+func (s *Service) GetSlipByTicketCode(
+	ctx context.Context,
+	code string,
+) (*SlipDTO, error) {
+	slip, err := s.repo.GetSlipByTicketCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+	if slip == nil {
+		return nil, nil
+	}
+	return s.mapToDTO(slip), nil
+}
+
 func (s *Service) mapToDTO(slip *SlipWithDetailsView) *SlipDTO {
 	if slip == nil {
 		return nil
 	}
 
-	return &SlipDTO{
+	dto := &SlipDTO{
 		ID:     slip.ID,
 		UserID: slip.UserID,
 		IIRID:  slip.IIRID,
@@ -985,4 +1088,16 @@ func (s *Service) mapToDTO(slip *SlipWithDetailsView) *SlipDTO {
 		CreatedAt: slip.CreatedAt,
 		UpdatedAt: slip.UpdatedAt,
 	}
+
+	if slip.TicketCode.Valid {
+		dto.Ticket = &TicketDTO{
+			TicketCode: slip.TicketCode.String,
+			IsVerified: slip.IsVerified.Bool,
+		}
+		if slip.VerifiedAt.Valid {
+			dto.Ticket.VerifiedAt = slip.VerifiedAt.Time
+		}
+	}
+
+	return dto
 }
