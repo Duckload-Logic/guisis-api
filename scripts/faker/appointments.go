@@ -315,7 +315,7 @@ func insertAppointment(
 		StatusID:              statusID,
 	}
 
-	err := appointmentsRepo.CreateAppointment(ctx, tx, appt)
+	_, err := appointmentsRepo.CreateAppointment(ctx, tx, appt)
 	if err != nil {
 		log.Printf("[Seeder] {Insert Appointment}: %v", err)
 		return ""

@@ -279,6 +279,21 @@ func (r *Repository) GetUserIDsByRole(
 	return userIDs, err
 }
 
+func (r *Repository) GetEmailsByRole(
+	ctx context.Context,
+	roleID int,
+) ([]string, error) {
+	var emails []string
+	query := `
+		SELECT u.email 
+		FROM users u
+		JOIN user_roles ur ON ur.user_id = u.id
+		WHERE ur.role_id = ? AND u.is_active = 1
+	`
+	err := r.db.SelectContext(ctx, &emails, query, roleID)
+	return emails, err
+}
+
 func (r *Repository) ListUsers(
 	ctx context.Context,
 	params ListUsersRequest,

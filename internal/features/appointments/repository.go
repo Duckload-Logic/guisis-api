@@ -99,6 +99,7 @@ func (r *Repository) GetCategories(
 
 func (r *Repository) GetAppointment(
 	ctx context.Context,
+	db datastore.DB,
 	id string,
 ) (*AppointmentWithDetailsView, error) {
 	query := fmt.Sprintf(`
@@ -107,7 +108,7 @@ func (r *Repository) GetAppointment(
 	`, appointmentsBaseQuery)
 
 	var appt AppointmentWithDetailsView
-	err := r.db.GetContext(ctx, &appt, query, id)
+	err := db.GetContext(ctx, &appt, query, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -502,7 +503,7 @@ func (r *Repository) CreateAppointment(
 	ctx context.Context,
 	tx datastore.DB,
 	appt *Appointment,
-) error {
+) (*AppointmentWithDetailsView, error) {
 	query := `
 		INSERT INTO appointments (
 			id, iir_id, reason, admin_notes, when_date,
@@ -517,9 +518,15 @@ func (r *Repository) CreateAppointment(
 
 	_, err := tx.NamedExecContext(ctx, query, appt)
 	if err != nil {
-		return fmt.Errorf("failed to create appointment: %w", err)
+		return nil, fmt.Errorf("failed to create appointment: %w", err)
 	}
-	return nil
+
+	newAppt, err := r.GetAppointment(ctx, tx, appt.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get created appointment: %w", err)
+	}
+
+	return newAppt, nil
 }
 
 func (r *Repository) UpdateAppointment(
@@ -567,4 +574,3 @@ func (r *Repository) UpdateAppointment(
 	_, err := tx.ExecContext(ctx, query, args...)
 	return err
 }
-

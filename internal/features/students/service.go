@@ -1130,13 +1130,23 @@ func (s *Service) saveComprehensiveProfile(
 
 	// 13. Hobbies
 	_ = s.repo.DeleteStudentHobbiesByIIRID(ctx, tx, iirID)
+	seenHobbies := make(map[string]bool)
 	for _, hDTO := range req.Interests.Hobbies {
-		if strings.TrimSpace(hDTO.HobbyName) == "" {
+		hName := strings.TrimSpace(hDTO.HobbyName)
+		if hName == "" {
 			continue
 		}
+
+		// Case-insensitive deduplication
+		key := strings.ToLower(hName)
+		if seenHobbies[key] {
+			continue
+		}
+		seenHobbies[key] = true
+
 		_, err = s.repo.CreateStudentHobby(ctx, tx, &StudentHobby{
 			IIRID:        iirID,
-			HobbyName:    hDTO.HobbyName,
+			HobbyName:    hName,
 			PriorityRank: hDTO.PriorityRank,
 		})
 		if err != nil {

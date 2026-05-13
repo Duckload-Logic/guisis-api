@@ -12,6 +12,7 @@ import (
 type DispatchParams struct {
 	Log           *LogParams
 	Notifications []NotificationParams
+	Email         []EmailParams
 	Tx            datastore.DB
 }
 
@@ -24,6 +25,13 @@ type LogParams struct {
 	TargetID   structs.NullableString
 	TargetType structs.NullableString
 	Metadata   *LogMetadata
+}
+
+type EmailParams struct {
+	To           []string
+	Subject      string
+	TemplatePath string
+	TemplateData interface{}
 }
 
 // NotificationParams holds the parameters for a notification.
@@ -42,6 +50,7 @@ func Dispatch(
 	ctx context.Context,
 	logger Logger,
 	notifier Notifier,
+	emailer Emailer,
 	params DispatchParams,
 ) {
 	// Extract Meta
@@ -97,6 +106,26 @@ func Dispatch(
 			if err != nil {
 				log.Printf(
 					`[Audit:Dispatch] {Send Notification}: %v`,
+					err,
+				)
+			}
+		}
+	}
+
+	// Prepare and Send Email
+	if emailer != nil && params.Email != nil {
+		for _, e := range params.Email {
+			entry := EmailEntry{
+				To:           e.To,
+				Subject:      e.Subject,
+				TemplatePath: e.TemplatePath,
+				TemplateData: e.TemplateData,
+			}
+
+			err := emailer.Send(ctx, entry)
+			if err != nil {
+				log.Printf(
+					`[Audit:Dispatch] {Send Email}: %v`,
 					err,
 				)
 			}

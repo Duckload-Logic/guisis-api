@@ -149,10 +149,7 @@ func (h *Handler) PostAppointment(c *gin.Context) {
 		return
 	}
 
-	response.SendSuccess(c, gin.H{
-		"message": "Appointment created successfully",
-		"id":      appt.ID,
-	}, http.StatusCreated)
+	response.SendSuccess(c, appt, http.StatusCreated)
 }
 
 // GetAppointmentByID godoc

@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/smtp"
 
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 )
 
@@ -21,40 +22,53 @@ func NewMailPit(host string, port int) (*MailPit, error) {
 	}, nil
 }
 
-func (m *MailPit) SendEmail(
+func (m *MailPit) Send(
 	ctx context.Context,
-	to, subject, body string,
-) (bool, error) {
+	email audit.EmailEntry,
+) error {
+	body, err := renderTemplate(email)
+	if err != nil {
+		return err
+	}
+
 	addr := fmt.Sprintf("%s:%d", m.host, m.port)
 	from := constants.FromEmail()
 
 	// Construct the email message in standard SMTP format (using \r\n)
-	msg := fmt.Sprintf("To: %s\r\n", to) +
+	toHeader := ""
+	for i, to := range email.To {
+		if i > 0 {
+			toHeader += ", "
+		}
+		toHeader += to
+	}
+
+	msg := fmt.Sprintf("To: %s\r\n", toHeader) +
 		fmt.Sprintf("From: %s\r\n", from) +
-		fmt.Sprintf("Subject: %s\r\n", subject) +
+		fmt.Sprintf("Subject: %s\r\n", email.Subject) +
 		"MIME-version: 1.0\r\n" +
 		"Content-Type: text/html; charset=\"UTF-8\"\r\n" +
 		"\r\n" +
 		body
 
-	err := smtp.SendMail(addr, nil, from, []string{to}, []byte(msg))
+	err = smtp.SendMail(addr, nil, from, email.To, []byte(msg))
 	if err != nil {
 		// Check for Network Timeouts/Connection errors
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			return false, fmt.Errorf("[MailPit] Connection timeout: %w", err)
+			return fmt.Errorf("[MailPit] Connection timeout: %w", err)
 		}
 
 		// Check for SMTP Protocol Errors (e.g., 550 Invalid Recipient)
-		// These typically contain the 3-digit SMTP status code
-		return false, fmt.Errorf("[MailPit] SMTP Protocol Error: %w", err)
+		return fmt.Errorf("[MailPit] SMTP Protocol Error: %w", err)
 	}
 
-	return true, nil
+	return nil
 }
 
-func (m *MailPit) SendOTP(
-	ctx context.Context,
-	to, otp string,
-) (bool, error) {
-	return m.SendEmail(ctx, to, "Verification Code", OTP_TEMPLATE(otp))
+func (m *MailPit) SendOTP(ctx context.Context, to, otp string) error {
+	return m.Send(ctx, audit.EmailEntry{
+		To:      []string{to},
+		Subject: "Your Verification Code",
+		Body:    fmt.Sprintf("<h1>Verification Code</h1><p>Your code is: <b>%s</b></p>", otp),
+	})
 }

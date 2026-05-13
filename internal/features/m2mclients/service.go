@@ -10,9 +10,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
 
@@ -20,23 +23,32 @@ type Service struct {
 	repo           *Repository
 	logService     audit.Logger
 	notifService   audit.Notifier
+	emailService   audit.Emailer
+	userService    *users.Service
 	tokenService   *tokens.Service
 	sessionService *sessions.Service
+	cfg            *config.Config
 }
 
 func NewService(
 	repo *Repository,
 	logService audit.Logger,
 	notifService audit.Notifier,
+	emailService audit.Emailer,
+	userService *users.Service,
 	tokenService *tokens.Service,
 	sessionService *sessions.Service,
+	cfg *config.Config,
 ) *Service {
 	return &Service{
 		repo:           repo,
 		logService:     logService,
 		notifService:   notifService,
+		emailService:   emailService,
+		userService:    userService,
 		tokenService:   tokenService,
 		sessionService: sessionService,
+		cfg:            cfg,
 	}
 }
 
@@ -74,6 +86,63 @@ func (s *Service) CreateClient(
 	if err != nil {
 		return nil, err
 	}
+
+	// Dispatch notifications
+	superadminIDs, _ := s.userService.GetUserIDsByRole(ctx, int(constants.SuperAdminRoleID))
+	notifications := []audit.NotificationParams{
+		{
+			ReceiverID: structs.StringToNullableString(userID),
+			Title:      "M2M Client Request Sent",
+			Message:    "Your request for a new M2M client has been notified to the Superadmin. Please wait for approval.",
+			Type:       "m2m",
+		},
+	}
+	for _, aid := range superadminIDs {
+		notifications = append(notifications, audit.NotificationParams{
+			ReceiverID: structs.StringToNullableString(aid),
+			Title:      "M2M Client Pending Approval",
+			Message:    fmt.Sprintf("New M2M client request from user %s is pending for approval.", userID),
+			Type:       "m2m",
+		})
+	}
+
+	superadminEmails, _ := s.userService.GetEmailsByRole(
+		ctx,
+		int(constants.SuperAdminRoleID),
+	)
+
+	audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
+		Log: &audit.LogParams{
+			Level:    audit.LevelInfo,
+			Category: audit.CategoryAudit,
+			Action:   audit.ActionM2MClientCreated,
+			Message:  fmt.Sprintf("M2M Client %s requested by user %s", clientID, userID),
+			Metadata: &audit.LogMetadata{
+				EntityType: "m2m_client",
+				EntityID:   clientID,
+			},
+		},
+		Notifications: notifications,
+		Email: []audit.EmailParams{
+			{
+				To:           superadminEmails,
+				Subject:      "New M2M Client Request",
+				TemplatePath: "request.html",
+				TemplateData: map[string]any{
+					"EntityType":   "M2M Client",
+					"StudentName":  userID,
+					"Category":     "M2M Access",
+					"Reason":       req.ClientDescription,
+					"TimeSlot":     time.Now().Format("2006-01-02 15:04:05"),
+					"UrgencyLevel": "HIGH",
+					"RequestURL": fmt.Sprintf(
+						"%s/superadmin/m2m-clients",
+						s.cfg.BaseURL,
+					),
+				},
+			},
+		},
+	})
 
 	return &CreateM2MClientResponse{
 		M2MClientDTO: M2MClientDTO{
@@ -254,7 +323,47 @@ func (s *Service) Deactivate(
 }
 
 func (s *Service) Verify(ctx context.Context, id string) error {
-	return s.repo.VerifyByID(ctx, id)
+	err := s.repo.VerifyByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	client, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil // Should not happen if verify succeeded
+	}
+
+	user, _ := s.userService.GetUserByID(ctx, client.UserID)
+
+	audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
+		Log: &audit.LogParams{
+			Level:    audit.LevelInfo,
+			Category: audit.CategoryAudit,
+			Action:   audit.ActionM2MClientVerified,
+			Message:  fmt.Sprintf("M2M Client %s verified", id),
+		},
+		Notifications: []audit.NotificationParams{
+			{
+				ReceiverID: structs.StringToNullableString(client.UserID),
+				Title:      "M2M Client Approved",
+				Message:    fmt.Sprintf("Your M2M client '%s' has been approved and is ready for use.", client.ClientName),
+				Type:       "m2m",
+			},
+		},
+		Email: []audit.EmailParams{
+			{
+				To:           []string{user.Email},
+				Subject:      "M2M Client Approved",
+				TemplatePath: "m2m.html",
+				TemplateData: map[string]interface{}{
+					"ClientName": client.ClientName,
+					"ClientID":   client.ClientID,
+				},
+			},
+		},
+	})
+
+	return nil
 }
 
 func (s *Service) generateRandomString(n int) (string, error) {

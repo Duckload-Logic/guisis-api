@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/pdf"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
@@ -19,7 +20,6 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students/integrations"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
-	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/email"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/gotenberg"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/ocr"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/storage"
@@ -47,7 +47,7 @@ func getServices(
 	fileStorage storage.FileStorage,
 	cfg *config.Config,
 	redis *datastore.RedisClient,
-	emailer email.Emailer,
+	emailer audit.Emailer,
 ) *Services {
 	notificationsService := notifications.NewService(repos.NotificationRepo)
 	sessionService := sessions.NewService(redis)
@@ -75,8 +75,11 @@ func getServices(
 		repos.M2MClientRepo,
 		systemLogService,
 		notificationsService,
+		emailer,
+		userService,
 		tokenService,
 		sessionService,
+		cfg,
 	)
 	authService := auth.NewService(
 		repos.UserRepo,
@@ -101,6 +104,7 @@ func getServices(
 		repos.NoteRepo,
 		systemLogService,
 		notificationsService,
+		emailer,
 	)
 	integrationStudentService := integrations.NewService(
 		repos.IntegrationStudentRepo,
@@ -109,6 +113,7 @@ func getServices(
 		repos.AppointmentRepo,
 		notificationsService,
 		systemLogService,
+		emailer,
 		userService,
 		noteService,
 		studentService,
@@ -118,10 +123,12 @@ func getServices(
 		repos.SlipRepo,
 		systemLogService,
 		notificationsService,
+		emailer,
 		fileStorage,
 		userService,
 		studentService,
 		fileService,
+		cfg,
 	)
 	analyticsService := analytics.NewService(repos.AnalyticsRepo, redis)
 

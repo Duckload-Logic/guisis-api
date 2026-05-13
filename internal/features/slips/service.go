@@ -12,7 +12,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/datetime"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students"
@@ -26,29 +28,35 @@ type Service struct {
 	repo           *Repository
 	logService     audit.Logger
 	notifService   audit.Notifier
+	emailService   audit.Emailer
 	fileStorage    storage.FileStorage
 	userService    *users.Service
 	studentService *students.Service
 	filesService   *files.Service
+	cfg            *config.Config
 }
 
 func NewService(
 	repo *Repository,
 	logService audit.Logger,
 	notifService audit.Notifier,
+	emailService audit.Emailer,
 	fileStorage storage.FileStorage,
 	userService *users.Service,
 	studentService *students.Service,
 	filesService *files.Service,
+	cfg *config.Config,
 ) *Service {
 	return &Service{
 		repo:           repo,
 		logService:     logService,
 		notifService:   notifService,
+		emailService:   emailService,
 		fileStorage:    fileStorage,
 		userService:    userService,
 		studentService: studentService,
 		filesService:   filesService,
+		cfg:            cfg,
 	}
 }
 
@@ -74,7 +82,7 @@ func (s *Service) GetSlipByID(
 	ctx context.Context,
 	id string,
 ) (*SlipDTO, error) {
-	slip, err := s.repo.GetSlipByIDWithDetails(ctx, id)
+	slip, err := s.repo.GetSlipByIDWithDetails(ctx, s.repo.GetDB(), id)
 	if err != nil {
 		return nil, err
 	}
@@ -412,7 +420,7 @@ func (s *Service) SubmitExcuseSlip(
 	iirID string,
 	req CreateSlipRequest,
 	files []*multipart.FileHeader,
-) (*Slip, error) {
+) (*SlipDTO, error) {
 	// Graduated Student Protocol: Lock records for Graduated or Archived students
 	isLocked, err := s.studentService.IsStudentLocked(ctx, iirID)
 	if err != nil {
@@ -462,10 +470,12 @@ func (s *Service) SubmitExcuseSlip(
 		StatusID:      1,
 	}
 
+	var createdSlip *SlipWithDetailsView
 	err = s.repo.WithTransaction(
 		ctx,
 		func(tx datastore.DB) error {
-			_, err := s.repo.CreateSlip(ctx, tx, slip)
+			var err error
+			createdSlip, err = s.repo.CreateSlip(ctx, tx, slip)
 			if err != nil {
 				return err
 			}
@@ -489,7 +499,7 @@ func (s *Service) SubmitExcuseSlip(
 		},
 	)
 	if err != nil {
-		audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
+		audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
 			Log: &audit.LogParams{
 				Level:    audit.LevelError,
 				Category: audit.CategoryAudit,
@@ -564,7 +574,14 @@ func (s *Service) SubmitExcuseSlip(
 		})
 	}
 
-	audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
+	counselorEmails, _ := s.userService.GetEmailsByRole(
+		ctx,
+		int(constants.AdminRoleID),
+	)
+
+	newSlipDTO := s.mapToDTO(createdSlip)
+
+	audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
 		Log: &audit.LogParams{
 			Level:    audit.LevelInfo,
 			Category: audit.CategoryAudit,
@@ -573,13 +590,33 @@ func (s *Service) SubmitExcuseSlip(
 			Metadata: &audit.LogMetadata{
 				EntityType: constants.SlipEntityType,
 				EntityID:   slip.ID,
-				NewValues:  slip,
+				NewValues:  newSlipDTO,
 			},
 		},
 		Notifications: notifications,
+		Email: []audit.EmailParams{
+			{
+				To:           counselorEmails,
+				Subject:      "New Admission Slip Request",
+				TemplatePath: "request.html",
+				TemplateData: map[string]interface{}{
+					"EntityType": constants.SlipEntityType,
+					"StudentName": fmt.Sprintf(
+						"%s %s",
+						newSlipDTO.User.FirstName,
+						newSlipDTO.User.LastName,
+					),
+					"Category":      newSlipDTO.Category.Name,
+					"DateOfAbsence": datetime.FormatDate(newSlipDTO.DateOfAbsence),
+					"DateNeeded":    datetime.FormatDate(newSlipDTO.DateNeeded),
+					"Status":        newSlipDTO.Status.Name,
+					"AdminNotes":    nil,
+				},
+			},
+		},
 	})
 
-	return slip, nil
+	return newSlipDTO, nil
 }
 
 func (s *Service) UpdateExcuseSlip(
@@ -693,7 +730,7 @@ func (s *Service) UpdateExcuseSlip(
 	}
 
 	studentUserID, _ := s.repo.GetUserIDBySlipID(ctx, slipID)
-	audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
+	audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
 		Log: &audit.LogParams{
 			Level:    audit.LevelInfo,
 			Category: audit.CategoryAudit,
@@ -779,7 +816,7 @@ func (s *Service) UpdateExcuseSlipStatus(
 	}
 
 	// Fetch old state for audit trail
-	oldSlip, _ := s.repo.GetSlipByID(ctx, id)
+	oldSlip, _ := s.repo.GetSlipByIDWithDetails(ctx, s.repo.GetDB(), id)
 
 	return s.repo.WithTransaction(
 		ctx,
@@ -790,6 +827,7 @@ func (s *Service) UpdateExcuseSlipStatus(
 					ctx,
 					s.logService,
 					s.notifService,
+					s.emailService,
 					audit.DispatchParams{
 						Tx: tx,
 						Log: &audit.LogParams{
@@ -859,6 +897,7 @@ func (s *Service) UpdateExcuseSlipStatus(
 				ctx,
 				s.logService,
 				s.notifService,
+				s.emailService,
 				audit.DispatchParams{
 					Tx: tx,
 					Log: &audit.LogParams{
@@ -881,6 +920,25 @@ func (s *Service) UpdateExcuseSlipStatus(
 						},
 					},
 					Notifications: notifications,
+					Email: []audit.EmailParams{
+						{
+							To:           []string{oldSlip.UserEmail},
+							Subject:      "Admission Slip Status Updated",
+							TemplatePath: "slip.html",
+							TemplateData: map[string]interface{}{
+								"StudentName": fmt.Sprintf(
+									"%s %s",
+									oldSlip.UserFirstName,
+									oldSlip.UserLastName,
+								),
+								"Category":      oldSlip.CategoryName,
+								"DateOfAbsence": datetime.FormatDate(oldSlip.DateOfAbsence),
+								"DateNeeded":    datetime.FormatDate(oldSlip.DateNeeded),
+								"Status":        newStatus,
+								"AdminNotes":    adminNotes,
+							},
+						},
+					},
 				},
 			)
 			return nil
@@ -893,4 +951,38 @@ func (s *Service) GetUserIDBySlipID(
 	id string,
 ) (string, error) {
 	return s.repo.GetUserIDBySlipID(ctx, id)
+}
+
+func (s *Service) mapToDTO(slip *SlipWithDetailsView) *SlipDTO {
+	if slip == nil {
+		return nil
+	}
+
+	return &SlipDTO{
+		ID:     slip.ID,
+		UserID: slip.UserID,
+		IIRID:  slip.IIRID,
+		User: users.UserResponse{
+			FirstName:  slip.UserFirstName,
+			MiddleName: slip.UserMiddleName,
+			LastName:   slip.UserLastName,
+			Email:      slip.UserEmail,
+		},
+		StudentNumber: slip.StudentNumber,
+		Reason:        slip.Reason,
+		DateOfAbsence: slip.DateOfAbsence,
+		DateNeeded:    slip.DateNeeded,
+		AdminNotes:    slip.AdminNotes,
+		Category: SlipCategory{
+			ID:   slip.CategoryID,
+			Name: slip.CategoryName,
+		},
+		Status: SlipStatus{
+			ID:       slip.StatusID,
+			Name:     slip.StatusName,
+			ColorKey: slip.StatusColorKey,
+		},
+		CreatedAt: slip.CreatedAt,
+		UpdatedAt: slip.UpdatedAt,
+	}
 }

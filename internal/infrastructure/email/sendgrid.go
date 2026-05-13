@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/sendgrid/sendgrid-go"
 	"github.com/sendgrid/sendgrid-go/helpers/mail"
@@ -19,32 +20,50 @@ func NewSendGrid(apiKey string) *SendGrid {
 	}
 }
 
-func (s *SendGrid) SendEmail(
+func (s *SendGrid) Send(
 	ctx context.Context,
-	to, subject, body string,
-) (bool, error) {
+	email audit.EmailEntry,
+) error {
+	body, err := renderTemplate(email)
+	if err != nil {
+		return err
+	}
+
 	from := constants.FromEmail()
 	fromAddress := mail.NewEmail("GuiSIS", from)
-	toAddress := mail.NewEmail("", to)
+	m := mail.NewV3Mail()
+	m.SetFrom(fromAddress)
+	m.Subject = email.Subject
 
-	message := mail.NewSingleEmail(fromAddress, subject, toAddress, "", body)
+	p := mail.NewPersonalization()
+	for _, to := range email.To {
+		p.AddTos(mail.NewEmail("", to))
+	}
+	m.AddPersonalizations(p)
 
-	response, err := s.client.Send(message)
+	content := mail.NewContent("text/html", body)
+	m.AddContent(content)
+
+	response, err := s.client.Send(m)
 	if err != nil {
-		return false, fmt.Errorf("[SendGrid] Network Error: %w", err)
+		return fmt.Errorf("[SendGrid] Network Error: %w", err)
 	}
 
 	if response.StatusCode >= 400 {
-		return false, fmt.Errorf(
+		return fmt.Errorf(
 			"[SendGrid] API Error (Status %d): %s",
 			response.StatusCode,
 			response.Body,
 		)
 	}
 
-	return true, nil
+	return nil
 }
 
-func (s *SendGrid) SendOTP(ctx context.Context, to, otp string) (bool, error) {
-	return s.SendEmail(ctx, to, "Verification Code", OTP_TEMPLATE(otp))
+func (s *SendGrid) SendOTP(ctx context.Context, to, otp string) error {
+	return s.Send(ctx, audit.EmailEntry{
+		To:      []string{to},
+		Subject: "Your Verification Code",
+		Body:    fmt.Sprintf("<h1>Verification Code</h1><p>Your code is: <b>%s</b></p>", otp),
+	})
 }
