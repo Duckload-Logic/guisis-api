@@ -32,6 +32,7 @@ type SlipDTO struct {
 	Category      SlipCategory           `json:"category"                form:"categoryId"    binding:"required"`
 	Status        SlipStatus             `json:"status,omitempty"`
 	StudentCORURL string                 `json:"studentCorUrl,omitempty"`
+	Ticket        *TicketDTO             `json:"ticket,omitempty"`
 	CreatedAt     time.Time              `json:"createdAt,omitempty"`
 	UpdatedAt     time.Time              `json:"updatedAt,omitempty"`
 }
@@ -52,4 +53,14 @@ type CreateSlipRequest struct {
 type UpdateStatusRequest struct {
 	Status     string `json:"status"     binding:"required"`
 	AdminNotes string `json:"adminNotes"`
+}
+
+type TicketDTO struct {
+	TicketCode string    `json:"ticketCode"`
+	IsVerified bool      `json:"isVerified"`
+	VerifiedAt time.Time `json:"verifiedAt,omitempty"`
+}
+
+type TicketClaimRequest struct {
+	TicketCode string `json:"ticketCode" binding:"required"`
 }

@@ -35,9 +35,12 @@ const (
 		slp.admin_notes AS admin_notes,
 		c.id AS category_id,
 		c.name AS category_name,
-		s.id AS status_id,
+		slp.status_id AS status_id,
 		s.name AS status_name,
 		s.color_key AS status_color_key,
+		t.ticket_code AS ticket_code,
+		t.is_verified AS is_verified,
+		t.verified_at AS verified_at,
 		slp.created_at AS created_at,
 		slp.updated_at AS updated_at
 	FROM admission_slips slp
@@ -46,6 +49,7 @@ const (
 	JOIN users u ON ir.user_id = u.id
 	JOIN admission_slip_categories c ON slp.category_id = c.id
 	JOIN statuses s ON slp.status_id = s.id
+	LEFT JOIN admission_tickets t ON slp.id = t.admission_slip_id
 `
 	orderSlipsCreatedDesc = " ORDER BY slp.created_at DESC LIMIT ? OFFSET ?"
 )
@@ -574,7 +578,7 @@ func (r *Repository) UpdateStatus(
 }
 
 func (r *Repository) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM excuse_slips WHERE excuse_slip_id = ?`
+	query := `DELETE FROM admission_slips WHERE excuse_slip_id = ?`
 
 	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
@@ -591,4 +595,103 @@ func (r *Repository) Delete(ctx context.Context, id string) error {
 	}
 
 	return nil
+}
+
+func (r *Repository) CreateTicket(
+	ctx context.Context,
+	tx datastore.DB,
+	ticket *AdmissionTicket,
+) error {
+	query := `
+		INSERT INTO admission_tickets (
+			id, admission_slip_id, ticket_code
+		) VALUES (
+			:id, :admission_slip_id, :ticket_code
+		)
+	`
+	_, err := tx.NamedExecContext(ctx, query, ticket)
+	if err != nil {
+		return fmt.Errorf("failed to insert ticket: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) GetTicketByCode(
+	ctx context.Context,
+	code string,
+) (*AdmissionTicket, error) {
+	var ticket AdmissionTicket
+	query := `SELECT id, admission_slip_id, ticket_code, is_verified, 
+			  verified_at, verified_by, created_at, updated_at 
+			  FROM admission_tickets WHERE ticket_code = ?`
+	err := r.db.GetContext(ctx, &ticket, query, code)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get ticket: %w", err)
+	}
+	return &ticket, nil
+}
+
+func (r *Repository) UpdateTicketVerification(
+	ctx context.Context,
+	tx datastore.DB,
+	ticketID string,
+	verifiedBy string,
+) error {
+	query := `
+		UPDATE admission_tickets
+		SET is_verified = TRUE, verified_at = NOW(), verified_by = ?
+		WHERE id = ?
+	`
+	_, err := tx.ExecContext(ctx, query, verifiedBy, ticketID)
+	if err != nil {
+		return fmt.Errorf("failed to verify ticket: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) TicketExistsForSlip(
+	ctx context.Context,
+	slipID string,
+) (bool, error) {
+	var count int
+	query := `SELECT COUNT(*) FROM admission_tickets WHERE admission_slip_id = ?`
+	err := r.db.GetContext(ctx, &count, query, slipID)
+	return count > 0, err
+}
+
+func (r *Repository) GetTicketBySlipID(
+	ctx context.Context,
+	slipID string,
+) (*AdmissionTicket, error) {
+	var ticket AdmissionTicket
+	query := `SELECT id, admission_slip_id, ticket_code, is_verified, 
+			  verified_at, verified_by, created_at, updated_at 
+			  FROM admission_tickets WHERE admission_slip_id = ?`
+	err := r.db.GetContext(ctx, &ticket, query, slipID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get ticket by slip id: %w", err)
+	}
+	return &ticket, nil
+}
+
+func (r *Repository) GetSlipByTicketCode(
+	ctx context.Context,
+	code string,
+) (*SlipWithDetailsView, error) {
+	var slip SlipWithDetailsView
+	query := slipsBaseQuery + ` WHERE t.ticket_code = ?`
+	err := r.db.GetContext(ctx, &slip, query, code)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get slip by ticket code: %w", err)
+	}
+	return &slip, nil
 }

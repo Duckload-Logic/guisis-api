@@ -31,6 +31,8 @@ func RegisterRoutes(
 		adminOnly.GET("", h.GetSlips)
 		adminOnly.GET("/urgent", h.GetSlipUrgent)
 		adminOnly.PATCH("/id/:slipID/status", h.PatchSlipStatus)
+		adminOnly.POST("/tickets/claim", h.PostClaimTicket)
+		adminOnly.GET("/tickets/:code", h.GetTicketDetails)
 	}
 
 	studentOnly := routes.Group("")

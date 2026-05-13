@@ -109,7 +109,7 @@ CREATE TABLE student_personal_info (
     gender_id INT NOT NULL,
     civil_status_id INT NOT NULL,
     religion_id INT NOT NULL,
-    height_ft DECIMAL(5,2) NOT NULL,
+    height_m DECIMAL(5,2) NOT NULL,
     weight_kg DECIMAL(5,2) NOT NULL,
     complexion VARCHAR(50) NOT NULL,
     high_school_gwa DECIMAL(4,2) NOT NULL,

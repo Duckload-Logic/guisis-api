@@ -1,6 +1,7 @@
 package slips
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
@@ -39,6 +40,9 @@ type SlipWithDetailsView struct {
 	StatusName     string                 `db:"status_name"      json:"statusName"`
 	UrgencyScore   int                    `db:"urgency_score"    json:"urgencyScore"`
 	StatusColorKey string                 `db:"status_color_key" json:"statusColorKey"`
+	TicketCode     structs.NullableString `db:"ticket_code"       json:"ticketCode,omitempty"`
+	IsVerified     sql.NullBool           `db:"is_verified"       json:"isVerified,omitempty"`
+	VerifiedAt     structs.NullableTime   `db:"verified_at"       json:"verifiedAt,omitempty"`
 	CreatedAt      time.Time              `db:"created_at"        json:"createdAt"`
 	UpdatedAt      time.Time              `db:"updated_at"        json:"updatedAt"`
 }
@@ -72,4 +76,16 @@ type SlipAttachment struct {
 	AttachmentType string                 `db:"attachment_type"   json:"attachmentType"`
 	FileName       string                 `db:"file_name"         json:"fileName"`
 	FileURL        string                 `db:"file_url"          json:"fileUrl"`
+}
+
+// AdmissionTicket represents the physical verification ticket for on-site approval.
+type AdmissionTicket struct {
+	ID              string                 `db:"id"                json:"id"`
+	AdmissionSlipID string                 `db:"admission_slip_id" json:"admissionSlipId"`
+	TicketCode      string                 `db:"ticket_code"       json:"ticketCode"`
+	IsVerified      bool                   `db:"is_verified"       json:"isVerified"`
+	VerifiedAt      structs.NullableTime   `db:"verified_at"       json:"verifiedAt"`
+	VerifiedBy      structs.NullableString `db:"verified_by"       json:"verifiedBy"`
+	CreatedAt       time.Time              `db:"created_at"        json:"createdAt"`
+	UpdatedAt       time.Time              `db:"updated_at"        json:"updatedAt"`
 }
