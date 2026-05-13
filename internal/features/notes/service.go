@@ -13,17 +13,20 @@ type Service struct {
 	repo         *Repository
 	logService   audit.Logger
 	notifService audit.Notifier
+	emailService audit.Emailer
 }
 
 func NewService(
 	repo *Repository,
 	logService audit.Logger,
 	notifService audit.Notifier,
+	emailService audit.Emailer,
 ) *Service {
 	return &Service{
 		repo:         repo,
 		logService:   logService,
 		notifService: notifService,
+		emailService: emailService,
 	}
 }
 
@@ -71,7 +74,7 @@ func (s *Service) CreateSignificantNote(
 
 	_, err := s.repo.CreateSignificantNote(ctx, note)
 	if err != nil {
-		audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
+		audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
 			Log: &audit.LogParams{
 				Level:    audit.LevelError,
 				Category: audit.CategoryAudit,
@@ -93,7 +96,7 @@ func (s *Service) CreateSignificantNote(
 		)
 	}
 
-	audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
+	audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
 		Log: &audit.LogParams{
 			Level:    audit.LevelInfo,
 			Category: audit.CategoryAudit,

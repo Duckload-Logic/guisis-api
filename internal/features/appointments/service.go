@@ -25,6 +25,7 @@ type Service struct {
 	repo           *Repository
 	notifService   audit.Notifier
 	logService     audit.Logger
+	emailService   audit.Emailer
 	userService    *users.Service
 	noteService    *notes.Service
 	studentService *students.Service
@@ -35,6 +36,7 @@ func NewService(
 	repo *Repository,
 	notifService audit.Notifier,
 	logService audit.Logger,
+	emailService audit.Emailer,
 	userService *users.Service,
 	noteService *notes.Service,
 	studentService *students.Service,
@@ -44,6 +46,7 @@ func NewService(
 		repo:           repo,
 		notifService:   notifService,
 		logService:     logService,
+		emailService:   emailService,
 		userService:    userService,
 		noteService:    noteService,
 		studentService: studentService,
@@ -62,7 +65,7 @@ func (s *Service) CreateAppointment(
 	iirID string,
 	req AppointmentDTO,
 	cfg *config.Config,
-) (*Appointment, error) {
+) (*AppointmentDTO, error) {
 	appt := &Appointment{
 		ID:                    uuid.New().String(),
 		IIRID:                 iirID,
@@ -94,6 +97,7 @@ func (s *Service) CreateAppointment(
 		appt.UrgencyScore = classification.Confidence
 	}
 
+	var createdAppt *AppointmentWithDetailsView
 	err = s.repo.WithTransaction(
 		ctx,
 		func(tx datastore.DB) error {
@@ -107,11 +111,12 @@ func (s *Service) CreateAppointment(
 				return fmt.Errorf("selected time slot is no longer available")
 			}
 
-			return s.repo.CreateAppointment(ctx, tx, appt)
+			createdAppt, err = s.repo.CreateAppointment(ctx, tx, appt)
+			return err
 		},
 	)
 	if err != nil {
-		audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
+		audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
 			Log: &audit.LogParams{
 				Level:    audit.LevelError,
 				Category: audit.CategoryAudit,
@@ -155,6 +160,11 @@ func (s *Service) CreateAppointment(
 		},
 	}
 
+	counselorEmails, _ := s.userService.GetEmailsByRole(
+		ctx,
+		int(constants.AdminRoleID),
+	)
+
 	for _, cid := range counselorIDs {
 		notifications = append(notifications, audit.NotificationParams{
 			ReceiverID: structs.StringToNullableString(cid),
@@ -171,7 +181,9 @@ func (s *Service) CreateAppointment(
 		})
 	}
 
-	audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
+	newApptDTO := s.mapToDTO(createdAppt)
+
+	audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
 		Log: &audit.LogParams{
 			Level:    audit.LevelInfo,
 			Category: audit.CategoryAudit,
@@ -184,16 +196,38 @@ func (s *Service) CreateAppointment(
 			},
 		},
 		Notifications: notifications,
+		Email: []audit.EmailParams{
+			{
+				To:           counselorEmails,
+				Subject:      "New Appointment Request",
+				TemplatePath: "request.html",
+				TemplateData: map[string]any{
+					"EntityType":   constants.AppointmentEntityType,
+					"StudentName":  studentName,
+					"UrgencyLevel": newApptDTO.UrgencyLevel,
+					"Category":     newApptDTO.AppointmentCategory.Name,
+					"Reason":       newApptDTO.Reason.String,
+					"Time":         datetime.FormatTime(newApptDTO.TimeSlot.Time),
+					"Date":         datetime.FormatDate(newApptDTO.WhenDate),
+					"Status":       newApptDTO.Status.Name,
+					"RequestURL": fmt.Sprintf(
+						"%s/admin/appointments/%s",
+						cfg.BaseURL,
+						appt.ID,
+					),
+				},
+			},
+		},
 	})
 
-	return appt, nil
+	return newApptDTO, nil
 }
 
 func (s *Service) GetAppointmentByID(
 	ctx context.Context,
 	id string,
 ) (*AppointmentDTO, error) {
-	appt, err := s.repo.GetAppointment(ctx, id)
+	appt, err := s.repo.GetAppointment(ctx, s.repo.GetDB(), id)
 	if err != nil {
 		return nil, err
 	}
@@ -554,7 +588,7 @@ func (s *Service) UpdateAppointment(
 	req AppointmentDTO,
 ) error {
 	// Fetch old state for audit trail
-	oldAppt, _ := s.repo.GetAppointment(ctx, id)
+	oldAppt, _ := s.repo.GetAppointment(ctx, s.repo.GetDB(), id)
 
 	appt := Appointment{
 		ID:                    id,
@@ -573,7 +607,7 @@ func (s *Service) UpdateAppointment(
 		},
 	)
 	if err != nil {
-		audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
+		audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
 			Log: &audit.LogParams{
 				Level:    audit.LevelError,
 				Category: audit.CategoryAudit,
@@ -592,7 +626,7 @@ func (s *Service) UpdateAppointment(
 		return err
 	}
 
-	newAppt, _ := s.repo.GetAppointment(ctx, id)
+	newAppt, _ := s.repo.GetAppointment(ctx, s.repo.GetDB(), id)
 
 	// Fetch student UserID for notification
 	studentUserID, _ := s.repo.GetUserIDByAppointmentID(ctx, id)
@@ -632,7 +666,7 @@ func (s *Service) UpdateAppointment(
 		},
 	}
 
-	audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
+	audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
 		Log: &audit.LogParams{
 			Level:    audit.LevelInfo,
 			Category: audit.CategoryAudit,
@@ -646,6 +680,25 @@ func (s *Service) UpdateAppointment(
 			},
 		},
 		Notifications: notifications,
+		Email: []audit.EmailParams{
+			{
+				To:           []string{newAppt.UserEmail},
+				Subject:      "Appointment Status Updated",
+				TemplatePath: "appointment.html",
+				TemplateData: map[string]interface{}{
+					"StudentName": fmt.Sprintf(
+						"%s %s",
+						newAppt.UserFirstName,
+						newAppt.UserLastName,
+					),
+					"Date":       datetime.FormatDate(newAppt.WhenDate),
+					"Time":       datetime.FormatTime(newAppt.TimeSlotTime),
+					"Category":   newAppt.CategoryName,
+					"Status":     newAppt.StatusName,
+					"AdminNotes": newAppt.AdminNotes.String,
+				},
+			},
+		},
 	})
 
 	// Add special prompt for counselors if appointment is completed
@@ -657,6 +710,7 @@ func (s *Service) UpdateAppointment(
 				ctx,
 				s.logService,
 				s.notifService,
+				s.emailService,
 				audit.DispatchParams{
 					Notifications: []audit.NotificationParams{
 						{
@@ -687,4 +741,42 @@ func (s *Service) GetUserIDByAppointmentID(
 	id string,
 ) (string, error) {
 	return s.repo.GetUserIDByAppointmentID(ctx, id)
+}
+
+func (s *Service) mapToDTO(appt *AppointmentWithDetailsView) *AppointmentDTO {
+	if appt == nil {
+		return nil
+	}
+
+	return &AppointmentDTO{
+		ID: appt.ID,
+		User: users.UserResponse{
+			FirstName:  appt.UserFirstName,
+			MiddleName: appt.UserMiddleName,
+			LastName:   appt.UserLastName,
+			Email:      appt.UserEmail,
+		},
+		IIRID:         appt.IIRID,
+		StudentNumber: appt.StudentNumber,
+		Reason:        appt.Reason,
+		AdminNotes:    appt.AdminNotes,
+		WhenDate:      appt.WhenDate,
+		TimeSlot: TimeSlot{
+			ID:   appt.TimeSlotID,
+			Time: appt.TimeSlotTime,
+		},
+		AppointmentCategory: AppointmentCategory{
+			ID:   appt.CategoryID,
+			Name: appt.CategoryName,
+		},
+		Status: AppointmentStatus{
+			ID:       appt.StatusID,
+			Name:     appt.StatusName,
+			ColorKey: appt.StatusColorKey,
+		},
+		UrgencyLevel: appt.UrgencyLevel,
+		UrgencyScore: appt.UrgencyScore,
+		CreatedAt:    appt.CreatedAt,
+		UpdatedAt:    appt.UpdatedAt,
+	}
 }

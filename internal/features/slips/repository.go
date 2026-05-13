@@ -69,7 +69,7 @@ func (r *Repository) CreateSlip(
 	ctx context.Context,
 	tx datastore.DB,
 	slip *Slip,
-) (*string, error) {
+) (*SlipWithDetailsView, error) {
 	query := `
 		INSERT INTO admission_slips (
 			id, iir_id, reason, date_of_absence, date_needed,
@@ -85,7 +85,7 @@ func (r *Repository) CreateSlip(
 		return nil, fmt.Errorf("failed to insert excuse slip: %w", err)
 	}
 
-	return &slip.ID, nil
+	return r.GetSlipByIDWithDetails(ctx, tx, slip.ID)
 }
 
 func (r *Repository) SaveSlipAttachment(
@@ -450,11 +450,12 @@ func (r *Repository) GetSlipByID(
 
 func (r *Repository) GetSlipByIDWithDetails(
 	ctx context.Context,
+	db datastore.DB,
 	id string,
 ) (*SlipWithDetailsView, error) {
 	var slip SlipWithDetailsView
 	query := slipsBaseQuery + " WHERE slp.id = ?"
-	err := r.db.GetContext(ctx, &slip, query, id)
+	err := db.GetContext(ctx, &slip, query, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil

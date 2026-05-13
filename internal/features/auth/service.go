@@ -19,7 +19,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
-	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/email"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/identity/idp"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
@@ -30,14 +30,14 @@ type Service struct {
 	idpClient      idp.IDPClientInterface
 	redis          *datastore.RedisClient
 	sessionService *sessions.Service
-	emailer        email.Emailer
+	emailer        audit.Emailer
 }
 
 func NewService(
 	repo *users.Repository,
 	redis *datastore.RedisClient,
 	sessionService *sessions.Service,
-	emailer email.Emailer,
+	emailer audit.Emailer,
 ) *Service {
 	return &Service{
 		repo:           repo,
@@ -272,11 +272,8 @@ func (s *Service) sendVerificationEmail(
 	ctx context.Context,
 	verificationOTP, receiverEmail string,
 ) error {
-	isSent, err := s.emailer.SendOTP(ctx, receiverEmail, verificationOTP)
+	err := s.emailer.SendOTP(ctx, receiverEmail, verificationOTP)
 	if err != nil {
-		return fmt.Errorf("failed to send verification email: %v", err)
-	}
-	if !isSent {
 		return fmt.Errorf("failed to send verification email: %v", err)
 	}
 

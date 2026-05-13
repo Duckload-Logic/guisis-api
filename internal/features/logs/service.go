@@ -79,17 +79,13 @@ func (s *Service) Record(
 		return
 	}
 
-	if level == audit.LevelError && func(action string) bool {
-		excluded := map[string]bool{
-			audit.ActionLoginFailed:           true,
-			audit.ActionInvalidToken:          true,
-			audit.ActionAccessDenied:          true,
-			audit.ActionRateLimitExceeded:     true,
-			audit.ActionM2MAuthFailed:         true,
-			audit.ActionM2MClientVerifyFailed: true,
-		}
-		return !excluded[action]
-	}(entry.Action) {
+	// Only notify superadmins for specific critical actions or system errors.
+	shouldNotify := (level == audit.LevelError &&
+		entry.Action == audit.ActionRateLimitExceeded) ||
+		entry.Action == audit.ActionM2MClientCreated ||
+		level == audit.LevelCritical
+
+	if shouldNotify {
 		s.notifySuperadmins(ctx, entry)
 	}
 }

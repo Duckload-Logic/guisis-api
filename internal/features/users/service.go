@@ -84,6 +84,13 @@ func (s *Service) GetUserIDsByRole(
 	return s.repo.GetUserIDsByRole(ctx, roleID)
 }
 
+func (s *Service) GetEmailsByRole(
+	ctx context.Context,
+	roleID int,
+) ([]string, error) {
+	return s.repo.GetEmailsByRole(ctx, roleID)
+}
+
 func (s *Service) GetRoleDistribution(
 	ctx context.Context,
 ) ([]RoleDistributionDTO, error) {

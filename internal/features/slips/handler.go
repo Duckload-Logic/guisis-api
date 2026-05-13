@@ -113,10 +113,7 @@ func (h *Handler) PostSlip(c *gin.Context) {
 		return
 	}
 
-	response.SendSuccess(c, gin.H{
-		"message": "Excuse slip submitted successfully",
-		"slipId":  slip.ID,
-	}, http.StatusCreated)
+	response.SendSuccess(c, slip, http.StatusCreated)
 }
 
 // GetUrgentSlipList godoc

@@ -1,7 +1,6 @@
 package appointments
 
 import (
-	"database/sql"
 	"time"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
@@ -88,9 +87,4 @@ type DailyStatusCount struct {
 	PendingCount     int    `db:"pending_count"     json:"pendingCount"`
 	ScheduledCount   int    `db:"scheduled_count"   json:"scheduledCount"`
 	RescheduledCount int    `db:"rescheduled_count" json:"rescheduledCount"`
-}
-
-// Internal helper for mapping NullStrings in repository if needed
-func toSqlNullString(ns structs.NullableString) sql.NullString {
-	return sql.NullString{String: ns.String, Valid: ns.Valid}
 }
