@@ -16,6 +16,8 @@ type Config struct {
 
 	JWTSecret string
 
+	BaseURL string
+
 	WebsitesPort string
 
 	LocalUploadDIR               string
@@ -54,6 +56,8 @@ func LoadConfig() *Config {
 		DBTLSCA: os.Getenv("DB_TLS_CA"),
 
 		JWTSecret: os.Getenv("JWT_SECRET"),
+
+		BaseURL: os.Getenv("BASE_URL"),
 
 		WebsitesPort: os.Getenv("WEBSITES_PORT"),
 

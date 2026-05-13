@@ -144,6 +144,14 @@ type NotificationEntry struct {
 	CreatedAt  time.Time              `json:"createdAt"`
 }
 
+type EmailEntry struct {
+	To           []string
+	Subject      string
+	Body         string // Pre-rendered HTML or plain text
+	TemplatePath string
+	TemplateData interface{}
+}
+
 // LogMetadata defines a structured format for audit log metadata.
 type LogMetadata struct {
 	EntityType string      `json:"entityType,omitempty"`
