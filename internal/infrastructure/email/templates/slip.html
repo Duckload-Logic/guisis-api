@@ -103,6 +103,7 @@
 					PUPT GuiSIS
 				</div>
 			</div>
+			{{if not .IsApproved}}
 			<div class="title">Admission Slip {{.Status}}</div>
 			<div class="subtitle">
 				Your admission slip request has been updated
@@ -136,6 +137,21 @@
 				</div>
 				{{end}}
 			</div>
+			{{else}}
+			<div class="title">Admission Slip Approved</div>
+			<div class="subtitle">
+				Your admission slip request has been approved. Please present
+				this code to the guidance counselor when claiming your admission
+				slip.
+			</div>
+
+			<div class="info-box">
+				<div class="info-item">
+					<span class="info-label">Ticket Code:</span>
+					<span class="info-value">{{.TicketCode}}</span>
+				</div>
+			</div>
+			{{end}}
 
 			<div class="footer">
 				For any concerns, please visit the counseling office.
