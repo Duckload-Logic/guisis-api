@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>IIR Analytics Report</title>
+		<style>
+			@page {
+				size: A4;
+				margin: 15mm;
+			}
+			body {
+				font-family: "Arial", Times, serif;
+				font-size: 12pt;
+				line-height: 1.5;
+				color: #000000;
+			}
+			.header {
+				font-family: "Times New Roman", Times, serif;
+				display: flex;
+				align-items: center;
+				line-height: 1;
+				gap: 10pt;
+				margin-bottom: 20px;
+				padding-bottom: 10px;
+			}
+			.header-text {
+				display: flex;
+				flex-direction: column;
+			}
+			.report-info {
+				display: flex;
+				justify-content: space-between;
+				margin-bottom: 20px;
+				font-size: 9pt;
+			}
+			.section-title {
+				background-color: #f2f2f2;
+				padding: 5px 10px;
+				font-weight: bold;
+				margin-top: 20px;
+				margin-bottom: 10px;
+				border-left: 5px solid #800000;
+				text-transform: uppercase;
+			}
+			table {
+				width: 100%;
+				border-collapse: collapse;
+				margin-bottom: 15px;
+			}
+			th,
+			td {
+				border: 1.5px solid #000000;
+				padding: 6px 8px;
+				text-align: left;
+			}
+			th {
+				background-color: #fafafa;
+				font-size: 9pt;
+				font-weight: bold;
+				text-align: center;
+			}
+			.num-col {
+				text-align: center;
+				width: 60px;
+			}
+			.pct-col {
+				text-align: center;
+				width: 50px;
+			}
+			.rank-col {
+				text-align: center;
+				width: 40px;
+				font-weight: bold;
+			}
+			.total-row {
+				background-color: #eee;
+			}
+			.highlight-row {
+				background-color: #2200464d;
+				font-weight: bold;
+				color: #000000;
+			}
+			.footer {
+				margin-top: 30px;
+				font-size: 8pt;
+				text-align: center;
+				color: #999;
+				border-top: 1px solid #eee;
+				padding-top: 10px;
+			}
+			.summary {
+				width: 100%;
+				border-collapse: collapse;
+				margin-bottom: 20px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="header">
+			<img
+				src="data:image/png;base64,{{.LogoBase64}}"
+				height="150px"
+				width="150px"
+			/>
+			<div class="header-text">
+				<span>Republic of the Philippines</span>
+				<span
+					><strong
+						>Polytechnic University of the Philippines</strong
+					></span
+				>
+				<span>Office of the Vice President for Campuses</span>
+				<span><strong>TAGUIG CAMPUS</strong></span>
+			</div>
+		</div>
+
+		<hr width="85%" height="2px" />
+
+		<div style="text-align: center; margin: 1rem">
+			<strong>PROFILE OF FRESHMEN</strong>
+			<br />
+			<span>{{if ne .Year 0}} S.Y. {{.Year}}-{{add .Year 1}}{{end}}</span>
+		</div>
+
+		<div class="summary">
+			&nbsp;&nbsp;&nbsp;&nbsp;The freshmen population covered by this
+			profile is made up of a total of
+			<strong>{{.Data.TotalStudents}}</strong>
+			enrolled {{if ne .Year 0}}this 1st semester AY
+			<strong>{{.Year}}-{{add .Year 1}}</strong>{{else}}over the analyzed
+			period{{end}}.
+		</div>
+
+		<!-- Age -->
+		{{template "statTable" ( dict "Category" "Age" "Data"
+		.Data.AgeDistribution)}}
+		<!--  -->
+		{{template "statTable" (dict "Category" "Civil Status" "Data"
+		.Data.CivilStatus)}}
+
+		<div class="summary">
+			Part I -
+			<strong>Personal Information</strong> shows that on
+			<strong>Age</strong>, the highest percentage of the total number of
+			freshmen ({{.AgeTopPct}}%) falls under the category of:
+			<strong>{{.AgeTopCategories}}</strong>. As to
+			<strong>Civil Status</strong>, the highest recorded percentage
+			({{.CivilTopPct}}%) belongs to the category of:
+			<strong>{{.CivilTopCategories}}</strong>.
+		</div>
+
+		<!--  -->
+		{{template "statTable" (dict "Category" "City Address" "Data"
+		.Data.CityAddress)}}
+
+		<div class="summary">
+			With regard to <strong>City Address</strong>, the majority or
+			highest percentage of freshmen ({{.CityTopPct}}%) reside in:
+			<strong>{{.CityTopCategories}}</strong>.
+		</div>
+
+		<!--  -->
+		{{template "statTable" (dict "Category" "Religion" "Data"
+		.Data.Religions)}}
+
+		<div class="summary">
+			As to freshmen's <strong>Religion</strong>, the highest percentage
+			of respondents ({{.ReligionTopPct}}%) falls under:
+			<strong>{{.ReligionTopCategories}}</strong>.
+		</div>
+
+		<!--  -->
+		{{template "statTable" (dict "Category" `Elementary` "Data"
+		.Data.Elementary)}}
+		<!--  -->
+		{{template "statTable" (dict "Category" `High School` "Data"
+		.Data.HighSchool)}}
+		<!--  -->
+		{{template "statTable" (dict "Category" `Vocational` "Data"
+		.Data.Vocational)}}
+		<!--  -->
+		{{template "statTable" (dict "Category" `College Education` "Data"
+		.Data.College)}}
+		<!--  -->
+		{{template "statTable" (dict "Category" `Nature of Schooling` "Data"
+		.Data.NatureOfSchooling)}}
+
+		<div class="summary">
+			Part II is on the <strong>Educational Background</strong> of
+			freshmen.
+			<!--  -->
+			{{if gt .ElemTopPct 0.0}} As to
+			<strong>Elementary Education</strong>, the largest frequency
+			({{.ElemTopPct}}%) is categorized as:
+			<strong>{{.ElemTopCategories}}</strong>. {{end}}
+			<!--  -->
+			{{if gt .HSCATopPct 0.0}} With regard to
+			<strong>High School Education</strong>, the highest percentage of
+			freshmen ({{.HSCATopPct}}%) are in the range of:
+			<strong>{{.HSCATopCategories}}</strong>. {{end}}
+			<!--  -->
+			{{if gt .VocTopPct 0.0}} With regard to
+			<strong>Vocational Education</strong>, the highest percentage of
+			freshmen ({{.VocTopPct}}%) are in the range of:
+			<strong>{{.VocTopCategories}}</strong>. {{end}}
+			<!--  -->
+			{{if gt .CollegeTopPct 0.0}} On the
+			<strong>College Education</strong> of the respondents, the highest
+			percentage ({{.CollegeTopPct}}%) falls under:
+			<strong>{{.CollegeTopCategories}}</strong>. {{end}}
+			<!--  -->
+			With regard to
+			<strong>Nature of Schooling</strong>, the highest percentage of
+			freshmen ({{.NatureOfSchoolingTopPct}}%) are in the range of:
+			<strong>{{.NatureOfSchoolingTopCategories}}</strong>.
+		</div>
+
+		<!--  -->
+		{{template "statTable" (dict "Category" `HSGWA` "Data"
+		.Data.HighSchoolGWA)}}
+
+		<div class="summary">
+			With regard to
+			<strong>High School General Weighted Average (HSGWA)</strong>, the
+			highest percentage of freshmen ({{.HSGWATopPct}}%) are in the range
+			of: <strong>{{.HSGWATopCategories}}</strong>.
+		</div>
+
+		<!--  -->
+		{{template "statTable" (dict "Category" `Father's Educational
+		Attainment` "Data" .Data.FatherEducation)}}
+		<!--  -->
+		{{template "statTable" (dict "Category" `Mother's Educational
+		Attainment` "Data" .Data.MotherEducation)}}
+
+		<div class="summary">
+			The 3rd part of the profile is on
+			<strong>Family and Home Background</strong> of the freshmen. As to
+			the <strong>Father's Educational Attainment</strong>, the highest
+			percentage ({{.FatherTopPct}}%) falls under:
+			<strong>{{.FatherTopCategories}}</strong>. With reference to the
+			<strong>Mother's Educational Attainment</strong>, the highest
+			recorded frequency ({{.MotherTopPct}}%) belongs to the category of:
+			<strong>{{.MotherTopCategories}}</strong>.
+		</div>
+
+		<!--  -->
+		{{template "statTable" (dict "Category" `Parents' Marital Status` "Data"
+		.Data.ParentsMaritalStatus)}}
+
+		<div class="summary">
+			On their <strong>Parents' Marital Status</strong>, the highest
+			percentage of the freshmen's parents ({{.ParentsMaritalTopPct}}%)
+			are classified as:
+			<strong>{{.ParentsMaritalTopCategories}}</strong>.
+		</div>
+
+		<!--  -->
+		{{template "statTable" (dict "Category" "Monthly Family Income" "Data"
+		.Data.MonthlyIncome)}}
+
+		<div class="summary">
+			With regard to the <strong>Monthly Family Income</strong>, the
+			highest percentage of freshmen ({{.IncomeTopPct}}%) reported their
+			family income falls in the bracket of:
+			<strong>{{.IncomeTopCategories}}</strong>.
+		</div>
+		<!--  -->
+		{{template "statTable" (dict "Category" "Ordinal Position in Family"
+		"Data" .Data.OrdinalPosition)}}
+
+		<div class="summary">
+			With respect to the
+			<strong>Ordinal Position in the Family</strong>, the profile reveals
+			that the highest percentage of freshmen ({{.OrdinalTopPct}}%) are
+			categorized as the: <strong>{{.OrdinalTopCategories}}</strong>.
+		</div>
+
+		<!--  -->
+		{{template "statTable" (dict "Category" `Do you have a quiet place to
+		study?` "Data" .Data.QuietStudyPlace)}}
+
+		<!-- <div class="summary">
+			Regarding the <strong>Study Environment</strong> of students at
+			home, the highest percentage of freshmen
+			({{.QuietStudyPlaceTopPct}}%) falls under the category of:
+			<strong>{{.QuietStudyPlaceTopCategories}}</strong>.
+		</div> -->
+
+		{{define "statTable"}}
+		<table>
+			<thead>
+				<tr>
+					<th rowspan="2" style="color: red">{{.Category}}</th>
+					<th colspan="2">Male</th>
+					<th colspan="2">Female</th>
+					<th colspan="2">Total</th>
+					<th rowspan="2">Rank</th>
+				</tr>
+				<tr>
+					<th class="num-col">Number</th>
+					<th class="pct-col">%</th>
+					<th class="num-col">Number</th>
+					<th class="pct-col">%</th>
+					<th class="num-col">Number</th>
+					<th class="pct-col">%</th>
+				</tr>
+			</thead>
+			<tbody>
+				{{range .Data}}
+				<!--  -->
+				{{if eq .Rank 1}}
+				<tr class="highlight-row">
+					<td>{{.Category}}</td>
+					<td class="num-col">{{.MaleCount}}</td>
+					<td class="pct-col">{{printf "%.1f" .MalePct}}%</td>
+					<td class="num-col">{{.FemaleCount}}</td>
+					<td class="pct-col">{{printf "%.1f" .FemalePct}}%</td>
+					<td class="num-col">{{.Total}}</td>
+					<td class="pct-col">{{printf "%.1f" .TotalPct}}%</td>
+					<td class="rank-col">{{.Rank}}</td>
+				</tr>
+				{{else}}
+				<tr>
+					<td>{{.Category}}</td>
+					<td class="num-col">{{.MaleCount}}</td>
+					<td class="pct-col">{{printf "%.1f" .MalePct}}%</td>
+					<td class="num-col">{{.FemaleCount}}</td>
+					<td class="pct-col">{{printf "%.1f" .FemalePct}}%</td>
+					<td class="num-col">{{.Total}}</td>
+					<td class="pct-col">{{printf "%.1f" .TotalPct}}%</td>
+					<td class="rank-col">{{.Rank}}</td>
+				</tr>
+				{{end}} {{end}}
+				<tr class="total-row">
+					<td>TOTAL</td>
+					<td class="num-col">{{sumInt .Data "MaleCount"}}</td>
+					<td class="pct-col">
+						{{printf "%.1f" (sumFloat .Data "MalePct")}}%
+					</td>
+					<td class="num-col">{{sumInt .Data "FemaleCount"}}</td>
+					<td class="pct-col">
+						{{printf "%.1f" (sumFloat .Data "FemalePct")}}%
+					</td>
+					<td class="num-col">{{sumInt .Data "Total"}}</td>
+					<td class="pct-col">
+						{{printf "%.1f" (sumFloat .Data "TotalPct")}}%
+					</td>
+					<td class="rank-col"></td>
+				</tr>
+			</tbody>
+		</table>
+		{{end}}
+	</body>
+</html>

@@ -114,6 +114,22 @@ func (h *Handler) GetEducationalLevels(c *gin.Context) {
 	response.SendSuccess(c, levels)
 }
 
+func (h *Handler) GetEducationalAttainments(c *gin.Context) {
+	attainments, err := h.service.GetEducationalAttainments(c.Request.Context())
+	if err != nil {
+		log.Printf("[GetEducationalAttainments] {Service Call}: %v", err)
+		response.SendError(
+			c,
+			"Failed to get educational attainments",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, attainments)
+}
+
 func (h *Handler) GetCourses(c *gin.Context) {
 	courses, err := h.service.GetCourses(c.Request.Context())
 	if err != nil {

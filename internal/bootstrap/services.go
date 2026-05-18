@@ -130,7 +130,11 @@ func getServices(
 		fileService,
 		cfg,
 	)
-	analyticsService := analytics.NewService(repos.AnalyticsRepo, redis)
+	analyticsService := analytics.NewService(
+		repos.AnalyticsRepo,
+		redis,
+		pdfService,
+	)
 
 	return &Services{
 		AuthService:               authService,

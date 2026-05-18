@@ -332,7 +332,14 @@ func (r *Repository) GetOrdinalPositionStats(
 	filter, args := r.buildFilter(year, courseID)
 	query := `
 		SELECT
-			CAST(fb.ordinal_position AS CHAR) AS category,
+			CASE
+				WHEN fb.ordinal_position = 1 AND (fb.brothers + fb.sisters = 0) THEN 'Only Child'
+				WHEN fb.ordinal_position = 1 AND (fb.brothers + fb.sisters > 0) THEN 'Eldest'
+				WHEN fb.ordinal_position = (fb.brothers + fb.sisters + 1) THEN 'Youngest'
+				WHEN fb.ordinal_position > 1 AND fb.ordinal_position < (fb.brothers + fb.sisters + 1) THEN 'Middle'
+				WHEN fb.ordinal_position = 0 THEN 'Not Indicated'
+				ELSE 'Others'
+			END AS category,
 			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
 			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
@@ -351,7 +358,7 @@ func (r *Repository) GetFatherEducationStats(
 	filter, args := r.buildFilter(year, courseID)
 	query := `
 		SELECT
-			COALESCE(rp.educational_level, 'Not Indicated') AS category,
+			COALESCE(ea.name, 'Not Indicated') AS category,
 			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
 			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
@@ -360,6 +367,7 @@ func (r *Repository) GetFatherEducationStats(
 		JOIN student_related_persons srp ON spi.iir_id = srp.iir_id
 		JOIN related_persons rp ON srp.related_person_id = rp.id
 		JOIN student_relationship_types srt ON srp.relationship_id = srt.id
+		LEFT JOIN educational_attainments ea ON rp.educational_attainment_id = ea.id
 		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE srt.relationship_name = 'Father' ` + filter + `
 		GROUP BY category;`
@@ -372,7 +380,7 @@ func (r *Repository) GetMotherEducationStats(
 	filter, args := r.buildFilter(year, courseID)
 	query := `
 		SELECT
-			COALESCE(rp.educational_level, 'Not Indicated') AS category,
+			COALESCE(ea.name, 'Not Indicated') AS category,
 			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
 			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
@@ -381,6 +389,7 @@ func (r *Repository) GetMotherEducationStats(
 		JOIN student_related_persons srp ON spi.iir_id = srp.iir_id
 		JOIN related_persons rp ON srp.related_person_id = rp.id
 		JOIN student_relationship_types srt ON srp.relationship_id = srt.id
+		LEFT JOIN educational_attainments ea ON rp.educational_attainment_id = ea.id
 		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE srt.relationship_name = 'Mother' ` + filter + `
 		GROUP BY category;`
@@ -435,11 +444,15 @@ func (r *Repository) GetHSGWAStats(
 	query := `
 		SELECT
 			CASE
-				WHEN spi.high_school_gwa >= 95.00 THEN '95.00 - 100.00'
-				WHEN spi.high_school_gwa >= 90.00 THEN '90.00 - 94.99'
-				WHEN spi.high_school_gwa >= 85.00 THEN '85.00 - 89.99'
-				WHEN spi.high_school_gwa >= 80.00 THEN '80.00 - 84.99'
-				WHEN spi.high_school_gwa >= 75.00 THEN '75.00 - 79.99'
+				WHEN spi.high_school_gwa >= 97.00 THEN '97.00 - 100.00'
+				WHEN spi.high_school_gwa >= 94.00 THEN '94.00 - 96.99'
+				WHEN spi.high_school_gwa >= 91.00 THEN '91.00 - 93.99'
+				WHEN spi.high_school_gwa >= 88.00 THEN '88.00 - 90.99'
+				WHEN spi.high_school_gwa >= 85.00 THEN '85.00 - 87.99'
+				WHEN spi.high_school_gwa >= 82.00 THEN '82.00 - 84.99'
+				WHEN spi.high_school_gwa >= 79.00 THEN '79.00 - 81.99'
+				WHEN spi.high_school_gwa >= 76.00 THEN '76.00 - 78.99'
+				WHEN spi.high_school_gwa >= 75.00 THEN '75.00'
 				ELSE 'Below 75.00'
 			END AS category,
 			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
@@ -470,7 +483,10 @@ func (r *Repository) GetElementaryStats(
 		JOIN educational_levels el ON sd.educational_level_id = el.id
 		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE el.level_name = 'Elementary' ` + filter + `
-		GROUP BY category;`
+		GROUP BY category
+		ORDER BY FIELD(
+			category, 'Public', 'Private', 'Not Indicated'
+		);`
 	return r.executeStatQuery(ctx, query, args...)
 }
 
@@ -491,7 +507,10 @@ func (r *Repository) GetJuniorHighStats(
 		JOIN educational_levels el ON sd.educational_level_id = el.id
 		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE el.level_name = 'Junior High School' ` + filter + `
-		GROUP BY category;`
+		GROUP BY category
+		ORDER BY FIELD(
+			category, 'Public', 'Private', 'Not Indicated'
+		);`
 	return r.executeStatQuery(ctx, query, args...)
 }
 
@@ -512,7 +531,85 @@ func (r *Repository) GetSeniorHighStats(
 		JOIN educational_levels el ON sd.educational_level_id = el.id
 		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE el.level_name = 'Senior High School' ` + filter + `
-		GROUP BY category;`
+		GROUP BY category
+		ORDER BY FIELD(
+			category, 'Public', 'Private', 'Not Indicated'
+		);`
+	return r.executeStatQuery(ctx, query, args...)
+}
+
+func (r *Repository) GetHighSchoolStats(
+	ctx context.Context, year int, courseID int,
+) ([]DemographicStat, error) {
+	filter, args := r.buildFilter(year, courseID)
+	query := `
+		SELECT
+			COALESCE(sd.school_type, 'Not Indicated') AS category,
+			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			COUNT(*) as total,
+			RANK() OVER (ORDER BY COUNT(*) DESC) as rank_pos
+		FROM student_personal_info spi
+		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
+		JOIN school_details sd ON eb.id = sd.eb_id
+		JOIN educational_levels el ON sd.educational_level_id = el.id
+		LEFT JOIN genders g ON spi.gender_id = g.id
+		WHERE el.level_name IN (
+			'High School', 'Junior High School',
+			'Senior High School'
+		) ` + filter + `
+		GROUP BY category
+		ORDER BY FIELD(
+			category, 'Public', 'Private', 'Not Indicated'
+		);`
+	return r.executeStatQuery(ctx, query, args...)
+}
+
+func (r *Repository) GetVocationalStats(
+	ctx context.Context, year int, courseID int,
+) ([]DemographicStat, error) {
+	filter, args := r.buildFilter(year, courseID)
+	query := `
+		SELECT
+			COALESCE(sd.school_type, 'Not Indicated') AS category,
+			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			COUNT(*) as total,
+			RANK() OVER (ORDER BY COUNT(*) DESC) as rank_pos
+		FROM student_personal_info spi
+		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
+		JOIN school_details sd ON eb.id = sd.eb_id
+		JOIN educational_levels el ON sd.educational_level_id = el.id
+		LEFT JOIN genders g ON spi.gender_id = g.id
+		WHERE el.level_name = 'Vocational' ` + filter + `
+		GROUP BY category
+		ORDER BY FIELD(
+			category, 'Public', 'Private', 'Not Indicated'
+		);`
+	return r.executeStatQuery(ctx, query, args...)
+}
+
+func (r *Repository) GetCollegeStats(
+	ctx context.Context, year int, courseID int,
+) ([]DemographicStat, error) {
+	filter, args := r.buildFilter(year, courseID)
+	query := `
+		SELECT
+			COALESCE(sd.school_type, 'Not Indicated') AS category,
+			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			COUNT(*) as total,
+			RANK() OVER (ORDER BY COUNT(*) DESC) as rank_pos
+		FROM student_personal_info spi
+		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
+		JOIN school_details sd ON eb.id = sd.eb_id
+		JOIN educational_levels el ON sd.educational_level_id = el.id
+		LEFT JOIN genders g ON spi.gender_id = g.id
+		WHERE el.level_name = 'College' ` + filter + `
+		GROUP BY category
+		ORDER BY FIELD(
+			category, 'Public', 'Private', 'Not Indicated'
+		);`
 	return r.executeStatQuery(ctx, query, args...)
 }
 

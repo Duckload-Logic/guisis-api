@@ -177,6 +177,10 @@ func (s *Service) GetEducationalLevels(ctx context.Context) ([]EducationalLevel,
 	return s.repo.GetEducationalLevels(ctx)
 }
 
+func (s *Service) GetEducationalAttainments(ctx context.Context) ([]EducationalAttainment, error) {
+	return s.repo.GetEducationalAttainments(ctx)
+}
+
 func (s *Service) GetCourses(ctx context.Context) ([]Course, error) {
 	return s.repo.GetCourses(ctx)
 }
@@ -500,6 +504,11 @@ func (s *Service) GetStudentPersonalInfo(
 		IsEmployed:       personalInfo.IsEmployed,
 		EmployerName:     personalInfo.EmployerName,
 		EmployerAddress:  personalInfo.EmployerAddress,
+		EmployerContactNumber: personalInfo.EmployerContactNumber,
+		LivingInDorm:          personalInfo.LivingInDorm,
+		DormAddress:           personalInfo.DormAddress,
+		LandlordName:          personalInfo.LandlordName,
+		LandlordContactNumber: personalInfo.LandlordContactNumber,
 		EmergencyContact: emergencyContactDTO,
 	}, nil
 }
@@ -579,21 +588,26 @@ func (s *Service) GetStudentRelatedPersons(
 		rp, _ := s.repo.GetRelatedPersonByID(ctx, srp.RelatedPersonID)
 		rel, _ := s.repo.GetStudentRelationshipByID(ctx, srp.RelationshipID)
 
+		attainment := &EducationalAttainment{}
+		if rp.EducationalAttainmentID.Valid {
+			attainment, _ = s.repo.GetEducationalAttainmentByID(ctx, int(rp.EducationalAttainmentID.Int64))
+		}
+
 		related = append(related, RelatedPersonDTO{
-			ID:               rp.ID,
-			EducationalLevel: rp.EducationalLevel,
-			DateOfBirth:      rp.DateOfBirth,
-			LastName:         rp.LastName,
-			FirstName:        rp.FirstName,
-			MiddleName:       rp.MiddleName,
-			SuffixName:       rp.SuffixName,
-			Occupation:       rp.Occupation,
-			EmployerName:     rp.EmployerName,
-			EmployerAddress:  rp.EmployerAddress,
-			Relationship:     *rel,
-			IsParent:         srp.IsParent,
-			IsGuardian:       srp.IsGuardian,
-			IsLiving:         srp.IsLiving,
+			ID:                    rp.ID,
+			EducationalAttainment: *attainment,
+			DateOfBirth:           rp.DateOfBirth,
+			LastName:              rp.LastName,
+			FirstName:             rp.FirstName,
+			MiddleName:            rp.MiddleName,
+			SuffixName:            rp.SuffixName,
+			Occupation:            rp.Occupation,
+			EmployerName:          rp.EmployerName,
+			EmployerAddress:       rp.EmployerAddress,
+			Relationship:          *rel,
+			IsParent:              srp.IsParent,
+			IsGuardian:            srp.IsGuardian,
+			IsLiving:              srp.IsLiving,
 		})
 	}
 	return related, nil
@@ -687,6 +701,8 @@ func (s *Service) GetStudentHealthRecord(
 		SpeechDetails:           hr.SpeechDetails,
 		GeneralHealthHasProblem: hr.GeneralHealthHasProblem,
 		GeneralHealthDetails:    hr.GeneralHealthDetails,
+		MentalEmotionalHasProblem: hr.MentalEmotionalHasProblem,
+		MentalEmotionalDetails:    hr.MentalEmotionalDetails,
 	}, nil
 }
 
@@ -897,6 +913,11 @@ func (s *Service) saveComprehensiveProfile(
 		IsEmployed:      req.Student.IsEmployed,
 		EmployerName:    req.Student.EmployerName,
 		EmployerAddress: req.Student.EmployerAddress,
+		EmployerContactNumber: req.Student.EmployerContactNumber,
+		LivingInDorm:          req.Student.LivingInDorm,
+		DormAddress:           req.Student.DormAddress,
+		LandlordName:          req.Student.LandlordName,
+		LandlordContactNumber: req.Student.LandlordContactNumber,
 		StatusID:        1, // Default to Enrolled/Active?
 	})
 	if err != nil {
@@ -1005,6 +1026,8 @@ func (s *Service) saveComprehensiveProfile(
 		SpeechDetails:           req.Health.SpeechDetails,
 		GeneralHealthHasProblem: req.Health.GeneralHealthHasProblem,
 		GeneralHealthDetails:    req.Health.GeneralHealthDetails,
+		MentalEmotionalHasProblem: req.Health.MentalEmotionalHasProblem,
+		MentalEmotionalDetails:    req.Health.MentalEmotionalDetails,
 	})
 	if err != nil {
 		return "", err
@@ -1045,15 +1068,15 @@ func (s *Service) saveComprehensiveProfile(
 			return "", fmt.Errorf("date of birth is required for related person: %s %s", rpDTO.FirstName, rpDTO.LastName)
 		}
 		rpID, err := s.repo.UpsertRelatedPerson(ctx, tx, &RelatedPerson{
-			FirstName:        rpDTO.FirstName,
-			MiddleName:       rpDTO.MiddleName,
-			LastName:         rpDTO.LastName,
-			SuffixName:       rpDTO.SuffixName,
-			DateOfBirth:      rpDTO.DateOfBirth,
-			EducationalLevel: rpDTO.EducationalLevel,
-			Occupation:       rpDTO.Occupation,
-			EmployerName:     rpDTO.EmployerName,
-			EmployerAddress:  rpDTO.EmployerAddress,
+			FirstName:               rpDTO.FirstName,
+			MiddleName:              rpDTO.MiddleName,
+			LastName:                rpDTO.LastName,
+			SuffixName:              rpDTO.SuffixName,
+			DateOfBirth:             rpDTO.DateOfBirth,
+			EducationalAttainmentID: structs.Int64ToNullableInt64(int64(rpDTO.EducationalAttainment.ID)),
+			Occupation:              rpDTO.Occupation,
+			EmployerName:            rpDTO.EmployerName,
+			EmployerAddress:         rpDTO.EmployerAddress,
 		})
 		if err != nil {
 			return "", err

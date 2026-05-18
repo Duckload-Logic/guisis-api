@@ -189,34 +189,34 @@ func generateFullStudentIIR(
 	// hobbies
 	insertHobbies(ctx, tx, iirID)
 
-	// Collect appointment and admission slip IDs for notes
-	appointmentIDs := []string{}
-	admissionSlipIDs := []string{}
+	// // Collect appointment and admission slip IDs for notes
+	// appointmentIDs := []string{}
+	// admissionSlipIDs := []string{}
 
-	// admission slip (30% chance)
-	if rand.Float32() < 0.3 {
-		slipID := insertAdmissionSlip(ctx, tx, iirID)
-		if slipID != "" {
-			admissionSlipIDs = append(admissionSlipIDs,
-				slipID)
-		}
-	}
+	// // admission slip (30% chance)
+	// if rand.Float32() < 0.3 {
+	// 	slipID := insertAdmissionSlip(ctx, tx, iirID)
+	// 	if slipID != "" {
+	// 		admissionSlipIDs = append(admissionSlipIDs,
+	// 			slipID)
+	// 	}
+	// }
 
-	// appointment (30% chance)
-	if rand.Float32() < 0.3 {
-		for i := 0; i < rand.Intn(5)+1; i++ {
-			// up to 5 appointments per student
-			apptID := insertAppointment(ctx, tx, iirID, appointmentsDataset)
-			if apptID != "" {
-				appointmentIDs = append(appointmentIDs,
-					apptID)
-			}
-		}
-	}
+	// // appointment (30% chance)
+	// if rand.Float32() < 0.3 {
+	// 	for i := 0; i < rand.Intn(5)+1; i++ {
+	// 		// up to 5 appointments per student
+	// 		apptID := insertAppointment(ctx, tx, iirID, appointmentsDataset)
+	// 		if apptID != "" {
+	// 			appointmentIDs = append(appointmentIDs,
+	// 				apptID)
+	// 		}
+	// 	}
+	// }
 
-	// significant notes (after appointments/slips created)
-	insertSignificantNotes(ctx, tx, iirID, appointmentIDs,
-		admissionSlipIDs)
+	// // significant notes (after appointments/slips created)
+	// insertSignificantNotes(ctx, tx, iirID, appointmentIDs,
+	// 	admissionSlipIDs)
 
 	fmt.Printf("[Seeder] Created student %d | iirID: %s\n", index+1, iirID)
 }
@@ -561,7 +561,7 @@ func insertRelatedPerson(ctx context.Context, tx *sqlx.Tx) relatedPersonSeed {
 		time.Date(1950, 1, 1, 0, 0, 0, 0, time.UTC),
 		time.Now().AddDate(-30, 0, 0),
 	)
-	educ := randomEducationalAttainment()
+	educID := randomEducationalAttainmentID()
 	occupation := structs.NullableString{
 		String: gofakeit.JobTitle(),
 		Valid:  gofakeit.Bool(),
@@ -580,14 +580,14 @@ func insertRelatedPerson(ctx context.Context, tx *sqlx.Tx) relatedPersonSeed {
 	}
 
 	rp := &students.RelatedPerson{
-		EducationalLevel: educ,
-		DateOfBirth:      dob.Format("2006-01-02"),
-		LastName:         lname,
-		FirstName:        fname,
-		MiddleName:       mname,
-		Occupation:       occupation,
-		EmployerName:     employer,
-		EmployerAddress:  employerAddr,
+		EducationalAttainmentID: structs.Int64ToNullableInt64(educID),
+		DateOfBirth:             dob.Format("2006-01-02"),
+		LastName:                lname,
+		FirstName:               fname,
+		MiddleName:              mname,
+		Occupation:              occupation,
+		EmployerName:            employer,
+		EmployerAddress:         employerAddr,
 	}
 
 	id, err := studentsRepo.UpsertRelatedPerson(ctx, tx, rp)
@@ -605,15 +605,10 @@ func insertRelatedPerson(ctx context.Context, tx *sqlx.Tx) relatedPersonSeed {
 	}
 }
 
-func randomEducationalAttainment() string {
-	levels := []string{
-		"Elementary",
-		"High School",
-		"Vocational",
-		"College",
-		"Post Graduate",
-	}
-	return levels[rand.Intn(len(levels))]
+func randomEducationalAttainmentID() int64 {
+	// IDs match migration 000016_add_educational_attainments_table.up.sql
+	// 1: Elementary, 2: High School, 3: College, 4: Post Grad, 5: Vocational, etc.
+	return int64(rand.Intn(7) + 1)
 }
 
 func linkRelatedPerson(

@@ -45,6 +45,8 @@ func RegisterRoutes(
 			h.GetStudentRelationshipTypes,
 		)
 		lookupRoutes.GET("/student-statuses", h.GetStudentStatuses)
+		lookupRoutes.GET("/educational-levels", h.GetEducationalLevels)
+		lookupRoutes.GET("/educational-attainments", h.GetEducationalAttainments)
 	}
 
 	inventoryRoutes := routes.Group("/inventory")
