@@ -11,7 +11,7 @@ type DemographicStatDTO struct {
 	Rank        int     `json:"rank,omitempty"`
 }
 
-type DashboardResponse struct {
+type IIRAnalyticsReportResponse struct {
 	TotalStudents      int                  `json:"totalStudents"`
 	GenderDistribution []DemographicStatDTO `json:"genderDistribution"`
 
@@ -31,8 +31,11 @@ type DashboardResponse struct {
 	// Academic Background
 	HighSchoolGWA     []DemographicStatDTO `json:"highSchoolGWA"`
 	Elementary        []DemographicStatDTO `json:"elementary"`
+	HighSchool        []DemographicStatDTO `json:"highSchool"`
 	JuniorHigh        []DemographicStatDTO `json:"juniorHigh"`
 	SeniorHigh        []DemographicStatDTO `json:"seniorHigh"`
+	Vocational        []DemographicStatDTO `json:"vocational"`
+	College           []DemographicStatDTO `json:"college"`
 	NatureOfSchooling []DemographicStatDTO `json:"natureOfSchooling"`
 
 	// Study Environment

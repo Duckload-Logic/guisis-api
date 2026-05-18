@@ -34,12 +34,21 @@ func RegisterRoutes(
 		h.GetAdminDashboard,
 	)
 
-	analyticsRoutes.GET("/dashboard",
+	analyticsRoutes.GET("/reports/iir",
 		middleware.RoleMiddleware(
 			constants.AdminRoleID,
 			constants.SuperAdminRoleID,
 			constants.DeveloperRoleID,
 		),
-		h.GetDashboard,
+		h.GetIIRAnalyticsReport,
+	)
+
+	analyticsRoutes.GET("/reports/iir/export",
+		middleware.RoleMiddleware(
+			constants.AdminRoleID,
+			constants.SuperAdminRoleID,
+			constants.DeveloperRoleID,
+		),
+		h.ExportIIRAnalyticsReport,
 	)
 }
