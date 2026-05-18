@@ -103,6 +103,13 @@ type StudentPersonalInfoDTO struct {
 	EmployerAddress  structs.NullableString `json:"employerAddress,omitempty"`
 	MobileNumber     string                 `json:"mobileNumber"               binding:"required"`
 	TelephoneNumber  structs.NullableString `json:"telephoneNumber,omitempty"`
+	EmployerContactNumber structs.NullableString `
+json:"employerContactNumber,omitempty"`
+	LivingInDorm     bool                   `json:"livingInDorm"`
+	DormAddress      structs.NullableString `json:"dormAddress,omitempty"`
+	LandlordName     structs.NullableString `json:"landlordName,omitempty"`
+	LandlordContactNumber structs.NullableString `
+json:"landlordContactNumber,omitempty"`
 	Status           StudentStatus          `json:"status"                     binding:"required"`
 	GraduationYear   *int                   `json:"graduationYear,omitempty"`
 	EmergencyContact EmergencyContactDTO    `json:"emergencyContact,omitempty"`
@@ -168,7 +175,7 @@ type RelatedPersonDTO struct {
 	MiddleName       structs.NullableString  `json:"middleName,omitempty"`
 	SuffixName       structs.NullableString  `json:"suffixName,omitempty"`
 	DateOfBirth      string                  `json:"dateOfBirth,omitempty"     binding:"omitempty"`
-	EducationalLevel string                  `json:"educationalLevel"`
+	EducationalAttainment EducationalAttainment `json:"educationalAttainment"`
 	Occupation       structs.NullableString  `json:"occupation,omitempty"`
 	EmployerName     structs.NullableString  `json:"employerName,omitempty"`
 	EmployerAddress  structs.NullableString  `json:"employerAddress,omitempty"`
@@ -221,6 +228,9 @@ type StudentHealthRecordDTO struct {
 	SpeechDetails           structs.NullableString `json:"speechDetails,omitempty"`
 	GeneralHealthHasProblem bool                   `json:"generalHealthHasProblem"`
 	GeneralHealthDetails    structs.NullableString `json:"generalHealthDetails,omitempty"`
+	MentalEmotionalHasProblem bool                 `json:"mentalEmotionalHasProblem"`
+	MentalEmotionalDetails structs.NullableString `
+json:"mentalEmotionalDetails,omitempty"`
 }
 
 type StudentConsultationDTO struct {
