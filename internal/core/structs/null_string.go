@@ -124,3 +124,10 @@ func FromSqlNullInt64(ni sql.NullInt64) NullableInt64 {
 func ToSqlNullInt64(ni NullableInt64) sql.NullInt64 {
 	return sql.NullInt64{Int64: ni.Int64, Valid: ni.Valid}
 }
+
+func Int64ToNullableInt64(i int64) NullableInt64 {
+	if i == 0 {
+		return NullableInt64{Valid: false}
+	}
+	return NullableInt64{Int64: i, Valid: true}
+}
