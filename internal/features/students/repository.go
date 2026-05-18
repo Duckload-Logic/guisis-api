@@ -137,6 +137,38 @@ func (r *Repository) GetEducationalLevels(
 	return levels, nil
 }
 
+func (r *Repository) GetEducationalAttainments(
+	ctx context.Context,
+) ([]EducationalAttainment, error) {
+	query := fmt.Sprintf(`
+		SELECT %s FROM educational_attainments ORDER BY id
+	`, datastore.GetColumns(EducationalAttainment{}))
+
+	var attainments []EducationalAttainment
+	err := r.db.SelectContext(ctx, &attainments, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get educational attainments: %w", err)
+	}
+	return attainments, nil
+}
+
+func (r *Repository) GetEducationalAttainmentByID(
+	ctx context.Context,
+	attainmentID int,
+) (*EducationalAttainment, error) {
+	query := fmt.Sprintf(`
+		SELECT %s FROM educational_attainments WHERE id = ?
+	`, datastore.GetColumns(EducationalAttainment{}))
+
+	var model EducationalAttainment
+	err := r.db.GetContext(ctx, &model, query, attainmentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get educational attainment by ID: %w", err)
+	}
+
+	return &model, nil
+}
+
 func (r *Repository) GetStudentStatuses(
 	ctx context.Context,
 ) ([]StudentStatus, error) {

@@ -559,7 +559,7 @@
         <div class="flex-row">
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Educational Attainment:</span>
-                <span class="field-fill">{{if $father}}{{$father.EducationalLevel}}{{end}}</span>
+                <span class="field-fill">{{if $father}}{{$father.EducationalAttainment.Name}}{{end}}</span>
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Occupation:</span>
@@ -600,7 +600,7 @@
         <div class="flex-row">
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Educational Attainment:</span>
-                <span class="field-fill">{{if $mother}}{{$mother.EducationalLevel}}{{end}}</span>
+                <span class="field-fill">{{if $mother}}{{$mother.EducationalAttainment.Name}}{{end}}</span>
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Occupation:</span>
@@ -637,7 +637,7 @@
         <div class="flex-row">
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Educational Attainment:</span>
-                <span class="field-fill">{{if $guardian}}{{$guardian.EducationalLevel}}{{end}}</span>
+                <span class="field-fill">{{if $guardian}}{{$guardian.EducationalAttainment.Name}}{{end}}</span>
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Occupation:</span>
