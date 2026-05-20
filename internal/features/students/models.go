@@ -184,14 +184,11 @@ type StudentPersonalInfo struct {
 	MobileNumber          string                 `db:"mobile_number"     json:"mobileNumber"`
 	TelephoneNumber       structs.NullableString `db:"telephone_number"  json:"telephoneNumber,omitempty"`
 	EmployerContactNumber structs.NullableString `db:"employer_contact_number" json:"employerContactNumber,omitempty"`
-	LivingInDorm          bool                   `db:"living_in_dorm"           json:"livingInDorm"`
-	DormAddress           structs.NullableString `db:"dorm_address" json:"dormAddress,omitempty"`
-	LandlordName          structs.NullableString `db:"landlord_name" json:"landlordName,omitempty"`
-	LandlordContactNumber structs.NullableString `db:"landlord_contact_number" json:"landlordContactNumber,omitempty"`
-	StatusID              int                    `db:"status_id"         json:"statusId"`
-	GraduationYear        structs.NullableInt64  `db:"graduation_year"   json:"graduationYear,omitempty"`
-	CreatedAt             time.Time              `db:"created_at"        json:"createdAt"`
-	UpdatedAt             time.Time              `db:"updated_at"        json:"updatedAt"`
+
+	StatusID       int                   `db:"status_id"         json:"statusId"`
+	GraduationYear structs.NullableInt64 `db:"graduation_year"   json:"graduationYear,omitempty"`
+	CreatedAt      time.Time             `db:"created_at"        json:"createdAt"`
+	UpdatedAt      time.Time             `db:"updated_at"        json:"updatedAt"`
 }
 
 // EmergencyContact represents the contact person in case of emergency.
@@ -392,8 +389,27 @@ type TestResult struct {
 
 // StudentCOR represents the Certificate of Registration file link.
 type StudentCOR struct {
-	FileID     string               `db:"file_id"     json:"fileId"`
-	StudentID  string               `db:"student_id"  json:"studentId"`
-	ValidFrom  structs.NullableTime `db:"valid_from"  json:"validFrom,omitempty"`
-	ValidUntil structs.NullableTime `db:"valid_until" json:"validUntil,omitempty"`
+	FileID        string               `db:"file_id"     json:"fileId"`
+	StudentID     string               `db:"student_id"  json:"studentId"`
+	StudentNumber string               `db:"student_number" json:"studentNumber"`
+	CourseCode    string               `db:"course_code" json:"courseCode"`
+	CourseDesc    string               `db:"course_desc" json:"courseDesc"`
+	YearLevel     int                  `db:"year_level" json:"yearLevel"`
+	Section       int                  `db:"section" json:"section"`
+	Campus        string               `db:"campus" json:"campus"`
+	YearStart     int                  `db:"year_start" json:"yearStart"`
+	YearEnd       int                  `db:"year_end" json:"yearEnd"`
+	Term          int                  `db:"term" json:"term"`
+	ValidFrom     structs.NullableTime `db:"valid_from"  json:"validFrom,omitempty"`
+	ValidUntil    structs.NullableTime `db:"valid_until" json:"validUntil,omitempty"`
+}
+
+// AcademicSetting holds the single-row global academic year + term setting
+// managed by the SuperAdmin. Used to validate uploaded student CORs.
+type AcademicSetting struct {
+	ID               int       `db:"id"                 json:"id"`
+	CurrentYearStart int       `db:"current_year_start" json:"currentYearStart"`
+	CurrentYearEnd   int       `db:"current_year_end"   json:"currentYearEnd"`
+	CurrentTerm      int       `db:"current_term"       json:"currentTerm"`
+	UpdatedAt        time.Time `db:"updated_at"         json:"updatedAt"`
 }

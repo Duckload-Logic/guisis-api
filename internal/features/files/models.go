@@ -4,14 +4,14 @@ import "time"
 
 // File represents a file asset, used for both business logic and data persistence.
 type File struct {
-	ID        string    `db:"id"         json:"id"`
-	FileName  string    `db:"file_name"  json:"fileName"`
-	FileURL   string    `db:"file_url"   json:"fileUrl"`
-	FileType  string    `db:"file_type"  json:"fileType"`
-	FileSize  int64     `db:"file_size"  json:"fileSize"`
-	MimeType  string    `db:"mime_type"  json:"mimeType"`
-	CreatedAt time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+	ID        string     `db:"id"         json:"id"`
+	FileName  string     `db:"file_name"  json:"fileName"`
+	FileURL   string     `db:"file_url"   json:"fileUrl"`
+	FileType  string     `db:"file_type"  json:"fileType"`
+	FileSize  int64      `db:"file_size"  json:"fileSize"`
+	MimeType  string     `db:"mime_type"  json:"mimeType"`
+	CreatedAt time.Time  `db:"created_at" json:"createdAt"`
+	UpdatedAt time.Time  `db:"updated_at" json:"updatedAt"`
 	DeletedAt *time.Time `db:"deleted_at" json:"deletedAt,omitempty"`
 }
 

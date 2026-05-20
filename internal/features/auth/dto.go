@@ -19,6 +19,7 @@ type MeResponse struct {
 	CreatedAt      time.Time    `json:"createdAt"`
 	Roles          []users.Role `json:"roles"`
 	StudentCORURL  string       `json:"studentCorUrl,omitempty"`
+	IsStudentCORValid bool      `json:"isStudentCorValid"`
 	Type           string       `json:"type"` // "native" or "idp"
 }
 

@@ -28,6 +28,7 @@ func RegisterRoutes(
 	lookupRoutes := routes.Group("/lookups")
 	{
 		lookupRoutes.GET("/genders", h.GetGenders)
+		lookupRoutes.GET("/enrollment-years", h.GetEnrollmentYears)
 		lookupRoutes.GET("/religions", h.GetReligions)
 		lookupRoutes.GET("/parental-status-types", h.GetParentalStatusTypes)
 		lookupRoutes.GET("/income-ranges", h.GetIncomeRanges)
@@ -75,6 +76,11 @@ func RegisterRoutes(
 			"/records/iir/:iirID",
 			iirResourceLookup,
 			h.GetStudentIIRByIIRID,
+		)
+		userRoutes.PATCH(
+			"/records/iir/:iirID",
+			iirResourceLookup,
+			h.PatchStudentIIR,
 		)
 		userRoutes.GET(
 			"/records/iir/:iirID/profile",
@@ -176,4 +182,17 @@ func RegisterRoutes(
 
 	// Counselor view of CORs
 	counselorRoutes.GET("/cors/user/:userID/current", h.GetStudentCORByUserID)
+
+	// Academic settings — GET is open to all authenticated roles;
+	// PUT is restricted to SuperAdmin only.
+	routes.GET("/settings/academic", h.GetAcademicSetting)
+
+	superadminSettingsRoutes := routes.Group("/settings")
+	superadminSettingsRoutes.Use(
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
+	)
+	{
+		superadminSettingsRoutes.PUT("/academic", h.PutAcademicSetting)
+	}
 }
+

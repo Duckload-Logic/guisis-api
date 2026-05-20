@@ -34,6 +34,28 @@ func (r *Repository) WithTransaction(
 }
 
 // Lookup
+func (r *Repository) GetEnrollmentYears(ctx context.Context) ([]int, error) {
+	// To adjust to created_at later, swap with:
+	// SELECT DISTINCT EXTRACT(YEAR FROM created_at) AS year
+	// FROM student_personal_info
+	// ORDER BY year DESC
+	query := `
+		SELECT DISTINCT
+			CAST(SUBSTRING(student_number, 1, 4) AS UNSIGNED) AS year
+		FROM student_personal_info
+		WHERE student_number LIKE '____-%'
+		ORDER BY year DESC
+	`
+
+	var years []int
+	err := r.db.SelectContext(ctx, &years, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get enrollment years: %w", err)
+	}
+
+	return years, nil
+}
+
 func (r *Repository) GetGenders(ctx context.Context) ([]Gender, error) {
 	query := fmt.Sprintf(`
 		SELECT %s FROM genders ORDER BY id
@@ -969,13 +991,19 @@ func (r *Repository) UpsertIIRRecord(
 	tx datastore.DB,
 	iir *IIRRecord,
 ) (string, error) {
-	exclude := []string{"created_at"}
-	cols, vals := datastore.GetInsertStatement(IIRRecord{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(IIRRecord{}, exclude)
-
-	query := fmt.Sprintf(`
-		INSERT INTO iir_records (id, %s) VALUES (:id, %s) ON DUPLICATE KEY UPDATE %s
-	`, cols, vals, onDuplicate)
+	// NOTE: We do NOT use GetOnDuplicateKeyUpdateStatement here because
+	// that helper appends `id = LAST_INSERT_ID(id)` whenever the struct
+	// has an `id` field — which is only valid for auto-increment INTEGER
+	// PKs. iir_records.id is a char(36) UUID; MySQL would try to coerce
+	// it to INTEGER inside LAST_INSERT_ID() and throw Error 1292.
+	// Only update the mutable columns on conflict.
+	query := `
+		INSERT INTO iir_records (id, user_id, is_submitted)
+		VALUES (:id, :user_id, :is_submitted)
+		ON DUPLICATE KEY UPDATE
+			user_id      = VALUES(user_id),
+			is_submitted = VALUES(is_submitted)
+	`
 
 	_, err := tx.NamedExecContext(ctx, query, iir)
 	return iir.ID, err
@@ -1040,6 +1068,16 @@ func (r *Repository) UpsertStudentAddress(
 	return int(lastID), nil
 }
 
+func (r *Repository) DeleteStudentAddressesByIIRID(
+	ctx context.Context,
+	tx datastore.DB,
+	iirID string,
+) error {
+	query := `DELETE FROM student_addresses WHERE iir_id = ?`
+	_, err := tx.ExecContext(ctx, query, iirID)
+	return err
+}
+
 func (r *Repository) CreateStudentSelectedReason(
 	ctx context.Context,
 	tx datastore.DB,
@@ -1099,14 +1137,72 @@ func (r *Repository) UpsertStudentRelatedPerson(
 	return err
 }
 
+func (r *Repository) DeleteEmergencyContactByIIRID(
+	ctx context.Context,
+	tx datastore.DB,
+	iirID string,
+) error {
+	var addressID int
+	queryGet := `
+		SELECT address_id FROM emergency_contacts
+		WHERE iir_id = ? LIMIT 1
+	`
+	err := tx.GetContext(ctx, &addressID, queryGet, iirID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return fmt.Errorf("failed to get EC address ID: %w", err)
+	}
+
+	queryDelEC := `DELETE FROM emergency_contacts WHERE iir_id = ?`
+	_, err = tx.ExecContext(ctx, queryDelEC, iirID)
+	if err != nil {
+		return fmt.Errorf("failed to delete EC: %w", err)
+	}
+
+	queryDelAddr := `DELETE FROM addresses WHERE id = ?`
+	_, err = tx.ExecContext(ctx, queryDelAddr, addressID)
+	if err != nil {
+		return fmt.Errorf("failed to delete EC address: %w", err)
+	}
+
+	return nil
+}
+
 func (r *Repository) DeleteStudentRelatedPersons(
 	ctx context.Context,
 	tx datastore.DB,
 	iirID string,
 ) error {
-	query := `DELETE FROM student_related_persons WHERE iir_id = ?`
-	_, err := tx.ExecContext(ctx, query, iirID)
-	return err
+	var ids []int
+	queryGet := `
+		SELECT related_person_id FROM student_related_persons
+		WHERE iir_id = ?
+	`
+	err := tx.SelectContext(ctx, &ids, queryGet, iirID)
+	if err != nil {
+		return fmt.Errorf("failed to get related person IDs: %w", err)
+	}
+
+	queryDel := `DELETE FROM student_related_persons WHERE iir_id = ?`
+	_, err = tx.ExecContext(ctx, queryDel, iirID)
+	if err != nil {
+		return fmt.Errorf("failed to delete student related links: %w", err)
+	}
+
+	for _, id := range ids {
+		_, err = tx.ExecContext(
+			ctx,
+			"DELETE FROM related_persons WHERE id = ?",
+			id,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to delete related person: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (r *Repository) UpsertFamilyBackground(
@@ -1525,7 +1621,7 @@ func (r *Repository) GetLatestCORsByUserIDs(
 	placeholders = placeholders[:len(placeholders)-1]
 
 	query := fmt.Sprintf(`
-		SELECT sc.student_id, f.file_url 
+		SELECT sc.student_id, f.file_url
 		FROM student_cors sc
 		JOIN files f ON f.id = sc.file_id
 		WHERE sc.student_id IN (%s)
@@ -1558,10 +1654,19 @@ func (r *Repository) GetStudentCORByUserID(
 	ctx context.Context,
 	userID string,
 ) (StudentCOR, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM student_cors
-		WHERE student_id = ? AND valid_from <= NOW() AND valid_until > NOW()
-	`, datastore.GetColumns(StudentCOR{}))
+	query := `
+		SELECT 
+			sc.file_id, sc.student_id, sc.student_number, sc.course_desc, 
+			sc.course_code, sc.year_level, sc.section, sc.campus, 
+			sc.year_start, sc.year_end, sc.term, sc.valid_from, sc.valid_until
+		FROM student_cors sc
+		JOIN academic_settings ac ON ac.id = 1
+		WHERE sc.student_id = ? 
+		  AND sc.year_start = ac.current_year_start 
+		  AND sc.term = ac.current_term
+		  AND sc.valid_from IS NOT NULL 
+		  AND sc.valid_until IS NOT NULL
+	`
 
 	var model StudentCOR
 	err := r.db.GetContext(ctx, &model, query, userID)
@@ -1580,3 +1685,43 @@ func (r *Repository) GetStudentCORsByUserID(
 	err := r.db.SelectContext(ctx, &models, query, userID)
 	return models, err
 }
+
+func (r *Repository) GetAcademicSetting(
+	ctx context.Context,
+) (*AcademicSetting, error) {
+	query := `
+		SELECT id, current_year_start, current_year_end,
+		       current_term, updated_at
+		FROM academic_settings WHERE id = 1 LIMIT 1
+	`
+	var setting AcademicSetting
+	err := r.db.GetContext(ctx, &setting, query)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"[Repository] {GetAcademicSetting}: %w", err,
+		)
+	}
+	return &setting, nil
+}
+
+func (r *Repository) UpdateAcademicSetting(
+	ctx context.Context,
+	tx datastore.DB,
+	yearStart, yearEnd, term int,
+) error {
+	query := `
+		UPDATE academic_settings
+		SET current_year_start = ?,
+		    current_year_end   = ?,
+		    current_term       = ?
+		WHERE id = 1
+	`
+	_, err := tx.ExecContext(ctx, query, yearStart, yearEnd, term)
+	if err != nil {
+		return fmt.Errorf(
+			"[Repository] {UpdateAcademicSetting}: %w", err,
+		)
+	}
+	return nil
+}
+

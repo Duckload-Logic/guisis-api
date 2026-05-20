@@ -7,23 +7,31 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
 )
 
 type Handler struct {
 	service *Service
 	cfg     *config.Config
+	logger  audit.Logger
 }
 
 // NewHandler creates a new authentication handler.
-func NewHandler(service *Service, cfg *config.Config) *Handler {
+func NewHandler(
+	service *Service,
+	cfg *config.Config,
+	logger audit.Logger,
+) *Handler {
 	return &Handler{
 		service: service,
 		cfg:     cfg,
+		logger:  logger,
 	}
 }
 
@@ -151,6 +159,25 @@ func (h *Handler) GetLogout(c *gin.Context) {
 	logoutURL, _ := h.service.Logout(
 		c.Request.Context(), token, tokenType, h.cfg,
 	)
+
+	var uIDStr, uEmailStr string
+	if id, ok := c.Get("userID"); ok {
+		uIDStr, _ = id.(string)
+	}
+	if email, ok := c.Get("userEmail"); ok {
+		uEmailStr, _ = email.(string)
+	}
+
+	h.logger.Record(c.Request.Context(), nil, audit.LogEntry{
+		Level:     audit.LevelInfo,
+		Category:  audit.CategorySecurity,
+		Action:    audit.ActionLogout,
+		Message:   fmt.Sprintf("User %s logged out", uEmailStr),
+		UserID:    structs.StringToNullableString(uIDStr),
+		UserEmail: structs.StringToNullableString(uEmailStr),
+		IPAddress: structs.StringToNullableString(c.ClientIP()),
+		UserAgent: structs.StringToNullableString(c.Request.UserAgent()),
+	})
 
 	// Clear cookies
 	c.SetSameSite(http.SameSiteLaxMode)

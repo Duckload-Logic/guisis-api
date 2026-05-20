@@ -52,6 +52,7 @@ func getHandlers(
 		AuthHandler: auth.NewHandler(
 			services.AuthService,
 			cfg,
+			services.SystemLogService,
 		),
 		UserHandler: users.NewHandler(
 			services.UserService,

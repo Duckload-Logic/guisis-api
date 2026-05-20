@@ -94,4 +94,3 @@ func (r *Repository) HasNoteForAppointment(
 
 	return count > 0, nil
 }
-

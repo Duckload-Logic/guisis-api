@@ -86,6 +86,7 @@ func getServices(
 		redis,
 		sessionService,
 		emailer,
+		systemLogService,
 	)
 
 	locationsService := locations.NewService(repos.LocationsRepo)

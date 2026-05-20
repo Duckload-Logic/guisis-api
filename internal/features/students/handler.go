@@ -2,6 +2,7 @@ package students
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -32,6 +33,25 @@ func (h *Handler) GetGenders(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, genders)
+}
+
+func (h *Handler) GetEnrollmentYears(c *gin.Context) {
+	years, err := h.service.GetEnrollmentYears(c.Request.Context())
+	if err != nil {
+		log.Printf(
+			"[GetEnrollmentYears] {Fetch Years}: %v",
+			err,
+		)
+		response.SendError(
+			c,
+			"Failed to get enrollment years",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, years)
 }
 
 func (h *Handler) GetParentalStatusTypes(c *gin.Context) {
@@ -714,7 +734,6 @@ func (h *Handler) PostStudentIIR(c *gin.Context) {
 		return
 	}
 
-
 	iirID, err := h.service.SubmitStudentIIR(c.Request.Context(), userID, req)
 	if err != nil {
 		log.Printf("[PostStudentIIR] {Service Call}: %s", err.Error())
@@ -732,6 +751,42 @@ func (h *Handler) PostStudentIIR(c *gin.Context) {
 		gin.H{"id": iirID, "message": "Student IIR submitted successfully"},
 	)
 }
+
+func (h *Handler) PatchStudentIIR(c *gin.Context) {
+	iirID := c.Param("iirID")
+	if iirID == "" {
+		response.SendFail(c, gin.H{"error": "IIR ID is required"})
+		return
+	}
+
+	var req ComprehensiveProfileDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[PatchStudentIIR] {JSON Bind}: %s", err.Error())
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+
+	_, err := h.service.UpdateStudentIIR(c.Request.Context(), iirID, req)
+	if err != nil {
+		log.Printf("[PatchStudentIIR] {Service Call}: %s", err.Error())
+		response.SendError(
+			c,
+			"Failed to update student IIR",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(
+		c,
+		gin.H{
+			"id":      iirID,
+			"message": "Student IIR updated successfully",
+		},
+	)
+}
+
 
 // GenerateIIR godoc
 // @Summary      Generate Student IIR PDF
@@ -809,6 +864,10 @@ func (h *Handler) PostStudentCOR(c *gin.Context) {
 	fileID, err := h.service.SubmitCOR(c.Request.Context(), userID, file)
 	if err != nil {
 		log.Printf("[PostStudentCOR] {Service Call}: %v", err)
+		if errors.Is(err, ErrOutdatedCOR) || errors.Is(err, ErrCOROwnerMismatch) {
+			response.SendFail(c, gin.H{"error": err.Error()})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to submit COR",
@@ -853,6 +912,10 @@ func (h *Handler) PostStudentCORByIIRID(c *gin.Context) {
 	fileID, err := h.service.SubmitCOR(c.Request.Context(), iir.UserID, file)
 	if err != nil {
 		log.Printf("[PostStudentCORByIIRID] {Service Call}: %v", err)
+		if errors.Is(err, ErrOutdatedCOR) || errors.Is(err, ErrCOROwnerMismatch) {
+			response.SendFail(c, gin.H{"error": err.Error()})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to submit COR",
@@ -907,3 +970,53 @@ func (h *Handler) GetStudentCORs(c *gin.Context) {
 
 	response.SendSuccess(c, cors)
 }
+
+func (h *Handler) GetAcademicSetting(c *gin.Context) {
+	setting, err := h.service.GetAcademicSetting(c.Request.Context())
+	if err != nil {
+		log.Printf("[GetAcademicSetting] {Fetch}: %v", err)
+		response.SendError(
+			c,
+			"Failed to retrieve academic setting",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+	response.SendSuccess(c, setting)
+}
+
+func (h *Handler) PutAcademicSetting(c *gin.Context) {
+	var req UpdateAcademicSettingDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[PutAcademicSetting] {JSON Bind}: %v", err)
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	userIDStr, _ := userID.(string)
+	userEmailVal, _ := c.Get("userEmail")
+	userEmail, _ := userEmailVal.(string)
+
+	if err := h.service.UpdateAcademicSetting(
+		c.Request.Context(),
+		req,
+		userIDStr,
+		userEmail,
+	); err != nil {
+		log.Printf("[PutAcademicSetting] {Service Call}: %v", err)
+		response.SendError(
+			c,
+			"Failed to update academic setting",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{
+		"message": "Academic setting updated successfully",
+	})
+}
+

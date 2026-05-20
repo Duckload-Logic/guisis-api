@@ -126,4 +126,3 @@ func (r *Repository) DeleteOldNotifications(
 
 	return rows, nil
 }
-

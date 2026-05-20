@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
@@ -19,7 +20,6 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
-	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/identity/idp"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
@@ -31,6 +31,7 @@ type Service struct {
 	redis          *datastore.RedisClient
 	sessionService *sessions.Service
 	emailer        audit.Emailer
+	logger         audit.Logger
 }
 
 func NewService(
@@ -38,6 +39,7 @@ func NewService(
 	redis *datastore.RedisClient,
 	sessionService *sessions.Service,
 	emailer audit.Emailer,
+	logger audit.Logger,
 ) *Service {
 	return &Service{
 		repo:           repo,
@@ -45,6 +47,7 @@ func NewService(
 		redis:          redis,
 		sessionService: sessionService,
 		emailer:        emailer,
+		logger:         logger,
 	}
 }
 
@@ -370,15 +373,42 @@ func (s *Service) AuthenticateUser(
 		string(constants.AuthTypeNative),
 	)
 	if err != nil {
+		s.logger.Record(ctx, nil, audit.LogEntry{
+			Level:     audit.LevelWarning,
+			Category:  audit.CategorySecurity,
+			Action:    audit.ActionLoginFailed,
+			Message:   fmt.Sprintf("Failed login attempt: %s", email),
+			UserEmail: structs.StringToNullableString(email),
+			IPAddress: structs.StringToNullableString(ipAddress),
+			UserAgent: structs.StringToNullableString(userAgent),
+		})
 		return "", "", "", fmt.Errorf("invalid credentials")
 	}
 
 	if !user.IsActive {
+		s.logger.Record(ctx, nil, audit.LogEntry{
+			Level:     audit.LevelWarning,
+			Category:  audit.CategorySecurity,
+			Action:    audit.ActionLoginFailed,
+			Message:   fmt.Sprintf("Failed login attempt (Inactive): %s", email),
+			UserEmail: structs.StringToNullableString(email),
+			IPAddress: structs.StringToNullableString(ipAddress),
+			UserAgent: structs.StringToNullableString(userAgent),
+		})
 		return "", "", "", fmt.Errorf("invalid credentials")
 	}
 
 	// Compare hashed password
 	if !user.PasswordHash.Valid {
+		s.logger.Record(ctx, nil, audit.LogEntry{
+			Level:     audit.LevelWarning,
+			Category:  audit.CategorySecurity,
+			Action:    audit.ActionLoginFailed,
+			Message:   fmt.Sprintf("Failed login attempt (No hash): %s", email),
+			UserEmail: structs.StringToNullableString(email),
+			IPAddress: structs.StringToNullableString(ipAddress),
+			UserAgent: structs.StringToNullableString(userAgent),
+		})
 		return "", "", "", fmt.Errorf("invalid credentials")
 	}
 
@@ -411,6 +441,19 @@ func (s *Service) AuthenticateUser(
 				)
 			}
 
+			s.logger.Record(ctx, nil, audit.LogEntry{
+				Level:     audit.LevelCritical,
+				Category:  audit.CategorySecurity,
+				Action:    audit.ActionLoginFailed,
+				Message: fmt.Sprintf(
+					"Account locked due to too many failed attempts: %s",
+					email,
+				),
+				UserEmail: structs.StringToNullableString(email),
+				IPAddress: structs.StringToNullableString(ipAddress),
+				UserAgent: structs.StringToNullableString(userAgent),
+			})
+
 			return "", "", "", fmt.Errorf(
 				"account locked due to too many failed attempts. " +
 					"please try again in 15 minutes",
@@ -426,6 +469,16 @@ func (s *Service) AuthenticateUser(
 		if err != nil {
 			return "", "", "", fmt.Errorf("[REDIS:SET-FAILURES]:%v", err)
 		}
+
+		s.logger.Record(ctx, nil, audit.LogEntry{
+			Level:     audit.LevelWarning,
+			Category:  audit.CategorySecurity,
+			Action:    audit.ActionLoginFailed,
+			Message:   fmt.Sprintf("Failed login attempt: %s", email),
+			UserEmail: structs.StringToNullableString(email),
+			IPAddress: structs.StringToNullableString(ipAddress),
+			UserAgent: structs.StringToNullableString(userAgent),
+		})
 
 		return "", "", "", fmt.Errorf("invalid credentials")
 	}
@@ -489,6 +542,18 @@ func (s *Service) AuthenticateUser(
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to store token in redis: %v", err)
 	}
+
+	// Log successful login
+	s.logger.Record(ctx, nil, audit.LogEntry{
+		Level:     audit.LevelInfo,
+		Category:  audit.CategorySecurity,
+		Action:    audit.ActionLoginSuccess,
+		Message:   fmt.Sprintf("User %s successfully logged in", user.Email),
+		UserID:    structs.StringToNullableString(user.ID),
+		UserEmail: structs.StringToNullableString(user.Email),
+		IPAddress: structs.StringToNullableString(ipAddress),
+		UserAgent: structs.StringToNullableString(userAgent),
+	})
 
 	return user.ID, token, refreshToken, nil
 }
@@ -696,6 +761,12 @@ func (s *Service) GetMe(
 			corURL, err := s.repo.GetStudentCORURLByUserID(ctx, userID)
 			if err == nil {
 				resp.StudentCORURL = corURL
+				valid, err := s.repo.CheckStudentCORValidByUserID(ctx, userID)
+				if err == nil {
+					resp.IsStudentCORValid = valid
+				} else {
+					log.Printf("[GetMe] {Student COR Validity Fetch}: %v", err)
+				}
 			} else if err != sql.ErrNoRows {
 				log.Printf("[GetMe] {Student COR Fetch}: %v", err)
 			}
@@ -995,6 +1066,21 @@ func (s *Service) PostIDPTokenExchange(
 	if err != nil {
 		return "", "", "", "", "", err
 	}
+
+	// Log successful login
+	s.logger.Record(ctx, nil, audit.LogEntry{
+		Level:     audit.LevelInfo,
+		Category:  audit.CategorySecurity,
+		Action:    audit.ActionLoginSuccess,
+		Message: fmt.Sprintf(
+			"User %s successfully logged in via IDP",
+			userInfo.Email,
+		),
+		UserID:    structs.StringToNullableString(appUserID),
+		UserEmail: structs.StringToNullableString(userInfo.Email),
+		IPAddress: structs.StringToNullableString(ipAddress),
+		UserAgent: structs.StringToNullableString(userAgent),
+	})
 
 	return appAccessToken, appRefreshToken, appUserID, userInfo.Email,
 		roleName, nil

@@ -26,15 +26,15 @@ type ProfilePicture struct {
 }
 
 type User struct {
-	ID           string                 `db:"id"            json:"id"`
-	FirstName    string                 `db:"first_name"    json:"firstName"`
-	MiddleName   structs.NullableString `db:"middle_name"   json:"middleName"`
-	LastName     string                 `db:"last_name"     json:"lastName"`
-	SuffixName   structs.NullableString `db:"suffix_name"   json:"suffixName"`
-	Email        string                 `db:"email"         json:"email"`
-	PasswordHash structs.NullableString `db:"password_hash" json:"-"`
-	AuthType     string                 `db:"auth_type"     json:"authType"`
-	IsActive     bool                   `db:"is_active"     json:"isActive"`
+	ID             string                 `db:"id"            json:"id"`
+	FirstName      string                 `db:"first_name"    json:"firstName"`
+	MiddleName     structs.NullableString `db:"middle_name"   json:"middleName"`
+	LastName       string                 `db:"last_name"     json:"lastName"`
+	SuffixName     structs.NullableString `db:"suffix_name"   json:"suffixName"`
+	Email          string                 `db:"email"         json:"email"`
+	PasswordHash   structs.NullableString `db:"password_hash" json:"-"`
+	AuthType       string                 `db:"auth_type"     json:"authType"`
+	IsActive       bool                   `db:"is_active"     json:"isActive"`
 	CreatedAt      structs.NullableTime   `db:"created_at"    json:"createdAt"`
 	UpdatedAt      structs.NullableTime   `db:"updated_at"    json:"updatedAt"`
 	ProfilePicture structs.NullableString `db:"-" json:"profilePicture"`
