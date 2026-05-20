@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"go/ast"
 	"go/doc"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
-	"log"
 
 	"golang.org/x/tools/go/packages"
 )
