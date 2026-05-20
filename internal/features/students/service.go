@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"strings"
@@ -65,6 +66,11 @@ func (s *Service) GetLatestCORsByUserIDs(
 ) (map[string]string, error) {
 	return s.repo.GetLatestCORsByUserIDs(ctx, userIDs)
 }
+
+var (
+	ErrOutdatedCOR      = errors.New("uploaded COR is for an outdated academic year or term")
+	ErrCOROwnerMismatch = errors.New("uploaded COR does not belong to the user")
+)
 
 // SubmitCOR uploads a Certificate of Registration and links it to the student.
 func (s *Service) SubmitCOR(
@@ -131,21 +137,38 @@ func (s *Service) SubmitCOR(
 			cor.YearEnd = endYear
 
 			// Validate against the current global AcademicSetting.
-			// If OCR year + term match, mark the COR as valid.
-			// If they do not match, ValidFrom/ValidUntil stay NULL
-			// (meaning the COR is unvalidated) until the student
-			// uploads the correct COR for the current SY/term.
+			// If OCR year + term do not match, automatically reject the COR.
 			setting, sErr := s.repo.GetAcademicSetting(ctx)
-			if sErr == nil &&
-				startYear == setting.CurrentYearStart &&
-				corData.Term == setting.CurrentTerm {
-				cor.ValidFrom = structs.TimeToNullableTime(
-					time.Now(),
-				)
-				cor.ValidUntil = structs.TimeToNullableTime(
-					time.Now().AddDate(0, 5, 0),
-				)
+			if sErr != nil {
+				_ = s.filesSvc.DeleteFile(ctx, file.ID)
+				return "", fmt.Errorf("[StudentService] {SubmitCOR Fetch Setting}: %w", sErr)
 			}
+
+			if startYear != setting.CurrentYearStart || corData.Term != setting.CurrentTerm {
+				_ = s.filesSvc.DeleteFile(ctx, file.ID)
+				return "", ErrOutdatedCOR
+			}
+
+			// OPTIONAL / FUTURE IMPLEMENTATION:
+			// Verify that the COR really belongs to the student.
+			// Check user's first name, last name, and student number.
+			/*
+			userRecord, uErr := s.repo.GetUserByID(ctx, userID)
+			if uErr == nil {
+				ocrStudNum := strings.TrimSpace(corData.StudentNumber)
+				dbStudNum := strings.TrimSpace(userRecord.StudentNumber)
+				
+				// Perform matches on student number, first name, last name
+				if ocrStudNum != "" && dbStudNum != "" && ocrStudNum != dbStudNum {
+					_ = s.filesSvc.DeleteFile(ctx, file.ID)
+					return "", ErrCOROwnerMismatch
+				}
+			}
+			*/
+
+			// If valid, set ValidFrom/ValidUntil
+			cor.ValidFrom = structs.TimeToNullableTime(time.Now())
+			cor.ValidUntil = structs.TimeToNullableTime(time.Now().AddDate(0, 5, 0))
 		}
 	}
 
