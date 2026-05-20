@@ -61,6 +61,9 @@ func (s *Service) GetIIRAnalyticsReport(
 
 	if total > 0 {
 		// Demographic data
+		rawGender, _ := s.repo.GetGenderStats(ctx, year, courseID)
+		report.GenderDistribution = s.mapToDTO(rawGender, total)
+
 		rawAges, _ := s.repo.GetAgeStats(ctx, year, courseID)
 		report.AgeDistribution = s.mapToDTO(rawAges, total)
 

@@ -46,4 +46,3 @@ func (r *Repository) GetOCRResult(
 	}
 	return &result, nil
 }
-
