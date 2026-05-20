@@ -1,0 +1,3 @@
+ALTER TABLE student_cors
+ADD COLUMN year_start INT NOT NULL DEFAULT 2025 AFTER campus,
+ADD COLUMN year_end INT NOT NULL DEFAULT 2026 AFTER year_start;

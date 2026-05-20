@@ -202,7 +202,7 @@ func (r *Repository) GetProfilePictureURLByUserID(
 
 	return fileURL, nil
 }
- 
+
 func (r *Repository) GetStudentCORURLByUserID(
 	ctx context.Context,
 	userID string,
@@ -223,6 +223,29 @@ func (r *Repository) GetStudentCORURLByUserID(
 	}
 
 	return fileURL, nil
+}
+
+func (r *Repository) CheckStudentCORValidByUserID(
+	ctx context.Context,
+	userID string,
+) (bool, error) {
+	var valid bool
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM student_cors sc
+			JOIN academic_settings ac ON ac.id = 1
+			WHERE sc.student_id = ? 
+			  AND sc.year_start = ac.current_year_start 
+			  AND sc.term = ac.current_term
+			  AND sc.valid_from IS NOT NULL 
+			  AND sc.valid_until IS NOT NULL
+		)
+	`
+	err := r.db.GetContext(ctx, &valid, query, userID)
+	if err != nil {
+		return false, err
+	}
+	return valid, nil
 }
 
 func (r *Repository) PostProfilePicture(
