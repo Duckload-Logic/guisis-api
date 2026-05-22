@@ -241,3 +241,55 @@ func (h *Handler) PostLogsCleanup(c *gin.Context) {
 		"rows_affected": rows,
 	})
 }
+
+// GetLog retrieves a single system log by its ID.
+func (h *Handler) GetLog(c *gin.Context) {
+	idStr := c.Param("id")
+	var id int64
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
+		fmt.Printf("[GetLog] {Parse ID}: invalid log id format: %s\n", idStr)
+		response.SendFail(c, gin.H{"error": "Invalid log ID format"})
+		return
+	}
+
+	result, err := h.service.GetLogByID(c.Request.Context(), id)
+	if err != nil {
+		fmt.Printf("[GetLog] {Fetch Log}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to retrieve log",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, result)
+}
+
+// GetTraceTracks retrieves system logs by their trace ID.
+func (h *Handler) GetTraceTracks(c *gin.Context) {
+	traceID := c.Param("traceId")
+	if traceID == "" {
+		fmt.Printf(
+			"[GetTraceTracks] {Validate Param}: trace id is required\n",
+		)
+		response.SendFail(c, gin.H{"error": "Trace ID is required"})
+		return
+	}
+
+	result, err := h.service.GetTraceTracks(c.Request.Context(), traceID)
+	if err != nil {
+		fmt.Printf("[GetTraceTracks] {Fetch Trace Tracks}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to retrieve trace tracks",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, result)
+}
+
