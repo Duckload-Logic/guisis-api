@@ -22,13 +22,13 @@ const (
 const appointmentsBaseQuery = `
 	SELECT
 		a.id,
-		u.id AS user_id,
-		ir.id AS iir_id,
-		spi.student_number AS student_number,
-		u.first_name AS user_first_name,
+		COALESCE(u.id, '') AS user_id,
+		COALESCE(ir.id, '') AS iir_id,
+		COALESCE(spi.student_number, '') AS student_number,
+		COALESCE(u.first_name, '') AS user_first_name,
 		u.middle_name AS user_middle_name,
-		u.last_name AS user_last_name,
-		u.email AS user_email,
+		COALESCE(u.last_name, '') AS user_last_name,
+		COALESCE(u.email, '') AS user_email,
 		a.reason AS reason,
 		a.admin_notes AS admin_notes,
 		DATE_FORMAT(a.when_date, '%Y-%m-%d') AS when_date,
@@ -44,9 +44,9 @@ const appointmentsBaseQuery = `
 		a.urgency_level AS urgency_level,
 		a.urgency_score AS urgency_score
 	FROM appointments a
-	JOIN iir_records ir ON a.iir_id = ir.id
-	JOIN users u ON ir.user_id = u.id
-	JOIN student_personal_info spi ON ir.id = spi.iir_id
+	LEFT JOIN iir_records ir ON a.iir_id = ir.id
+	LEFT JOIN users u ON ir.user_id = u.id
+	LEFT JOIN student_personal_info spi ON ir.id = spi.iir_id
 	JOIN time_slots ts ON a.time_slot_id = ts.id
 	JOIN appointment_categories ac ON
 		a.appointment_category_id = ac.id
