@@ -95,9 +95,7 @@ func (o *OCRClient) upload(
 	}
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	if o.apiKey != "" {
-		req.Header.Set("X-API-Key", o.apiKey)
-	}
+	req.Header.Set("X-API-Key", o.apiKey)
 
 	resp, err := o.http.Do(req)
 	if err != nil {

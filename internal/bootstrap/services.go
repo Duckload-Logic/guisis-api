@@ -54,7 +54,7 @@ func getServices(
 	gotenbergClient := gotenberg.NewClient(cfg.GotenbergURL)
 	pdfService := pdf.NewService(gotenbergClient)
 
-	ocrClient := ocr.NewClient(cfg.AIBaseUrl, "") // Assuming no API key for now
+	ocrClient := ocr.NewClient(cfg.AIBaseUrl, cfg.AiAPIKey)
 
 	fileService := files.NewService(
 		repos.FileRepo,
@@ -68,6 +68,7 @@ func getServices(
 		notificationsService,
 		userService,
 	)
+	fileService.SetLogger(systemLogService)
 
 	tokenService := tokens.NewService()
 

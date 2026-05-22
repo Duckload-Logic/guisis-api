@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/datetime"
@@ -211,9 +212,12 @@ func getActivityHelpers() template.FuncMap {
 			}
 			for i := 0; i < v.Len(); i++ {
 				item := reflect.Indirect(v.Index(i))
-				if item.FieldByName("ActivityOption").
-					FieldByName("Category").String() == target {
-					return true
+				opt := item.FieldByName("ActivityOption")
+				if opt.IsValid() {
+					name := opt.FieldByName("Name").String()
+					if strings.EqualFold(name, target) {
+						return true
+					}
 				}
 			}
 			return false
