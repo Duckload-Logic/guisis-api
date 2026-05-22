@@ -887,7 +887,7 @@
             <div class="row align-end">
                 <div class="checkbox-group">
                     <div class="checkbox-box">{{if eq $residence "Shares apartment with friends/relatives"}}✓{{end}}
-                    </div> shares apartment with friends/relatives (<u>Please Underline</u>)
+                    </div> shares apartment with friends/relatives
                 </div>
             </div>
         </div>
@@ -1012,43 +1012,106 @@
             <div class="flex-1">4. <span class="field-fill w-full inline-block">{{indexHobby .Hobbies 3}}</span></div>
         </div>
 
-        <div class="row mt-5">Which of the following organizations have you participated in and which interest you most?
-            (Please specify)</div>
+        {{$hasOfficer := false}}
+        {{$hasMember := false}}
+        {{$hasOtherRole := false}}
+        {{$otherRoleSpec := ""}}
+        {{range .Activities}}
+            {{if not (eq .ActivityOption.Category "academic")}}
+                {{if eq .Role "Officer"}}
+                    {{$hasOfficer = true}}
+                {{end}}
+                {{if eq .Role "Member"}}
+                    {{$hasMember = true}}
+                {{end}}
+                {{if eq .Role "Other"}}
+                    {{$hasOtherRole = true}}
+                    {{$otherRoleSpec = .RoleSpecification.String}}
+                {{end}}
+            {{end}}
+        {{end}}
+        <div class="row mt-5">
+            Which of the following organizations have you participated in and
+            which interest you most? (Please specify)
+        </div>
         <div class="row">
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Athletics
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities "Athletics"}}✓{{end}}
+                </div>
+                Athletics
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Religious organization
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities
+                        "Religious Organizations"}}✓{{end}}
+                </div>
+                Religious organization
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Glee Club
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities "Glee Club"}}✓{{end}}
+                </div>
+                Glee Club
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Others, please specify <span class="field-fill w-100"></span>
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities "Others"}}✓{{end}}
+                </div>
+                Others, please specify
+                <span class="field-fill w-100">
+                    {{range .Activities}}
+                        {{if eq .ActivityOption.Name "Others"}}
+                            {{.OtherSpecification.String}}
+                        {{end}}
+                    {{end}}
+                </span>
             </div>
         </div>
         <div class="row">
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Dramatics
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities "Dramatics"}}✓{{end}}
+                </div>
+                Dramatics
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Chess Club
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities "Chess Club"}}✓{{end}}
+                </div>
+                Chess Club
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Scouting
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities "Scouting"}}✓{{end}}
+                </div>
+                Scouting
             </div>
         </div>
         <div class="row align-end">
-            <span class="field-label">Occupational position in the organization:</span>
+            <span class="field-label">
+                Occupational position in the organization:
+            </span>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Officer
+                <div class="checkbox-box">
+                    {{if $hasOfficer}}✓{{end}}
+                </div>
+                Officer
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Member
+                <div class="checkbox-box">
+                    {{if $hasMember}}✓{{end}}
+                </div>
+                Member
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Others, please specify <span class="field-fill w-100"></span>
+                <div class="checkbox-box">
+                    {{if $hasOtherRole}}✓{{end}}
+                </div>
+                Others, please specify
+                <span class="field-fill w-100">
+                    {{$otherRoleSpec}}
+                </span>
             </div>
         </div>
         {{end}} {{/* end with .Interests */}}

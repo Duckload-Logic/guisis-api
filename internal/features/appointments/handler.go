@@ -430,8 +430,15 @@ func (h *Handler) PostAppointmentCancel(c *gin.Context) {
 	id := c.Param("appointmentID")
 	userID := audit.ExtractUserID(c.Request.Context())
 
-	ownerID, err := h.service.GetUserIDByAppointmentID(c.Request.Context(), id)
+	ownerID, err := h.service.GetUserIDByAppointmentID(
+		c.Request.Context(),
+		id,
+	)
 	if err != nil {
+		fmt.Printf(
+			"[PostAppointmentCancel] {Verify Ownership}: %v\n",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to verify ownership",
@@ -441,17 +448,33 @@ func (h *Handler) PostAppointmentCancel(c *gin.Context) {
 		return
 	}
 	if ownerID != userID {
-		response.SendFail(c, gin.H{"error": "Access denied"}, http.StatusForbidden)
+		response.SendFail(
+			c,
+			gin.H{"error": "Access denied"},
+			http.StatusForbidden,
+		)
 		return
 	}
 
 	appt, err := h.service.GetAppointmentByID(c.Request.Context(), id)
 	if err != nil {
+		fmt.Printf(
+			"[PostAppointmentCancel] {Fetch Appointment}: %v\n",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to fetch appointment",
 			http.StatusInternalServerError,
 			nil,
+		)
+		return
+	}
+	if appt == nil {
+		response.SendFail(
+			c,
+			gin.H{"error": "Appointment not found"},
+			http.StatusNotFound,
 		)
 		return
 	}

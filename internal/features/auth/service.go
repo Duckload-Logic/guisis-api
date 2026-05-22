@@ -442,9 +442,9 @@ func (s *Service) AuthenticateUser(
 			}
 
 			s.logger.Record(ctx, nil, audit.LogEntry{
-				Level:     audit.LevelCritical,
-				Category:  audit.CategorySecurity,
-				Action:    audit.ActionLoginFailed,
+				Level:    audit.LevelCritical,
+				Category: audit.CategorySecurity,
+				Action:   audit.ActionLoginFailed,
 				Message: fmt.Sprintf(
 					"Account locked due to too many failed attempts: %s",
 					email,
@@ -896,8 +896,6 @@ func (s *Service) PostIDPTokenExchange(
 		ctx,
 		userInfo.Email,
 	)
-	log.Printf("whitelistRoleIDs: %v", whitelistRoleIDs)
-	log.Printf("whitelistErr: %v", whitelistErr)
 
 	// User Existence Check
 	localUser, err := s.repo.GetUserByEmail(
@@ -945,7 +943,17 @@ func (s *Service) PostIDPTokenExchange(
 		err = s.repo.WithTransaction(
 			ctx,
 			func(tx datastore.DB) error {
-				return s.repo.CreateUser(ctx, tx, *localUser)
+				if err := s.repo.CreateUser(ctx, tx, *localUser); err != nil {
+					return err
+				}
+				if len(whitelistRoleIDs) > 0 {
+					return s.repo.RemoveUserFromWhitelist(
+						ctx,
+						tx,
+						userInfo.Email,
+					)
+				}
+				return nil
 			},
 		)
 		if err != nil {
@@ -955,40 +963,55 @@ func (s *Service) PostIDPTokenExchange(
 			)
 		}
 	case nil:
-		// User exists. Sync roles if they changed in the whitelist
-		if len(targetRoleIDs) > 0 {
+		// User exists. Sync roles and consume whitelist if present
+		if len(whitelistRoleIDs) > 0 && len(targetRoleIDs) > 0 {
 			addedAny := false
-			for _, targetID := range targetRoleIDs {
-				hasRole := false
-				for _, r := range localUser.Roles {
-					if r.ID == targetID {
-						hasRole = true
-						break
-					}
-				}
+			err = s.repo.WithTransaction(
+				ctx,
+				func(tx datastore.DB) error {
+					for _, targetID := range targetRoleIDs {
+						hasRole := false
+						for _, r := range localUser.Roles {
+							if r.ID == targetID {
+								hasRole = true
+								break
+							}
+						}
 
-				if !hasRole {
-					addedAny = true
-					// Promotion or sync from whitelist
-					err = s.repo.WithTransaction(ctx, func(tx datastore.DB) error {
-						return s.repo.AssignRole(ctx, tx, users.RoleAssignment{
-							UserID: localUser.ID,
-							RoleID: targetID,
-							Reason: structs.StringToNullableString(
-								"Whitelist synchronization",
-							),
-							AssignedBy: structs.StringToNullableString(
-								constants.SystemEntityType,
-							),
-						})
-					})
-					if err != nil {
-						return "", "", "", "", "", fmt.Errorf(
-							"[AuthService] {Update IDP User Role}: %w",
-							err,
-						)
+						if !hasRole {
+							addedAny = true
+							// Promotion or sync from whitelist
+							err = s.repo.AssignRole(
+								ctx,
+								tx,
+								users.RoleAssignment{
+									UserID: localUser.ID,
+									RoleID: targetID,
+									Reason: structs.StringToNullableString(
+										"Whitelist synchronization",
+									),
+									AssignedBy: structs.StringToNullableString(
+										constants.SystemEntityType,
+									),
+								},
+							)
+							if err != nil {
+								return err
+							}
+						}
 					}
-				}
+					return s.repo.RemoveUserFromWhitelist(
+						ctx,
+						tx,
+						userInfo.Email,
+					)
+				},
+			)
+			if err != nil {
+				return "", "", "", "", "", fmt.Errorf(
+					"[AuthService] {Sync Roles & Clear Whitelist}: %w",
+					err,
+				)
 			}
 
 			if addedAny {
@@ -1069,9 +1092,9 @@ func (s *Service) PostIDPTokenExchange(
 
 	// Log successful login
 	s.logger.Record(ctx, nil, audit.LogEntry{
-		Level:     audit.LevelInfo,
-		Category:  audit.CategorySecurity,
-		Action:    audit.ActionLoginSuccess,
+		Level:    audit.LevelInfo,
+		Category: audit.CategorySecurity,
+		Action:   audit.ActionLoginSuccess,
 		Message: fmt.Sprintf(
 			"User %s successfully logged in via IDP",
 			userInfo.Email,

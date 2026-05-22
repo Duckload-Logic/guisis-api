@@ -59,3 +59,17 @@ type AddUserToWhitelistRequest struct {
 type RemoveUserFromWhitelistRequest struct {
 	Email string `json:"email" binding:"required,email"`
 }
+
+type WhitelistEntry struct {
+	Email     string `db:"email"`
+	RoleID    int    `db:"role_id"`
+	RoleName  string `db:"role_name"`
+	CreatedAt string `db:"created_at"`
+}
+
+type WhitelistResponse struct {
+	Email     string `json:"email"`
+	Roles     []Role `json:"roles"`
+	CreatedAt string `json:"createdAt"`
+}
+

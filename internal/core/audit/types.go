@@ -85,6 +85,10 @@ const (
 	ActionM2MClientVerifyFailed       = "M2M_CLIENT_VERIFY_FAILED"
 	ActionM2MClientSecretRotateFailed = "M2M_CLIENT_SECRET_ROTATE_FAILED" // nolint:gosec
 	ActionSettingChangeFailed         = "SETTING_CHANGE_FAILED"
+	ActionEmailSendSuccess            = "EMAIL_SEND_SUCCESS"
+	ActionEmailSendFailed             = "EMAIL_SEND_FAILED"
+	ActionOCRProcessingSuccess        = "OCR_PROCESSING_SUCCESS"
+	ActionOCRProcessingFailed         = "OCR_PROCESSING_FAILED"
 )
 
 // Security log actions — track authentication and access events

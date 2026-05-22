@@ -194,16 +194,19 @@ func (s *Service) mapLogsToDTOs(logs []SystemLog) []audit.SystemLogDTO {
 
 	for _, l := range logs {
 		dto := audit.SystemLogDTO{
-			ID:        l.ID,
-			Category:  l.Category,
-			Action:    l.Action,
-			Message:   l.Message,
-			UserID:    l.UserID,
-			UserEmail: l.UserEmail,
-			IPAddress: l.IPAddress,
-			UserAgent: l.UserAgent,
-			TraceID:   l.TraceID,
-			CreatedAt: l.CreatedAt,
+			ID:          l.ID,
+			Level:       l.Level,
+			Category:    l.Category,
+			Action:      l.Action,
+			Message:     l.Message,
+			UserID:      l.UserID,
+			UserEmail:   l.UserEmail,
+			TargetID:    l.TargetID,
+			TargetEmail: l.TargetEmail,
+			IPAddress:   l.IPAddress,
+			UserAgent:   l.UserAgent,
+			TraceID:     l.TraceID,
+			CreatedAt:   l.CreatedAt,
 		}
 
 		if l.Metadata.Valid {
@@ -216,12 +219,42 @@ func (s *Service) mapLogsToDTOs(logs []SystemLog) []audit.SystemLogDTO {
 	return dtos
 }
 
+func (s *Service) GetLogByID(
+	ctx context.Context,
+	id int64,
+) (*audit.SystemLogDTO, error) {
+	result, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get log: %w", err)
+	}
+
+	dto := s.mapLogsToDTOs([]SystemLog{*result})
+	if len(dto) == 0 {
+		return nil, fmt.Errorf("failed to map log to dto")
+	}
+
+	return &dto[0], nil
+}
+
+func (s *Service) GetTraceTracks(
+	ctx context.Context,
+	traceID string,
+) ([]audit.SystemLogDTO, error) {
+	results, err := s.repo.GetByTraceID(ctx, traceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get trace tracks: %w", err)
+	}
+
+	return s.mapLogsToDTOs(results), nil
+}
+
 func (s *Service) DeleteLogsOlderThan(
 	ctx context.Context,
 	days int,
 ) (int64, error) {
 	return s.repo.DeleteLogsOlderThan(ctx, days)
 }
+
 
 func (s *Service) sanitizeMetadata(meta *audit.LogMetadata) {
 	if meta == nil {

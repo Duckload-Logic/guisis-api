@@ -50,7 +50,7 @@ func NewService(
 		userService:    userService,
 		noteService:    noteService,
 		studentService: studentService,
-		classifier:     classifier.NewClient(http.DefaultClient, cfg.AIBaseUrl),
+		classifier:     classifier.NewClient(http.DefaultClient, cfg.AIBaseUrl, cfg.AiAPIKey),
 	}
 }
 
@@ -95,6 +95,16 @@ func (s *Service) CreateAppointment(
 	if err == nil {
 		appt.UrgencyLevel = classification.Level
 		appt.UrgencyScore = classification.Confidence
+	} else {
+		s.logService.Record(ctx, nil, audit.LogEntry{
+			Level:    audit.LevelError,
+			Category: audit.CategorySystem,
+			Action:   "AI_CLASSIFICATION_FAILED",
+			Message: fmt.Sprintf(
+				"HuggingFace AI classification failed: %v",
+				err,
+			),
+		})
 	}
 
 	var createdAppt *AppointmentWithDetailsView
@@ -230,6 +240,9 @@ func (s *Service) GetAppointmentByID(
 	appt, err := s.repo.GetAppointment(ctx, s.repo.GetDB(), id)
 	if err != nil {
 		return nil, err
+	}
+	if appt == nil {
+		return nil, nil
 	}
 
 	dto := &AppointmentDTO{

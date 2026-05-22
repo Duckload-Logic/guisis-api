@@ -234,11 +234,9 @@ func (r *Repository) CheckStudentCORValidByUserID(
 		SELECT EXISTS(
 			SELECT 1 FROM student_cors sc
 			JOIN academic_settings ac ON ac.id = 1
-			WHERE sc.student_id = ? 
-			  AND sc.year_start = ac.current_year_start 
+			WHERE sc.student_id = ?
+			  AND sc.year_start = ac.current_year_start
 			  AND sc.term = ac.current_term
-			  AND sc.valid_from IS NOT NULL 
-			  AND sc.valid_until IS NOT NULL
 		)
 	`
 	err := r.db.GetContext(ctx, &valid, query, userID)
@@ -308,7 +306,7 @@ func (r *Repository) GetEmailsByRole(
 ) ([]string, error) {
 	var emails []string
 	query := `
-		SELECT u.email 
+		SELECT u.email
 		FROM users u
 		JOIN user_roles ur ON ur.user_id = u.id
 		WHERE ur.role_id = ? AND u.is_active = 1
@@ -510,3 +508,18 @@ func (r *Repository) RemoveUserFromWhitelist(
 	_, err := tx.ExecContext(ctx, query, email)
 	return err
 }
+
+func (r *Repository) ListWhitelist(
+	ctx context.Context,
+) ([]WhitelistEntry, error) {
+	var entries []WhitelistEntry
+	query := `
+		SELECT w.email, w.role_id, r.name as role_name, w.created_at
+		FROM whitelists w
+		JOIN roles r ON r.id = w.role_id
+		ORDER BY w.created_at DESC
+	`
+	err := r.db.SelectContext(ctx, &entries, query)
+	return entries, err
+}
+

@@ -189,34 +189,34 @@ func generateFullStudentIIR(
 	// hobbies
 	insertHobbies(ctx, tx, iirID)
 
-	// // Collect appointment and admission slip IDs for notes
-	// appointmentIDs := []string{}
-	// admissionSlipIDs := []string{}
+	// Collect appointment and admission slip IDs for notes
+	appointmentIDs := []string{}
+	admissionSlipIDs := []string{}
 
-	// // admission slip (30% chance)
-	// if rand.Float32() < 0.3 {
-	// 	slipID := insertAdmissionSlip(ctx, tx, iirID)
-	// 	if slipID != "" {
-	// 		admissionSlipIDs = append(admissionSlipIDs,
-	// 			slipID)
-	// 	}
-	// }
+	// admission slip (30% chance)
+	if rand.Float32() < 0.3 {
+		slipID := insertAdmissionSlip(ctx, tx, iirID)
+		if slipID != "" {
+			admissionSlipIDs = append(admissionSlipIDs,
+				slipID)
+		}
+	}
 
-	// // appointment (30% chance)
-	// if rand.Float32() < 0.3 {
-	// 	for i := 0; i < rand.Intn(5)+1; i++ {
-	// 		// up to 5 appointments per student
-	// 		apptID := insertAppointment(ctx, tx, iirID, appointmentsDataset)
-	// 		if apptID != "" {
-	// 			appointmentIDs = append(appointmentIDs,
-	// 				apptID)
-	// 		}
-	// 	}
-	// }
+	// appointment (30% chance)
+	if rand.Float32() < 0.3 {
+		for i := 0; i < rand.Intn(5)+1; i++ {
+			// up to 5 appointments per student
+			apptID := insertAppointment(ctx, tx, iirID, appointmentsDataset)
+			if apptID != "" {
+				appointmentIDs = append(appointmentIDs,
+					apptID)
+			}
+		}
+	}
 
-	// // significant notes (after appointments/slips created)
-	// insertSignificantNotes(ctx, tx, iirID, appointmentIDs,
-	// 	admissionSlipIDs)
+	// significant notes (after appointments/slips created)
+	insertSignificantNotes(ctx, tx, iirID, appointmentIDs,
+		admissionSlipIDs)
 
 	fmt.Printf("[Seeder] Created student %d | iirID: %s\n", index+1, iirID)
 }

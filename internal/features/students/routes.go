@@ -187,12 +187,12 @@ func RegisterRoutes(
 	// PUT is restricted to SuperAdmin only.
 	routes.GET("/settings/academic", h.GetAcademicSetting)
 
-	superadminSettingsRoutes := routes.Group("/settings")
-	superadminSettingsRoutes.Use(
-		middleware.RoleMiddleware(constants.SuperAdminRoleID),
+	counselorSettingsRoutes := routes.Group("/settings")
+	counselorSettingsRoutes.Use(
+		middleware.RoleMiddleware(constants.AdminRoleID),
 	)
 	{
-		superadminSettingsRoutes.PUT("/academic", h.PutAcademicSetting)
+		counselorSettingsRoutes.PUT("/academic", h.PutAcademicSetting)
 	}
 }
 

@@ -37,12 +37,16 @@ type Config struct {
 
 	GotenbergURL string
 
-	SendGridAPIKey string
+	SMTPHost string
+	SMTPPort int
+	SMTPUser string
+	SMTPPass string
 
 	MailPitHost string
 	MailPitPort int
 
 	AIBaseUrl string
+	AiAPIKey  string
 }
 
 func LoadConfig() *Config {
@@ -86,7 +90,16 @@ func LoadConfig() *Config {
 
 		GotenbergURL: os.Getenv("GOTENBERG_URL"),
 
-		SendGridAPIKey: os.Getenv("SENDGRID_API_KEY"),
+		SMTPHost: os.Getenv("SMTP_HOST"),
+		SMTPPort: func() int {
+			port, err := strconv.Atoi(os.Getenv("SMTP_PORT"))
+			if err != nil {
+				return 0
+			}
+			return port
+		}(),
+		SMTPUser: os.Getenv("SMTP_USER"),
+		SMTPPass: os.Getenv("SMTP_PASS"),
 
 		MailPitHost: os.Getenv("MAILPIT_HOST"),
 		MailPitPort: func() int {
@@ -99,6 +112,7 @@ func LoadConfig() *Config {
 		}(),
 
 		AIBaseUrl: os.Getenv("AI_BASE_URL"),
+		AiAPIKey:  os.Getenv("AI_API_KEY"),
 	}
 
 	validateConfig(config)
@@ -173,8 +187,17 @@ func validateStorageConfig(config *Config) {
 
 func validateProviderConfig(config *Config) {
 	if config.IsProduction {
-		if config.SendGridAPIKey == "" {
-			panic("SENDGRID_API_KEY is required for production")
+		if config.SMTPHost == "" {
+			panic("SMTP_HOST is required for production")
+		}
+		if config.SMTPPort == 0 {
+			panic("SMTP_PORT is required for production")
+		}
+		if config.SMTPUser == "" {
+			panic("SMTP_USER is required for production")
+		}
+		if config.SMTPPass == "" {
+			panic("SMTP_PASS is required for production")
 		}
 	} else {
 		if config.MailPitHost == "" {
