@@ -66,4 +66,16 @@ func RegisterRoutes(
 		middleware.RoleMiddleware(constants.SuperAdminRoleID),
 		h.PostUpdateRoles,
 	)
+	userRoutes.POST("/whitelist",
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
+		h.PostUserToWhitelist,
+	)
+	userRoutes.POST("/whitelist/remove",
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
+		h.PostRemoveUserFromWhitelist,
+	)
+	userRoutes.GET("/whitelist",
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
+		h.GetWhitelist,
+	)
 }
