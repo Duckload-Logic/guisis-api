@@ -2,6 +2,7 @@ package audit
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
@@ -128,6 +129,40 @@ func Dispatch(
 					`[Audit:Dispatch] {Send Email}: %v`,
 					err,
 				)
+				if logger != nil {
+					logger.Record(ctx, params.Tx, LogEntry{
+						Level:    LevelError,
+						Category: CategorySystem,
+						Action:   ActionEmailSendFailed,
+						Message: fmt.Sprintf(
+							"SMTP Mailer failed to send email to %v: %v",
+							e.To,
+							err,
+						),
+						UserID:    structs.StringToNullableString(id),
+						UserEmail: structs.StringToNullableString(email),
+						IPAddress: structs.StringToNullableString(ip),
+						UserAgent: structs.StringToNullableString(ua),
+						TraceID:   structs.StringToNullableString(trace),
+					})
+				}
+			} else {
+				if logger != nil {
+					logger.Record(ctx, params.Tx, LogEntry{
+						Level:    LevelInfo,
+						Category: CategorySystem,
+						Action:   ActionEmailSendSuccess,
+						Message: fmt.Sprintf(
+							"Successfully sent email to %v",
+							e.To,
+						),
+						UserID:    structs.StringToNullableString(id),
+						UserEmail: structs.StringToNullableString(email),
+						IPAddress: structs.StringToNullableString(ip),
+						UserAgent: structs.StringToNullableString(ua),
+						TraceID:   structs.StringToNullableString(trace),
+					})
+				}
 			}
 		}
 	}
