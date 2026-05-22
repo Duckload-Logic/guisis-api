@@ -13,13 +13,15 @@ import (
 type ClassifierClient struct {
 	httpClient *http.Client
 	baseUrl    string
+	apiKey     string
 }
 
 // NewIDPClient creates a new IDP client with configured timeout
-func NewClient(httpClient *http.Client, baseUrl string) *ClassifierClient {
+func NewClient(httpClient *http.Client, baseUrl string, apiKey string) *ClassifierClient {
 	return &ClassifierClient{
 		httpClient: httpClient,
 		baseUrl:    baseUrl,
+		apiKey:     apiKey,
 	}
 }
 
@@ -47,6 +49,7 @@ func (c *ClassifierClient) Classify(
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-API-KEY", c.apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
