@@ -130,6 +130,7 @@ func getServices(
 		userService,
 		studentService,
 		fileService,
+		ocrClient,
 		cfg,
 	)
 	analyticsService := analytics.NewService(
