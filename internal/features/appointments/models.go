@@ -14,9 +14,8 @@ type TimeSlot struct {
 
 // AppointmentStatus represents the lifecycle state of an appointment.
 type AppointmentStatus struct {
-	ID       int    `db:"id"        json:"id"`
-	Name     string `db:"name"      json:"name"`
-	ColorKey string `db:"color_key" json:"colorKey"`
+	ID   int    `db:"id"        json:"id"`
+	Name string `db:"name"      json:"name"`
 }
 
 // StatusCount represents a summary of appointments per status.
@@ -76,7 +75,6 @@ type AppointmentWithDetailsView struct {
 	CategoryName   string                 `db:"category_name"    json:"categoryName"`
 	StatusID       int                    `db:"status_id"        json:"statusId"`
 	StatusName     string                 `db:"status_name"      json:"statusName"`
-	StatusColorKey string                 `db:"status_color_key" json:"statusColorKey"`
 	UrgencyLevel   string                 `db:"urgency_level"     json:"urgencyLevel"`
 	UrgencyScore   float64                `db:"urgency_score"     json:"urgencyScore"`
 }

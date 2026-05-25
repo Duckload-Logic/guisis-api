@@ -40,7 +40,6 @@ const appointmentsBaseQuery = `
 		ac.name AS category_name,
 		as2.id AS status_id,
 		as2.name AS status_name,
-		as2.color_key AS status_color_key,
 		a.urgency_level AS urgency_level,
 		a.urgency_score AS urgency_score
 	FROM appointments a
@@ -248,7 +247,7 @@ func (r *Repository) List(
 	}
 
 	query += fmt.Sprintf(
-		" ORDER BY a.%s LIMIT %d OFFSET %d",
+		" ORDER BY a.%s DESC LIMIT %d OFFSET %d",
 		orderBy,
 		limit,
 		offset,
@@ -308,7 +307,7 @@ func (r *Repository) GetStatusByID(
 	id int,
 ) (*AppointmentStatus, error) {
 	query := `
-		SELECT id, name, color_key
+		SELECT id, name
 		FROM statuses
 		WHERE status_type IN ('appointment', 'both')
 		AND id = ?
@@ -373,7 +372,7 @@ func (r *Repository) GetStatuses(
 	ctx context.Context,
 ) ([]AppointmentStatus, error) {
 	query := `
-		SELECT id, name, color_key
+		SELECT id, name
 		FROM statuses
 		WHERE status_type IN ('appointment', 'both')
 	`
@@ -403,7 +402,7 @@ func (r *Repository) ListByUserID(
 	)
 
 	query += fmt.Sprintf(
-		" ORDER BY a.%s LIMIT %d OFFSET %d",
+		" ORDER BY a.%s DESC LIMIT %d OFFSET %d",
 		orderBy,
 		limit,
 		offset,
@@ -435,7 +434,7 @@ func (r *Repository) ListByIIRID(
 	)
 
 	query += fmt.Sprintf(
-		" ORDER BY a.%s LIMIT %d OFFSET %d",
+		" ORDER BY a.%s DESC LIMIT %d OFFSET %d",
 		orderBy,
 		limit,
 		offset,
