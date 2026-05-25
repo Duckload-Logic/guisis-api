@@ -977,9 +977,21 @@
                 <div class="checkbox-box">{{if hasActivity .Activities "Science Club"}}✓{{end}}</div> Science Club
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box">{{if hasActivity .Activities "Others"}}✓{{end}}</div> Others, please specify
-                <span class="field-fill w-150">{{range .Activities}}{{if eq .ActivityOption.Name
-                    "Others"}}{{.OtherSpecification.String}}{{end}}{{end}}</span>
+                <div class="checkbox-box">
+                    {{if hasActivityCategory
+                        .Activities "Others" "academic"}}
+                        ✓
+                    {{end}}
+                </div>
+                Others, please specify
+                <span class="field-fill w-150">
+                    {{range .Activities}}
+                        {{if and (eq .ActivityOption.Name "Others")
+                            (eq .ActivityOption.Category "academic")}}
+                            {{.OtherSpecification.String}}
+                        {{end}}
+                    {{end}}
+                </span>
             </div>
         </div>
         <div class="row">
@@ -1056,12 +1068,16 @@
             </div>
             <div class="checkbox-group">
                 <div class="checkbox-box">
-                    {{if hasActivity .Activities "Others"}}✓{{end}}
+                    {{if hasActivityCategory
+                        .Activities "Others" "extra_curricular"}}
+                        ✓
+                    {{end}}
                 </div>
                 Others, please specify
                 <span class="field-fill w-100">
                     {{range .Activities}}
-                        {{if eq .ActivityOption.Name "Others"}}
+                        {{if and (eq .ActivityOption.Name "Others")
+                            (eq .ActivityOption.Category "extra_curricular")}}
                             {{.OtherSpecification.String}}
                         {{end}}
                     {{end}}

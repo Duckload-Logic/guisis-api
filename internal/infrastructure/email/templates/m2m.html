@@ -123,10 +123,17 @@
 				</div>
 			</div>
 
+			{{ if eq .Status "Approved" }}
 			<p style="font-size: 14px; color: #6c757d; text-align: left">
 				You can now use your client credentials to authenticate with the
 				GuiSIS API.
 			</p>
+			{{ else }}
+			<p style="font-size: 14px; color: #6c757d; text-align: left">
+				Your M2M client request has been declined. Please contact the
+				system administrator for more information.
+			</p>
+			{{ end }}
 
 			<div class="footer">
 				If you did not request this client, please contact the system

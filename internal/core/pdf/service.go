@@ -222,6 +222,29 @@ func getActivityHelpers() template.FuncMap {
 			}
 			return false
 		},
+		"hasActivityCategory": func(
+			activities interface{},
+			target string,
+			category string,
+		) bool {
+			v := reflect.ValueOf(activities)
+			if v.Kind() != reflect.Slice {
+				return false
+			}
+			for i := 0; i < v.Len(); i++ {
+				item := reflect.Indirect(v.Index(i))
+				opt := item.FieldByName("ActivityOption")
+				if opt.IsValid() {
+					name := opt.FieldByName("Name").String()
+					cat := opt.FieldByName("Category").String()
+					if strings.EqualFold(name, target) &&
+						strings.EqualFold(cat, category) {
+						return true
+					}
+				}
+			}
+			return false
+		},
 		"indexHobby": func(hobbies interface{}, index int) string {
 			v := reflect.ValueOf(hobbies)
 			if v.Kind() != reflect.Slice {

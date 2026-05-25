@@ -15,9 +15,8 @@ type SlipCategory struct {
 
 // SlipStatus represents the lifecycle state of a slip request.
 type SlipStatus struct {
-	ID       int    `db:"id"        json:"id"`
-	Name     string `db:"name"      json:"name"`
-	ColorKey string `db:"color_key" json:"colorKey"`
+	ID   int    `db:"id"        json:"id"`
+	Name string `db:"name"      json:"name"`
 }
 
 // SlipWithDetailsView represents a denormalized view of a slip for listings.
@@ -39,7 +38,6 @@ type SlipWithDetailsView struct {
 	StatusID       int                    `db:"status_id"        json:"statusId"`
 	StatusName     string                 `db:"status_name"      json:"statusName"`
 	UrgencyScore   int                    `db:"urgency_score"    json:"urgencyScore"`
-	StatusColorKey string                 `db:"status_color_key" json:"statusColorKey"`
 	TicketCode     structs.NullableString `db:"ticket_code"       json:"ticketCode,omitempty"`
 	IsVerified     sql.NullBool           `db:"is_verified"       json:"isVerified,omitempty"`
 	VerifiedAt     structs.NullableTime   `db:"verified_at"       json:"verifiedAt,omitempty"`
@@ -49,10 +47,9 @@ type SlipWithDetailsView struct {
 
 // SlipStatusCount represents aggregated status metrics.
 type SlipStatusCount struct {
-	ID       int    `db:"id"        json:"id"`
-	Name     string `db:"name"      json:"name"`
-	ColorKey string `db:"color_key" json:"colorKey"`
-	Count    int    `db:"count"     json:"count"`
+	ID    int    `db:"id"        json:"id"`
+	Name  string `db:"name"      json:"name"`
+	Count int    `db:"count"     json:"count"`
 }
 
 // Slip represents the core entity for an excuse or admission slip.

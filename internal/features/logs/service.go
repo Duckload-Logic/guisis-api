@@ -126,11 +126,10 @@ func (s *Service) notifySuperadmins(ctx context.Context, entry audit.LogEntry) {
 
 func (s *Service) RecordSecurity(
 	ctx context.Context,
-	tx datastore.DB,
 	action, message string,
 	userEmail, userID, ipAddress, userAgent structs.NullableString,
 ) {
-	s.Record(ctx, tx, audit.LogEntry{
+	s.Record(ctx, nil, audit.LogEntry{
 		Category:  audit.CategorySecurity,
 		Action:    action,
 		Message:   message,
@@ -139,6 +138,15 @@ func (s *Service) RecordSecurity(
 		IPAddress: ipAddress,
 		UserAgent: userAgent,
 	})
+}
+
+// RecordEntry records an audit.LogEntry directly. It satisfies the
+// middleware.SecurityLogger interface without requiring a transaction.
+func (s *Service) RecordEntry(
+	ctx context.Context,
+	entry audit.LogEntry,
+) {
+	s.Record(ctx, nil, entry)
 }
 
 func (s *Service) ListLogs(

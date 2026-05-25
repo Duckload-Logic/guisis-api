@@ -128,7 +128,8 @@ INSERT INTO activity_options (`name`, category) VALUES
     ('Chess Club', 'extra_curricular'),
     ('Glee Club', 'extra_curricular'),
     ('Scouting', 'extra_curricular'),
-    ("Others", 'both');
+    ('Others', 'academic'),
+    ('Others', 'extra_curricular');
 
 INSERT INTO appointment_categories (id, name) VALUES
     (1, 'Academic'),
@@ -136,24 +137,26 @@ INSERT INTO appointment_categories (id, name) VALUES
     (3, 'Personal'),
     (4, 'Career Guidance'),
     (5, 'Mental Health'),
-    (6, 'Other');
+    (6, 'Psychological Testing'),
+    (7, 'Other');
 
 INSERT INTO admission_slip_categories (id, name) VALUES
     (1, 'Medical'),
     (2, 'Personal'),
     (3, 'Family-related'),
-    (4, 'Other');
+    (4, 'Scholarship'),
+    (5, 'Other');
 
-INSERT INTO statuses (id, name, color_key, status_type) VALUES
-    (1, 'Pending', 'warning', 'both'), -- Orange
-    (2, 'Scheduled', 'info', 'appointment'), -- Blue
-    (3, 'Completed', 'success', 'appointment'), -- Green
-    (4, 'Cancelled', 'danger', 'appointment'), -- Red
-    (5, 'Rejected', 'danger', 'both'), -- Red
-    (6, 'Rescheduled', 'notice', 'appointment'), -- Orange
-    (7, 'No-show', 'stale', 'appointment'), -- Gray
-    (8, 'Approved', 'success', 'slip'), -- Green
-    (9, 'For Revision', 'notice', 'slip'); -- Red
+INSERT INTO statuses (id, name, status_type) VALUES
+    (1, 'Pending', 'both'),
+    (2, 'Scheduled', 'appointment'),
+    (3, 'Completed',  'appointment'),
+    (4, 'Cancelled', 'appointment'),
+    (5, 'Rejected', 'both'),
+    (6, 'Rescheduled', 'appointment'),
+    (7, 'No-show', 'appointment'),
+    (8, 'Approved', 'slip'),
+    (9, 'For Revision', 'slip');
 
 INSERT INTO time_slots (id, time) VALUES
     (1, '08:00:00'),
@@ -164,11 +167,3 @@ INSERT INTO time_slots (id, time) VALUES
     (6, '14:00:00'),
     (7, '15:00:00'),
     (8, '16:00:00'),
-    (9, '17:00:00');
-
--- INSERT INTO appointment_types (id, appointment_type_name)
--- VALUES
---     (1, 'Initial Interview'),
---     (2, 'Mental Health Consultation'),
---     (3, 'Career Guidance'),
---     (4, 'Follow-up');

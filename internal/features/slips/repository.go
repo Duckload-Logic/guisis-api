@@ -37,7 +37,6 @@ const (
 		c.name AS category_name,
 		slp.status_id AS status_id,
 		s.name AS status_name,
-		s.color_key AS status_color_key,
 		t.ticket_code AS ticket_code,
 		t.is_verified AS is_verified,
 		t.verified_at AS verified_at,
@@ -51,7 +50,7 @@ const (
 	JOIN statuses s ON slp.status_id = s.id
 	LEFT JOIN admission_tickets t ON slp.id = t.admission_slip_id
 `
-	orderSlipsCreatedDesc = " ORDER BY slp.created_at DESC LIMIT ? OFFSET ?"
+	orderSlipsCreatedDesc = " ORDER BY slp.date_needed ASC LIMIT ? OFFSET ?"
 )
 
 func (r *Repository) GetDB() *sqlx.DB {
@@ -175,7 +174,7 @@ func (r *Repository) GetSlipStatuses(
 	ctx context.Context,
 ) ([]SlipStatus, error) {
 	var statuses []SlipStatus
-	query := `SELECT id, name, color_key FROM statuses WHERE status_type IN ('slip', 'both')`
+	query := `SELECT id, name FROM statuses WHERE status_type IN ('slip', 'both')`
 	err := r.db.SelectContext(ctx, &statuses, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get slip statuses: %w", err)
@@ -209,13 +208,12 @@ func (r *Repository) GetSlipStats(
 		SELECT
 			s.id AS id,
 			s.name AS name,
-			s.color_key AS color_key,
 			COUNT(slp.id) AS count
 		FROM statuses s
 		LEFT JOIN admission_slips slp
 			ON s.id = slp.status_id AND %s
 		WHERE s.status_type IN ('slip', 'both')
-		GROUP BY s.id, s.name, s.color_key
+		GROUP BY s.id, s.name
 	`, filterConditions)
 	err := r.db.SelectContext(ctx, &counts, query, args...)
 	if err != nil {
@@ -241,12 +239,12 @@ func (r *Repository) applyFilters(
 	}
 
 	if req.StartDate != "" {
-		query += " AND slp.created_at >= ?"
+		query += " AND slp.date_needed >= ?"
 		args = append(args, req.StartDate)
 	}
 
 	if req.EndDate != "" {
-		query += " AND slp.created_at <= ?"
+		query += " AND slp.date_needed <= ?"
 		args = append(args, req.EndDate)
 	}
 
@@ -272,6 +270,7 @@ func (r *Repository) applyFilters(
 func (r *Repository) GetTotalSlipsCount(
 	ctx context.Context,
 	req *ListSlipsRequest,
+	iirID *string,
 ) (int, error) {
 	query, args := r.applyFilters(
 		`SELECT COUNT(*) FROM admission_slips slp
@@ -280,7 +279,7 @@ func (r *Repository) GetTotalSlipsCount(
 		 WHERE 1=1`,
 		nil,
 		req,
-		nil,
+		iirID,
 	)
 
 	var count int
@@ -621,8 +620,8 @@ func (r *Repository) GetTicketByCode(
 	code string,
 ) (*AdmissionTicket, error) {
 	var ticket AdmissionTicket
-	query := `SELECT id, admission_slip_id, ticket_code, is_verified, 
-			  verified_at, verified_by, created_at, updated_at 
+	query := `SELECT id, admission_slip_id, ticket_code, is_verified,
+			  verified_at, verified_by, created_at, updated_at
 			  FROM admission_tickets WHERE ticket_code = ?`
 	err := r.db.GetContext(ctx, &ticket, query, code)
 	if err != nil {
@@ -667,8 +666,8 @@ func (r *Repository) GetTicketBySlipID(
 	slipID string,
 ) (*AdmissionTicket, error) {
 	var ticket AdmissionTicket
-	query := `SELECT id, admission_slip_id, ticket_code, is_verified, 
-			  verified_at, verified_by, created_at, updated_at 
+	query := `SELECT id, admission_slip_id, ticket_code, is_verified,
+			  verified_at, verified_by, created_at, updated_at
 			  FROM admission_tickets WHERE admission_slip_id = ?`
 	err := r.db.GetContext(ctx, &ticket, query, slipID)
 	if err != nil {
@@ -694,4 +693,24 @@ func (r *Repository) GetSlipByTicketCode(
 		return nil, fmt.Errorf("failed to get slip by ticket code: %w", err)
 	}
 	return &slip, nil
+}
+
+func (r *Repository) HasNoteForAdmissionSlip(
+	ctx context.Context,
+	admissionSlipID string,
+) (bool, error) {
+	var count int
+	query := `
+		SELECT COUNT(*)
+		FROM significant_notes
+		WHERE admission_slip_id = ?
+	`
+	err := r.db.GetContext(ctx, &count, query, admissionSlipID)
+	if err != nil {
+		return false, fmt.Errorf(
+			"failed to check for existing note: %w",
+			err,
+		)
+	}
+	return count > 0, nil
 }

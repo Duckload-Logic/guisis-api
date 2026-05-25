@@ -88,21 +88,30 @@ func (s *Service) CreateClient(
 	}
 
 	// Dispatch notifications
-	superadminIDs, _ := s.userService.GetUserIDsByRole(ctx, int(constants.SuperAdminRoleID))
+	superadminIDs, _ := s.userService.GetUserIDsByRole(
+		ctx,
+		int(constants.SuperAdminRoleID),
+	)
 	notifications := []audit.NotificationParams{
 		{
 			ReceiverID: structs.StringToNullableString(userID),
 			Title:      "M2M Client Request Sent",
-			Message:    "Your request for a new M2M client has been notified to the Superadmin. Please wait for approval.",
-			Type:       "m2m",
+			Message: "Your request for a new M2M client " +
+				"has been notified to the Superadmin. " +
+				"Please wait for approval.",
+			Type: constants.SystemEntityType,
 		},
 	}
 	for _, aid := range superadminIDs {
 		notifications = append(notifications, audit.NotificationParams{
 			ReceiverID: structs.StringToNullableString(aid),
 			Title:      "M2M Client Pending Approval",
-			Message:    fmt.Sprintf("New M2M client request from user %s is pending for approval.", userID),
-			Type:       "m2m",
+			Message: fmt.Sprintf(
+				"New M2M client request from user %s " +
+					"is pending for approval.",
+				userID,
+			),
+			Type: constants.SystemEntityType,
 		})
 	}
 
@@ -136,7 +145,7 @@ func (s *Service) CreateClient(
 					"TimeSlot":     time.Now().Format("2006-01-02 15:04:05"),
 					"UrgencyLevel": "HIGH",
 					"RequestURL": fmt.Sprintf(
-						"%s/superadmin/m2m-clients",
+						"%s/superadmin/m2m-management",
 						s.cfg.BaseURL,
 					),
 				},
@@ -220,10 +229,16 @@ func (s *Service) issueTokens(
 		return nil, err
 	}
 
+	isVerifiedStr := "false"
+	if client.IsVerified {
+		isVerifiedStr = "true"
+	}
+
 	val := map[string]string{
-		"userID":    client.UserID,
-		"tokenType": "m2m",
-		"clientID":  client.ClientID,
+		"userID":     client.UserID,
+		"tokenType":  "m2m",
+		"clientID":   client.ClientID,
+		"isVerified": isVerifiedStr,
 	}
 	err = s.sessionService.StoreToken(
 		ctx,
@@ -249,9 +264,10 @@ func (s *Service) issueTokens(
 	}
 
 	rVal := map[string]string{
-		"userID":    client.UserID,
-		"tokenType": "m2m_refresh",
-		"clientID":  client.ClientID,
+		"userID":     client.UserID,
+		"tokenType":  "m2m_refresh",
+		"clientID":   client.ClientID,
+		"isVerified": isVerifiedStr,
 	}
 	err = s.sessionService.StoreToken(
 		ctx,
@@ -330,38 +346,114 @@ func (s *Service) Verify(ctx context.Context, id string) error {
 
 	client, err := s.repo.GetByID(ctx, id)
 	if err != nil {
-		return nil // Should not happen if verify succeeded
+		return fmt.Errorf(
+			"failed to fetch client after verification: %w",
+			err,
+		)
 	}
 
 	user, _ := s.userService.GetUserByID(ctx, client.UserID)
 
-	audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
-		Log: &audit.LogParams{
-			Level:    audit.LevelInfo,
-			Category: audit.CategoryAudit,
-			Action:   audit.ActionM2MClientVerified,
-			Message:  fmt.Sprintf("M2M Client %s verified", id),
-		},
-		Notifications: []audit.NotificationParams{
-			{
-				ReceiverID: structs.StringToNullableString(client.UserID),
-				Title:      "M2M Client Approved",
-				Message:    fmt.Sprintf("Your M2M client '%s' has been approved and is ready for use.", client.ClientName),
-				Type:       "m2m",
+	audit.Dispatch(
+		ctx,
+		s.logService,
+		s.notifService,
+		s.emailService,
+		audit.DispatchParams{
+			Log: &audit.LogParams{
+				Level:    audit.LevelInfo,
+				Category: audit.CategoryAudit,
+				Action:   audit.ActionM2MClientVerified,
+				Message:  fmt.Sprintf("M2M Client %s verified", id),
 			},
-		},
-		Email: []audit.EmailParams{
-			{
-				To:           []string{user.Email},
-				Subject:      "M2M Client Approved",
-				TemplatePath: "m2m.html",
-				TemplateData: map[string]interface{}{
-					"ClientName": client.ClientName,
-					"ClientID":   client.ClientID,
+			Notifications: []audit.NotificationParams{
+				{
+					ReceiverID: structs.StringToNullableString(
+						client.UserID,
+					),
+					Title: "M2M Client Approved",
+					Message: fmt.Sprintf(
+						"Your M2M client '%s' has " +
+							"been approved and is ready for use.",
+						client.ClientName,
+					),
+					Type: constants.SystemEntityType,
+				},
+			},
+			Email: []audit.EmailParams{
+				{
+					To:           []string{user.Email},
+					Subject:      "M2M Client Approved",
+					TemplatePath: "m2m.html",
+					TemplateData: map[string]interface{}{
+						"Status":     "Approved",
+						"ClientName": client.ClientName,
+						"ClientID":   client.ClientID,
+					},
 				},
 			},
 		},
-	})
+	)
+
+	return nil
+}
+
+func (s *Service) Reject(ctx context.Context, id string) error {
+	client, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to fetch client before rejection: %w",
+			err,
+		)
+	}
+
+	err = s.repo.DeactivateByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	user, _ := s.userService.GetUserByID(ctx, client.UserID)
+
+	audit.Dispatch(
+		ctx,
+		s.logService,
+		s.notifService,
+		s.emailService,
+		audit.DispatchParams{
+			Log: &audit.LogParams{
+				Level:    audit.LevelInfo,
+				Category: audit.CategoryAudit,
+				Action:   audit.ActionM2MClientRevoked,
+				Message:  fmt.Sprintf("M2M Client %s rejected", id),
+			},
+			Notifications: []audit.NotificationParams{
+				{
+					ReceiverID: structs.StringToNullableString(
+						client.UserID,
+					),
+					Title: "M2M Client Rejected",
+					Message: fmt.Sprintf(
+						"Your M2M client request '%s' " +
+							"has been rejected.",
+						client.ClientName,
+					),
+					Type: constants.SystemEntityType,
+				},
+			},
+			Email: []audit.EmailParams{
+				{
+					To:           []string{user.Email},
+					Subject:      "M2M Client Rejected",
+					TemplatePath: "m2m.html",
+					TemplateData: map[string]interface{}{
+						"Status":     "Rejected",
+						"ClientName": client.ClientName,
+						"ClientID":   client.ClientID,
+					},
+				},
+			},
+		},
+	)
 
 	return nil
 }

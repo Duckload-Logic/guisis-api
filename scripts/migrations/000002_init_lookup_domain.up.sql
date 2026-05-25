@@ -91,7 +91,6 @@ CREATE UNIQUE INDEX unique_idx_admission_slip_category_name ON admission_slip_ca
 CREATE TABLE statuses (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
-    color_key ENUM('warning', 'danger', 'success', 'info', 'stale', 'notice') NOT NULL,
     status_type ENUM('appointment', 'slip', 'both') NOT NULL DEFAULT 'both'
 ) ENGINE = InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 

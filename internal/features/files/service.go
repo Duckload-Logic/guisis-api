@@ -179,10 +179,7 @@ func (s *Service) UploadFiles(
 						TraceID:   structs.StringToNullableString(trace),
 					})
 				}
-				return nil, fmt.Errorf(
-					"this file does not appear to be a valid COR: %w",
-					err,
-				)
+				return nil, fmt.Errorf("this file does not appear to be a valid COR")
 			}
 			if corResp == nil {
 				if s.logger != nil {

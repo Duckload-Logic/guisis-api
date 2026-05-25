@@ -46,7 +46,7 @@ func (r *Repository) GetProvincesByRegion(
 		SELECT id, code, name, region_code
 		FROM provinces
 		WHERE region_code = ?
-		ORDER BY name
+		ORDER BY name ASC
 	`
 	var provinces []Province
 	err := r.db.SelectContext(ctx, &provinces, query, regionCode)
@@ -65,7 +65,7 @@ func (r *Repository) GetCitiesByProvince(
 		SELECT id, code, name, province_code, type, zip_code, district, region_code
 		FROM cities
 		WHERE province_code = ?
-		ORDER BY name
+		ORDER BY name ASC
 	`
 	var cities []City
 	err := r.db.SelectContext(ctx, &cities, query, provinceCode)
@@ -84,7 +84,7 @@ func (r *Repository) GetCitiesByRegion(
 		SELECT id, code, name, province_code, type, zip_code, district, region_code
 		FROM cities
 		WHERE region_code = ?
-		ORDER BY name
+		ORDER BY name ASC
 	`
 	var cities []City
 	err := r.db.SelectContext(ctx, &cities, query, regionCode)
@@ -103,7 +103,7 @@ func (r *Repository) GetBarangaysByCity(
 		SELECT id, code, name, city_code
 		FROM barangays
 		WHERE city_code = ?
-		ORDER BY name
+		ORDER BY name ASC
 	`
 	var barangays []Barangay
 	err := r.db.SelectContext(ctx, &barangays, query, cityCode)

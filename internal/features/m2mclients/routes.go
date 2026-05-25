@@ -47,6 +47,7 @@ func RegisterRoutes(
 		{
 			adminOnly.GET("", h.GetM2MClients)
 			adminOnly.PATCH("/:id/verify", h.PatchM2MClientVerify)
+			adminOnly.PATCH("/:id/reject", h.PatchM2MClientReject)
 		}
 
 		devOnly := m2mMgmt.Group("")

@@ -45,12 +45,13 @@ func (s *Service) GetStudentSignificantNotes(
 	noteDTOs := make([]SignificantNoteDTO, 0, len(notes))
 	for _, n := range notes {
 		noteDTOs = append(noteDTOs, SignificantNoteDTO{
-			ID:            n.ID,
-			AppointmentID: n.AppointmentID.String,
-			Note:          n.Note,
-			Remarks:       n.Remarks,
-			CreatedAt:     n.CreatedAt,
-			UpdatedAt:     n.UpdatedAt,
+			ID:              n.ID,
+			AppointmentID:   n.AppointmentID.String,
+			AdmissionSlipID: n.AdmissionSlipID.String,
+			Note:            n.Note,
+			Remarks:         n.Remarks,
+			CreatedAt:       n.CreatedAt,
+			UpdatedAt:       n.UpdatedAt,
 		})
 	}
 
@@ -67,6 +68,9 @@ func (s *Service) CreateSignificantNote(
 		IIRID: structs.StringToNullableString(iirID),
 		AppointmentID: structs.StringToNullableString(
 			noteReq.AppointmentID,
+		),
+		AdmissionSlipID: structs.StringToNullableString(
+			noteReq.AdmissionSlipID,
 		),
 		Note:    noteReq.Note,
 		Remarks: noteReq.Remarks,

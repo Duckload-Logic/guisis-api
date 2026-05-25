@@ -93,20 +93,22 @@ const (
 
 // Security log actions — track authentication and access events
 const (
-	ActionLoginSuccess       = "LOGIN_SUCCESS"
-	ActionLoginFailed        = "LOGIN_FAILED"
-	ActionLogout             = "LOGOUT"
-	ActionTokenRefreshed     = "TOKEN_REFRESHED"
-	ActionAccessDenied       = "ACCESS_DENIED"
-	ActionRateLimitExceeded  = "RATE_LIMIT_EXCEEDED"
-	ActionInvalidToken       = "INVALID_TOKEN"
-	ActionM2MClientUsed      = "M2M_CLIENT_USED"
-	ActionM2MClientInvalid   = "M2M_CLIENT_INVALID"
-	ActionM2MAuthSuccess     = "M2M_AUTH_SUCCESS"
-	ActionM2MAuthFailed      = "M2M_AUTH_FAILED"
-	ActionM2MTokenRefreshed  = "M2M_TOKEN_REFRESHED" // nolint:gosec
-	ActionElevateRoles       = "ELEVATE_ROLES"
-	ActionElevateRolesFailed = "ELEVATE_ROLES_FAILED"
+	ActionLoginSuccess        = "LOGIN_SUCCESS"
+	ActionLoginFailed         = "LOGIN_FAILED"
+	ActionLogout              = "LOGOUT"
+	ActionTokenRefreshed      = "TOKEN_REFRESHED"
+	ActionAccessDenied        = "ACCESS_DENIED"
+	ActionRateLimitExceeded   = "RATE_LIMIT_EXCEEDED"
+	ActionInvalidToken        = "INVALID_TOKEN"
+	ActionM2MClientUsed       = "M2M_CLIENT_USED"
+	ActionM2MClientInvalid    = "M2M_CLIENT_INVALID"
+	ActionM2MAuthSuccess      = "M2M_AUTH_SUCCESS"
+	ActionM2MAuthFailed       = "M2M_AUTH_FAILED"
+	ActionM2MTokenRefreshed   = "M2M_TOKEN_REFRESHED" // nolint:gosec
+	ActionElevateRoles        = "ELEVATE_ROLES"
+	ActionElevateRolesFailed  = "ELEVATE_ROLES_FAILED"
+	ActionM2MDataAccess       = "M2M_DATA_ACCESS"
+	ActionM2MDataAccessDenied = "M2M_DATA_ACCESS_DENIED"
 )
 
 // LogEntry is the input struct used by other services to record a log.
