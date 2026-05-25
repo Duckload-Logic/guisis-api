@@ -45,3 +45,8 @@ type CORResponse struct {
 	Campus            string `json:"campus"`
 	Section           int    `json:"section"`
 }
+
+type ValidationResponse struct {
+	IsValid bool   `json:"is_valid"`
+	Message string `json:"message"`
+}

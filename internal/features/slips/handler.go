@@ -84,26 +84,38 @@ func (h *Handler) PostSlip(c *gin.Context) {
 	}
 
 	var files []*multipart.FileHeader
-	fieldNames := []string{
-		"files", "excuseLetter", "parentId", "medicalCert",
-	}
+	var parentIdFiles []*multipart.FileHeader
 
-	for _, field := range fieldNames {
+	for _, field := range []string{"files", "excuseLetter", "medicalCert"} {
 		if f := form.File[field]; len(f) > 0 {
 			files = append(files, f...)
 		}
 	}
+	if f := form.File["parentId"]; len(f) > 0 {
+		parentIdFiles = append(parentIdFiles, f...)
+	}
 
-	if len(files) == 0 {
+	if len(files) == 0 && len(parentIdFiles) == 0 {
 		response.SendFail(c, gin.H{"error": "At least one file required"})
 		return
 	}
 
 	slip, err := h.service.SubmitExcuseSlip(
-		c.Request.Context(), iirID, req, files,
+		c.Request.Context(), iirID, req, files, parentIdFiles,
 	)
 	if err != nil {
-		fmt.Printf("[PostSlip] {Submit Slip}: %v\n", err)
+		fmt.Printf("[PostSlip] {Submit Excuse Slip}: %v\n", err)
+		errStr := err.Error()
+		if strings.Contains(errStr, "invalid") ||
+			strings.Contains(errStr, "too large") ||
+			strings.Contains(errStr, "cannot") ||
+			strings.Contains(errStr, "absence date") ||
+			strings.Contains(errStr, "limit") ||
+			strings.Contains(errStr, "offline") ||
+			strings.Contains(errStr, "OCR") {
+			response.SendFail(c, gin.H{"error": errStr})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to submit slip",
@@ -466,31 +478,42 @@ func (h *Handler) PatchSlip(c *gin.Context) {
 	}
 
 	var files []*multipart.FileHeader
-	fieldNames := []string{
-		"files",
-		"excuseLetter",
-		"parentId",
-		"medicalCert",
-	}
-	for _, field := range fieldNames {
+	var parentIdFiles []*multipart.FileHeader
+
+	for _, field := range []string{"files", "excuseLetter", "medicalCert"} {
 		if f := form.File[field]; len(f) > 0 {
 			files = append(files, f...)
 		}
 	}
+	if f := form.File["parentId"]; len(f) > 0 {
+		parentIdFiles = append(parentIdFiles, f...)
+	}
 
-	if len(files) == 0 {
+	if len(files) == 0 && len(parentIdFiles) == 0 {
 		response.SendFail(c, gin.H{"error": "At least one file required"})
 		return
 	}
 
 	slip, err := h.service.UpdateExcuseSlip(
-		c.Request.Context(), iirID, idParam, req, files,
+		c.Request.Context(), iirID, idParam, req, files, parentIdFiles,
 	)
 	if err != nil {
-		fmt.Printf("[PatchSlip] {Update Slip}: %v\n", err)
+		fmt.Printf("[PatchSlip] {Update Excuse Slip}: %v\n", err)
+		errStr := err.Error()
+		if strings.Contains(errStr, "invalid") ||
+			strings.Contains(errStr, "too large") ||
+			strings.Contains(errStr, "cannot") ||
+			strings.Contains(errStr, "absence date") ||
+			strings.Contains(errStr, "limit") ||
+			strings.Contains(errStr, "offline") ||
+			strings.Contains(errStr, "OCR") ||
+			strings.Contains(errStr, "access denied") {
+			response.SendFail(c, gin.H{"error": errStr})
+			return
+		}
 		response.SendError(
 			c,
-			err.Error(),
+			"Failed to update slip",
 			http.StatusInternalServerError,
 			nil,
 		)

@@ -20,6 +20,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
+	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/ocr"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/storage"
 )
 
@@ -33,6 +34,7 @@ type Service struct {
 	userService    *users.Service
 	studentService *students.Service
 	filesService   *files.Service
+	ocrClient      *ocr.OCRClient
 	cfg            *config.Config
 }
 
@@ -45,6 +47,7 @@ func NewService(
 	userService *users.Service,
 	studentService *students.Service,
 	filesService *files.Service,
+	ocrClient *ocr.OCRClient,
 	cfg *config.Config,
 ) *Service {
 	return &Service{
@@ -56,6 +59,7 @@ func NewService(
 		userService:    userService,
 		studentService: studentService,
 		filesService:   filesService,
+		ocrClient:      ocrClient,
 		cfg:            cfg,
 	}
 }
@@ -90,35 +94,15 @@ func (s *Service) GetSlipByID(
 		return nil, fmt.Errorf("slip not found")
 	}
 
-	dto := &SlipDTO{
-		ID:     slip.ID,
-		UserID: slip.UserID,
-		IIRID:  slip.IIRID,
-		User: users.UserResponse{
-			FirstName:  slip.UserFirstName,
-			MiddleName: slip.UserMiddleName,
-			LastName:   slip.UserLastName,
-			Email:      slip.UserEmail,
-		},
-		StudentNumber: slip.StudentNumber,
-		Reason:        slip.Reason,
-		DateOfAbsence: slip.DateOfAbsence,
-		DateNeeded:    slip.DateNeeded,
-		AdminNotes:    slip.AdminNotes,
-		Category: SlipCategory{
-			ID:   slip.CategoryID,
-			Name: slip.CategoryName,
-		},
-		Status: SlipStatus{
-			ID:       slip.StatusID,
-			Name:     slip.StatusName,
-			ColorKey: slip.StatusColorKey,
-		},
-		CreatedAt: slip.CreatedAt,
-		UpdatedAt: slip.UpdatedAt,
-	}
+	dto := s.mapToDTO(slip)
 
-	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, []string{slip.UserID})
+	hasNote, _ := s.repo.HasNoteForAdmissionSlip(ctx, id)
+	dto.HasSignificantNote = hasNote
+
+	corMap, _ := s.studentService.GetLatestCORsByUserIDs(
+		ctx,
+		[]string{slip.UserID},
+	)
 	dto.StudentCORURL = corMap[slip.UserID]
 
 	return dto, nil
@@ -165,9 +149,8 @@ func (s *Service) GetUrgentSlips(
 				Name: slips[s].CategoryName,
 			},
 			Status: SlipStatus{
-				ID:       slips[s].StatusID,
-				Name:     slips[s].StatusName,
-				ColorKey: slips[s].StatusColorKey,
+				ID:   slips[s].StatusID,
+				Name: slips[s].StatusName,
 			},
 			StudentCORURL: corMap[slips[s].UserID],
 			CreatedAt:     slips[s].CreatedAt,
@@ -242,9 +225,8 @@ func (s *Service) GetAllExcuseSlips(
 				Name: slips[s].CategoryName,
 			},
 			Status: SlipStatus{
-				ID:       slips[s].StatusID,
-				Name:     slips[s].StatusName,
-				ColorKey: slips[s].StatusColorKey,
+				ID:   slips[s].StatusID,
+				Name: slips[s].StatusName,
 			},
 			StudentCORURL: corMap[slips[s].UserID],
 			CreatedAt:     slips[s].CreatedAt,
@@ -252,7 +234,7 @@ func (s *Service) GetAllExcuseSlips(
 		})
 	}
 
-	total, err := s.repo.GetTotalSlipsCount(ctx, &req)
+	total, err := s.repo.GetTotalSlipsCount(ctx, &req, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get slips count: %w", err)
 	}
@@ -297,16 +279,15 @@ func (s *Service) GetExcuseSlipsByIIRID(
 				Name: slips[s].CategoryName,
 			},
 			Status: SlipStatus{
-				ID:       slips[s].StatusID,
-				Name:     slips[s].StatusName,
-				ColorKey: slips[s].StatusColorKey,
+				ID:   slips[s].StatusID,
+				Name: slips[s].StatusName,
 			},
 			CreatedAt: slips[s].CreatedAt,
 			UpdatedAt: slips[s].UpdatedAt,
 		})
 	}
 
-	total, err := s.repo.GetTotalSlipsCount(ctx, &req)
+	total, err := s.repo.GetTotalSlipsCount(ctx, &req, &iirID)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to get slips count: %w",
@@ -414,12 +395,43 @@ func (s *Service) validateFiles(files []*multipart.FileHeader) error {
 	return nil
 }
 
+func (s *Service) validateFilesOCR(
+	ctx context.Context,
+	files []*multipart.FileHeader,
+) error {
+	for _, file := range files {
+		f, err := file.Open()
+		if err != nil {
+			return fmt.Errorf(
+				"failed to open file '%s' for validation: %w",
+				file.Filename,
+				err,
+			)
+		}
+
+		res, err := s.ocrClient.ValidateDocument(ctx, file.Filename, f)
+		f.Close()
+		if err != nil {
+			return fmt.Errorf("OCR validation service is currently offline")
+		}
+		if !res.IsValid {
+			return fmt.Errorf(
+				"file '%s' is invalid: %s",
+				file.Filename,
+				res.Message,
+			)
+		}
+	}
+	return nil
+}
+
 // SubmitExcuseSlip creates a new slip with attachments.
 func (s *Service) SubmitExcuseSlip(
 	ctx context.Context,
 	iirID string,
 	req CreateSlipRequest,
 	files []*multipart.FileHeader,
+	parentIdFiles []*multipart.FileHeader,
 ) (*SlipDTO, error) {
 	// Graduated Student Protocol: Lock records for Graduated or Archived students
 	isLocked, err := s.studentService.IsStudentLocked(ctx, iirID)
@@ -432,8 +444,16 @@ func (s *Service) SubmitExcuseSlip(
 		)
 	}
 
+	allFiles := append([]*multipart.FileHeader{}, files...)
+	allFiles = append(allFiles, parentIdFiles...)
+
 	// Validate all files
-	if err := s.validateFiles(files); err != nil {
+	if err := s.validateFiles(allFiles); err != nil {
+		return nil, err
+	}
+
+	// OCR check on non-ID files
+	if err := s.validateFilesOCR(ctx, files); err != nil {
 		return nil, err
 	}
 
@@ -454,8 +474,17 @@ func (s *Service) SubmitExcuseSlip(
 		return nil, fmt.Errorf("absence date cannot be in future")
 	}
 
+	dateNeeded := strings.Split(req.DateNeeded, "T")[0]
+	parsedDateNeeded, err := time.Parse("2006-01-02", dateNeeded)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date needed format: YYYY-MM-DD")
+	}
+	if parsedDateNeeded.Before(today) {
+		return nil, fmt.Errorf("date needed cannot be in the past")
+	}
+
 	// Unified File Implementation: Use files features
-	uploadedFiles, err := s.filesService.UploadFiles(ctx, files, "slips")
+	uploadedFiles, err := s.filesService.UploadFiles(ctx, allFiles, "slips")
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload files: %w", err)
 	}
@@ -625,6 +654,7 @@ func (s *Service) UpdateExcuseSlip(
 	slipID string,
 	req CreateSlipRequest,
 	files []*multipart.FileHeader,
+	parentIdFiles []*multipart.FileHeader,
 ) (*Slip, error) {
 	// Graduated Student Protocol: Lock records for Graduated or
 	// Archived students
@@ -655,8 +685,16 @@ func (s *Service) UpdateExcuseSlip(
 		return nil, fmt.Errorf("cannot edit slip in current status")
 	}
 
+	allFiles := append([]*multipart.FileHeader{}, files...)
+	allFiles = append(allFiles, parentIdFiles...)
+
 	// Validate all files
-	if err := s.validateFiles(files); err != nil {
+	if err := s.validateFiles(allFiles); err != nil {
+		return nil, err
+	}
+
+	// OCR check on non-ID files
+	if err := s.validateFilesOCR(ctx, files); err != nil {
 		return nil, err
 	}
 
@@ -675,6 +713,15 @@ func (s *Service) UpdateExcuseSlip(
 		return nil, fmt.Errorf("absence date cannot be in future")
 	}
 
+	dateNeeded := strings.Split(req.DateNeeded, "T")[0]
+	parsedDateNeeded, err := time.Parse("2006-01-02", dateNeeded)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date needed format: YYYY-MM-DD")
+	}
+	if parsedDateNeeded.Before(today) {
+		return nil, fmt.Errorf("date needed cannot be in the past")
+	}
+
 	// Delete old attachments from both slip records and files table
 	oldAttachments, err := s.repo.GetSlipAttachments(ctx, slipID)
 	if err == nil {
@@ -684,7 +731,7 @@ func (s *Service) UpdateExcuseSlip(
 	}
 
 	// Upload new files using centralized service
-	uploadedFiles, err := s.filesService.UploadFiles(ctx, files, "slips")
+	uploadedFiles, err := s.filesService.UploadFiles(ctx, allFiles, "slips")
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload files: %w", err)
 	}
@@ -1081,9 +1128,8 @@ func (s *Service) mapToDTO(slip *SlipWithDetailsView) *SlipDTO {
 			Name: slip.CategoryName,
 		},
 		Status: SlipStatus{
-			ID:       slip.StatusID,
-			Name:     slip.StatusName,
-			ColorKey: slip.StatusColorKey,
+			ID:   slip.StatusID,
+			Name: slip.StatusName,
 		},
 		CreatedAt: slip.CreatedAt,
 		UpdatedAt: slip.UpdatedAt,

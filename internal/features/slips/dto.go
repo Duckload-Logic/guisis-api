@@ -31,10 +31,11 @@ type SlipDTO struct {
 	AdminNotes    structs.NullableString `json:"adminNotes,omitempty"`
 	Category      SlipCategory           `json:"category"                form:"categoryId"    binding:"required"`
 	Status        SlipStatus             `json:"status,omitempty"`
-	StudentCORURL string                 `json:"studentCorUrl,omitempty"`
-	Ticket        *TicketDTO             `json:"ticket,omitempty"`
-	CreatedAt     time.Time              `json:"createdAt,omitempty"`
-	UpdatedAt     time.Time              `json:"updatedAt,omitempty"`
+	StudentCORURL      string                 `json:"studentCorUrl,omitempty"`
+	Ticket             *TicketDTO             `json:"ticket,omitempty"`
+	HasSignificantNote bool                   `json:"hasSignificantNote"`
+	CreatedAt          time.Time              `json:"createdAt,omitempty"`
+	UpdatedAt          time.Time              `json:"updatedAt,omitempty"`
 }
 
 type AttachmentDTO struct {

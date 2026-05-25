@@ -65,6 +65,26 @@ func (o *OCRClient) ProcessDocument(
 	return &result, nil
 }
 
+// ValidateDocument validates the uploaded file content.
+func (o *OCRClient) ValidateDocument(
+	ctx context.Context,
+	filename string,
+	file io.Reader,
+) (*ValidationResponse, error) {
+	respBody, err := o.upload(ctx, "/ocr/validate", filename, file)
+	if err != nil {
+		return nil, fmt.Errorf("[OCRClient] {ValidateDocument}: %w", err)
+	}
+	defer respBody.Close()
+
+	var result ValidationResponse
+	if err := json.NewDecoder(respBody).Decode(&result); err != nil {
+		return nil, fmt.Errorf("[OCRClient] {Decode Validate}: %w", err)
+	}
+
+	return &result, nil
+}
+
 // upload is a helper to perform multipart uploads to the AI service.
 func (o *OCRClient) upload(
 	ctx context.Context,
