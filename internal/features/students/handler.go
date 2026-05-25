@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
@@ -863,9 +864,12 @@ func (h *Handler) PostStudentCOR(c *gin.Context) {
 
 	fileID, err := h.service.SubmitCOR(c.Request.Context(), userID, file)
 	if err != nil {
-		log.Printf("[PostStudentCOR] {Service Call}: %v", err)
-		if errors.Is(err, ErrOutdatedCOR) || errors.Is(err, ErrCOROwnerMismatch) {
-			response.SendFail(c, gin.H{"error": err.Error()})
+		log.Printf("[PostStudentCOR] {Submit COR}: %v", err)
+		errStr := err.Error()
+		if errors.Is(err, ErrOutdatedCOR) ||
+			errors.Is(err, ErrCOROwnerMismatch) ||
+			strings.Contains(errStr, "valid COR") {
+			response.SendFail(c, gin.H{"error": errStr})
 			return
 		}
 		response.SendError(
@@ -911,9 +915,12 @@ func (h *Handler) PostStudentCORByIIRID(c *gin.Context) {
 
 	fileID, err := h.service.SubmitCOR(c.Request.Context(), iir.UserID, file)
 	if err != nil {
-		log.Printf("[PostStudentCORByIIRID] {Service Call}: %v", err)
-		if errors.Is(err, ErrOutdatedCOR) || errors.Is(err, ErrCOROwnerMismatch) {
-			response.SendFail(c, gin.H{"error": err.Error()})
+		log.Printf("[PostStudentCORByIIRID] {Submit COR}: %v", err)
+		errStr := err.Error()
+		if errors.Is(err, ErrOutdatedCOR) ||
+			errors.Is(err, ErrCOROwnerMismatch) ||
+			strings.Contains(errStr, "valid COR") {
+			response.SendFail(c, gin.H{"error": errStr})
 			return
 		}
 		response.SendError(

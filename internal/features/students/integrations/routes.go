@@ -13,9 +13,8 @@ func RegisterRoutes(
 ) {
 	routes := rg.Group("/integrations/students")
 	routes.Use(middleware.AuthMiddleware(redis))
-
-	routes.POST("/linker", h.PostLinkStudent)
-	routes.POST("/linker/code", h.PostEmailVerificationCode)
+	routes.Use(middleware.RequireVerifiedM2M)
+	routes.Use(middleware.M2MAuditMiddleware())
 
 	routes.GET("/profiles", h.GetStudents)
 	routes.GET("/profile", h.GetStudentByEmail)

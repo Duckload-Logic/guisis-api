@@ -109,22 +109,24 @@ type StudentBasicInfoView struct {
 	SuffixName structs.NullableString `db:"suffix_name"`
 }
 
-// StudentProfileView represents a summary view of a student's profile.
 type StudentProfileView struct {
-	IIRID         string                 `db:"iir_id"         json:"iirId"`
-	UserID        string                 `db:"user_id"        json:"userId"`
-	FirstName     string                 `db:"first_name"     json:"firstName"`
-	MiddleName    structs.NullableString `db:"middle_name"    json:"middleName,omitempty"`
-	LastName      string                 `db:"last_name"      json:"lastName"`
-	SuffixName    structs.NullableString `db:"suffix_name"    json:"suffixName,omitempty"`
-	Email         string                 `db:"email"          json:"email"`
-	StudentNumber string                 `db:"student_number" json:"studentNumber"`
-	GenderID      int                    `db:"gender_id"      json:"genderId"`
-	CourseID      int                    `db:"course_id"      json:"courseId"`
-	Section       int                    `db:"section"        json:"section"`
-	YearLevel     int                    `db:"year_level"     json:"yearLevel"`
-	StatusID      int                    `db:"status_id"      json:"statusId"`
-	StatusName    string                 `db:"status_name"    json:"statusName"`
+	IIRID         string                 `db:"iir_id"`
+	UserID        string                 `db:"user_id"`
+	FirstName     string                 `db:"first_name"`
+	MiddleName    structs.NullableString `db:"middle_name"`
+	LastName      string                 `db:"last_name"`
+	SuffixName    structs.NullableString `db:"suffix_name"`
+	Email         string                 `db:"email"`
+	StudentNumber string                 `db:"student_number"`
+	GenderID      int                    `db:"gender_id"`
+	CourseID      int                    `db:"course_id"`
+	Section       int                    `db:"section"`
+	YearLevel     int                    `db:"year_level"`
+	StatusID      int                    `db:"status_id"`
+	StatusName    string                 `db:"status_name"`
+	GenderName    string                 `db:"gender_name"`
+	CourseCode    string                 `db:"course_code"`
+	CourseName    string                 `db:"course_name"`
 }
 
 // IIRDraft represents an unsubmitted draft of the student's IIR form.
@@ -412,4 +414,77 @@ type AcademicSetting struct {
 	CurrentYearEnd   int       `db:"current_year_end"   json:"currentYearEnd"`
 	CurrentTerm      int       `db:"current_term"       json:"currentTerm"`
 	UpdatedAt        time.Time `db:"updated_at"         json:"updatedAt"`
+}
+
+// StudentPersonalInfoView holds joined personal info and emergency details.
+type StudentPersonalInfoView struct {
+	ID                    int                    `db:"id"`
+	IIRID                 string                 `db:"iir_id"`
+	StudentNumber         string                 `db:"student_number"`
+	GenderID              int                    `db:"gender_id"`
+	GenderName            string                 `db:"gender_name"`
+	CivilStatusID         int                    `db:"civil_status_id"`
+	CivilStatusName       string                 `db:"civil_status_name"`
+	ReligionID            int                    `db:"religion_id"`
+	ReligionName          string                 `db:"religion_name"`
+	HeightM               float64                `db:"height_m"`
+	WeightKg              float64                `db:"weight_kg"`
+	Complexion            string                 `db:"complexion"`
+	HighSchoolGWA         float64                `db:"high_school_gwa"`
+	CourseID              int                    `db:"course_id"`
+	CourseCode            string                 `db:"course_code"`
+	CourseName            string                 `db:"course_name"`
+	YearLevel             int                    `db:"year_level"`
+	Section               int                    `db:"section"`
+	PlaceOfBirth          string                 `db:"place_of_birth"`
+	DateOfBirth           string                 `db:"date_of_birth"`
+	IsEmployed            bool                   `db:"is_employed"`
+	EmployerName          structs.NullableString `db:"employer_name"`
+	EmployerAddress       structs.NullableString `db:"employer_address"`
+	MobileNumber          string                 `db:"mobile_number"`
+	TelephoneNumber       structs.NullableString `db:"telephone_number"`
+	EmployerContactNumber structs.NullableString `db:"employer_contact_number"`
+	StatusID              int                    `db:"status_id"`
+	StatusName            string                 `db:"status_name"`
+	GraduationYear        structs.NullableInt64  `db:"graduation_year"`
+
+	// Emergency Contact Details
+	EmergencyID               int                    `db:"emergency_id"`
+	EmergencyFirstName        string                 `db:"emergency_first_name"`
+	EmergencyMiddleName       structs.NullableString `db:"emergency_middle_name"`
+	EmergencyLastName         string                 `db:"emergency_last_name"`
+	EmergencyContactNumber    string                 `db:"emergency_contact_number"`
+	EmergencyRelationshipID   int                    `db:"emergency_relationship_id"`
+	EmergencyRelationshipName string                 `db:"emergency_relationship_name"`
+	EmergencyAddressID        int                    `db:"emergency_address_id"`
+}
+
+// RelatedPersonView holds joined related person and relationship details.
+type RelatedPersonView struct {
+	ID                        int                    `db:"id"`
+	LastName                  string                 `db:"last_name"`
+	FirstName                 string                 `db:"first_name"`
+	MiddleName                structs.NullableString `db:"middle_name"`
+	SuffixName                structs.NullableString `db:"suffix_name"`
+	DateOfBirth               string                 `db:"date_of_birth"`
+	EducationalAttainmentID   int                    `db:"educational_attainment_id"`
+	EducationalAttainmentName string                 `db:"educational_attainment_name"`
+	Occupation                structs.NullableString `db:"occupation"`
+	EmployerName              structs.NullableString `db:"employer_name"`
+	EmployerAddress           structs.NullableString `db:"employer_address"`
+	RelationshipID            int                    `db:"relationship_id"`
+	RelationshipName          string                 `db:"relationship_name"`
+	IsParent                  bool                   `db:"is_parent"`
+	IsGuardian                bool                   `db:"is_guardian"`
+	IsLiving                  bool                   `db:"is_living"`
+}
+
+// StudentFinanceView holds joined student finance and income range details.
+type StudentFinanceView struct {
+	ID              int                    `db:"id"`
+	IIRID           string                 `db:"iir_id"`
+	IncomeRangeID   int                    `db:"income_range_id"`
+	IncomeRangeText string                 `db:"income_range_text"`
+	OtherIncome     structs.NullableString `db:"other_income"`
+	WeeklyAllowance float64                `db:"weekly_allowance"`
 }

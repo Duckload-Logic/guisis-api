@@ -341,9 +341,6 @@ func (s *Service) ListStudents(
 
 	studentDTOs := make([]StudentProfileDTO, len(students))
 	for i, st := range students {
-		course, _ := s.repo.GetCourseByID(ctx, st.CourseID)
-		gender, _ := s.repo.GetGenderByID(ctx, st.GenderID)
-
 		studentDTOs[i] = StudentProfileDTO{
 			IIRID:         st.IIRID,
 			UserID:        st.UserID,
@@ -351,10 +348,17 @@ func (s *Service) ListStudents(
 			MiddleName:    st.MiddleName,
 			LastName:      st.LastName,
 			SuffixName:    st.SuffixName,
-			Gender:        *gender,
+			Gender: Gender{
+				ID:   st.GenderID,
+				Name: st.GenderName,
+			},
 			Email:         st.Email,
 			StudentNumber: st.StudentNumber,
-			Course:        *course,
+			Course: Course{
+				ID:   st.CourseID,
+				Code: st.CourseCode,
+				Name: st.CourseName,
+			},
 			Section:       st.Section,
 			YearLevel:     st.YearLevel,
 			Status: StudentStatus{
@@ -575,52 +579,81 @@ func (s *Service) GetStudentPersonalInfo(
 	ctx context.Context,
 	iirID string,
 ) (*StudentPersonalInfoDTO, error) {
-	personalInfo, err := s.repo.GetStudentPersonalInfo(ctx, iirID)
+	view, err := s.repo.GetStudentPersonalInfoView(ctx, iirID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get student personal info: %w", err)
+		return nil, fmt.Errorf("failed to get personal info view: %w", err)
+	}
+	if view == nil {
+		return nil, nil
 	}
 
-	gender, _ := s.repo.GetGenderByID(ctx, personalInfo.GenderID)
-	civilStatus, _ := s.repo.GetCivilStatusByID(ctx, personalInfo.CivilStatusID)
-	religion, _ := s.repo.GetReligionByID(ctx, personalInfo.ReligionID)
-	course, _ := s.repo.GetCourseByID(ctx, personalInfo.CourseID)
-	emergencyContact, _ := s.repo.GetEmergencyContactByIIRID(ctx, personalInfo.IIRID)
-	emergencyContactRelationship, _ := s.repo.GetStudentRelationshipByID(ctx, emergencyContact.RelationshipID)
-	emergencyAddressDTO, _ := s.locationsSvc.GetAddressByID(ctx, emergencyContact.AddressID)
+	emergencyAddressDTO, _ := s.locationsSvc.GetAddressByID(
+		ctx,
+		view.EmergencyAddressID,
+	)
 
 	emergencyContactDTO := EmergencyContactDTO{
-		ID:            emergencyContact.ID,
-		FirstName:     emergencyContact.FirstName,
-		MiddleName:    emergencyContact.MiddleName,
-		LastName:      emergencyContact.LastName,
-		ContactNumber: emergencyContact.ContactNumber,
-		Relationship:  *emergencyContactRelationship,
+		ID:            view.EmergencyID,
+		FirstName:     view.EmergencyFirstName,
+		MiddleName:    view.EmergencyMiddleName,
+		LastName:      view.EmergencyLastName,
+		ContactNumber: view.EmergencyContactNumber,
+		Relationship: StudentRelationshipType{
+			ID:   view.EmergencyRelationshipID,
+			Name: view.EmergencyRelationshipName,
+		},
 		Address:       emergencyAddressDTO,
 	}
 
-	return &StudentPersonalInfoDTO{
-		ID:                    personalInfo.ID,
-		StudentNumber:         personalInfo.StudentNumber,
-		Gender:                *gender,
-		CivilStatus:           *civilStatus,
-		Religion:              *religion,
-		HeightM:               personalInfo.HeightM,
-		WeightKg:              personalInfo.WeightKg,
-		Complexion:            personalInfo.Complexion,
-		HighSchoolGWA:         personalInfo.HighSchoolGWA,
-		Course:                *course,
-		YearLevel:             personalInfo.YearLevel,
-		Section:               personalInfo.Section,
-		PlaceOfBirth:          personalInfo.PlaceOfBirth,
-		DateOfBirth:           personalInfo.DateOfBirth,
-		TelephoneNumber:       personalInfo.TelephoneNumber,
-		MobileNumber:          personalInfo.MobileNumber,
-		IsEmployed:            personalInfo.IsEmployed,
-		EmployerName:          personalInfo.EmployerName,
-		EmployerAddress:       personalInfo.EmployerAddress,
-		EmployerContactNumber: personalInfo.EmployerContactNumber,
+	statusDTO := StudentStatus{
+		ID:   view.StatusID,
+		Name: view.StatusName,
+	}
 
-		EmergencyContact: emergencyContactDTO,
+	var gradYear *int
+	if view.GraduationYear.Valid {
+		gy := int(view.GraduationYear.Int64)
+		gradYear = &gy
+	}
+
+	return &StudentPersonalInfoDTO{
+		ID:                    view.ID,
+		IIRID:                 view.IIRID,
+		StudentNumber:         view.StudentNumber,
+		Gender: Gender{
+			ID:   view.GenderID,
+			Name: view.GenderName,
+		},
+		CivilStatus: CivilStatusType{
+			ID:   view.CivilStatusID,
+			Name: view.CivilStatusName,
+		},
+		Religion: Religion{
+			ID:   view.ReligionID,
+			Name: view.ReligionName,
+		},
+		HeightM:               view.HeightM,
+		WeightKg:              view.WeightKg,
+		Complexion:            view.Complexion,
+		HighSchoolGWA:         view.HighSchoolGWA,
+		Course: Course{
+			ID:   view.CourseID,
+			Code: view.CourseCode,
+			Name: view.CourseName,
+		},
+		YearLevel:             view.YearLevel,
+		Section:               view.Section,
+		PlaceOfBirth:          view.PlaceOfBirth,
+		DateOfBirth:           view.DateOfBirth,
+		TelephoneNumber:       view.TelephoneNumber,
+		MobileNumber:          view.MobileNumber,
+		IsEmployed:            view.IsEmployed,
+		EmployerName:          view.EmployerName,
+		EmployerAddress:       view.EmployerAddress,
+		EmployerContactNumber: view.EmployerContactNumber,
+		Status:                statusDTO,
+		GraduationYear:        gradYear,
+		EmergencyContact:      emergencyContactDTO,
 	}, nil
 }
 
@@ -695,37 +728,35 @@ func (s *Service) GetStudentRelatedPersons(
 	ctx context.Context,
 	iirID string,
 ) ([]RelatedPersonDTO, error) {
-	studentRelatedPersons, err := s.repo.GetStudentRelatedPersons(ctx, iirID)
+	views, err := s.repo.GetStudentRelatedPersonsView(ctx, iirID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get student related persons: %w", err)
+		return nil, fmt.Errorf("failed to get related persons: %w", err)
 	}
 
-	var related []RelatedPersonDTO
-	for _, srp := range studentRelatedPersons {
-		rp, _ := s.repo.GetRelatedPersonByID(ctx, srp.RelatedPersonID)
-		rel, _ := s.repo.GetStudentRelationshipByID(ctx, srp.RelationshipID)
-
-		attainment := &EducationalAttainment{}
-		if rp.EducationalAttainmentID.Valid {
-			attainment, _ = s.repo.GetEducationalAttainmentByID(ctx, int(rp.EducationalAttainmentID.Int64))
+	related := make([]RelatedPersonDTO, len(views))
+	for i, view := range views {
+		related[i] = RelatedPersonDTO{
+			ID: view.ID,
+			EducationalAttainment: EducationalAttainment{
+				ID:   view.EducationalAttainmentID,
+				Name: view.EducationalAttainmentName,
+			},
+			DateOfBirth:     view.DateOfBirth,
+			LastName:        view.LastName,
+			FirstName:       view.FirstName,
+			MiddleName:      view.MiddleName,
+			SuffixName:      view.SuffixName,
+			Occupation:      view.Occupation,
+			EmployerName:    view.EmployerName,
+			EmployerAddress: view.EmployerAddress,
+			Relationship: StudentRelationshipType{
+				ID:   view.RelationshipID,
+				Name: view.RelationshipName,
+			},
+			IsParent:   view.IsParent,
+			IsGuardian: view.IsGuardian,
+			IsLiving:   view.IsLiving,
 		}
-
-		related = append(related, RelatedPersonDTO{
-			ID:                    rp.ID,
-			EducationalAttainment: *attainment,
-			DateOfBirth:           rp.DateOfBirth,
-			LastName:              rp.LastName,
-			FirstName:             rp.FirstName,
-			MiddleName:            rp.MiddleName,
-			SuffixName:            rp.SuffixName,
-			Occupation:            rp.Occupation,
-			EmployerName:          rp.EmployerName,
-			EmployerAddress:       rp.EmployerAddress,
-			Relationship:          *rel,
-			IsParent:              srp.IsParent,
-			IsGuardian:            srp.IsGuardian,
-			IsLiving:              srp.IsLiving,
-		})
 	}
 	return related, nil
 }
@@ -770,29 +801,28 @@ func (s *Service) GetStudentFinancialInfo(
 	ctx context.Context,
 	iirID string,
 ) (*StudentFinanceDTO, error) {
-	finance, err := s.repo.GetStudentFinancialInfo(ctx, iirID)
+	view, err := s.repo.GetStudentFinancialInfoView(ctx, iirID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get financial info: %w", err)
+		return nil, fmt.Errorf("failed to get financial info view: %w", err)
 	}
-	if finance == nil {
+	if view == nil {
 		return nil, nil
 	}
 
-	supportTypes, _ := s.repo.GetFinancialSupportTypeByFinanceID(ctx, finance.ID)
-	var supportDTOs []StudentSupportType
-	for _, st := range supportTypes {
-		support, _ := s.repo.GetStudentSupportByID(ctx, st.SupportTypeID)
-		supportDTOs = append(supportDTOs, *support)
+	supportDTOs, err := s.repo.GetFinancialSupportTypes(ctx, view.ID)
+	if err != nil {
+		supportDTOs = []StudentSupportType{}
 	}
 
-	incomeRange, _ := s.repo.GetIncomeRangeByID(ctx, finance.IncomeRangeID)
-
 	return &StudentFinanceDTO{
-		ID:                       finance.ID,
-		MonthlyFamilyIncomeRange: *incomeRange,
-		OtherIncomeDetails:       finance.OtherIncome,
-		WeeklyAllowance:          finance.WeeklyAllowance,
-		FinancialSupportTypes:    supportDTOs,
+		ID: view.ID,
+		MonthlyFamilyIncomeRange: IncomeRange{
+			ID:   view.IncomeRangeID,
+			Text: view.IncomeRangeText,
+		},
+		OtherIncomeDetails:    view.OtherIncome,
+		WeeklyAllowance:       view.WeeklyAllowance,
+		FinancialSupportTypes: supportDTOs,
 	}, nil
 }
 

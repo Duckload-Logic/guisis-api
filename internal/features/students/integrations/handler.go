@@ -17,10 +17,6 @@ func NewHandler(service ServiceInterface) *Handler {
 	return &Handler{service: service}
 }
 
-func (h *Handler) PostLinkStudent(c *gin.Context) {}
-
-func (h *Handler) PostEmailVerificationCode(c *gin.Context) {}
-
 // HandleListStudents godoc
 // @Summary List students
 // @Description Get a paginated list of students with optional filters
