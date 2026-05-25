@@ -1,6 +1,7 @@
 package m2mclients
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -177,8 +178,36 @@ func (h *Handler) PatchM2MClientVerify(c *gin.Context) {
 	id := c.Param("id")
 	err := h.service.Verify(c.Request.Context(), id)
 	if err != nil {
-		response.SendError(c, err.Error(), http.StatusInternalServerError, nil)
+		log.Printf(
+			"[PatchM2MClientVerify] {Verify M2M Client}: %v",
+			err,
+		)
+		response.SendError(
+			c,
+			err.Error(),
+			http.StatusInternalServerError,
+			nil,
+		)
 		return
 	}
 	response.SendSuccess(c, gin.H{"message": "Verified"})
+}
+
+func (h *Handler) PatchM2MClientReject(c *gin.Context) {
+	id := c.Param("id")
+	err := h.service.Reject(c.Request.Context(), id)
+	if err != nil {
+		log.Printf(
+			"[PatchM2MClientReject] {Reject M2M Client}: %v",
+			err,
+		)
+		response.SendError(
+			c,
+			err.Error(),
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+	response.SendSuccess(c, gin.H{"message": "Rejected"})
 }
