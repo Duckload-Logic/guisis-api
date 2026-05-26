@@ -52,7 +52,6 @@ func (h *Handler) GetNotificationsStream(c *gin.Context) {
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
-	c.Header("Transfer-Encoding", "chunked")
 
 	// Force headers to be sent immediately
 	c.Writer.Flush()
@@ -75,6 +74,10 @@ func (h *Handler) GetNotificationsStream(c *gin.Context) {
 			// Heartbeat to keep connection alive and detect broken pipes
 			_, err := c.Writer.Write([]byte(": heartbeat\n\n"))
 			if err != nil {
+				fmt.Printf(
+					"[GetNotificationsStream] {Write Heartbeat}: %v\n",
+					err,
+				)
 				return
 			}
 			c.Writer.Flush()
@@ -84,10 +87,6 @@ func (h *Handler) GetNotificationsStream(c *gin.Context) {
 			}
 			b, err := json.Marshal(notif)
 			if err != nil {
-				fmt.Printf(
-					"[GetNotificationsStream] {Marshal}: %v\n",
-					err,
-				)
 				continue
 			}
 
@@ -106,7 +105,6 @@ func (h *Handler) PatchNotificationRead(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 
 	if err := h.service.MarkAsRead(c.Request.Context(), id, userID); err != nil {
-		fmt.Printf("[PatchNotificationRead] {Mark Read}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to mark notification as read",

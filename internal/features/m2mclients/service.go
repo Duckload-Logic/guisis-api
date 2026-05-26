@@ -120,12 +120,21 @@ func (s *Service) CreateClient(
 		int(constants.SuperAdminRoleID),
 	)
 
-	audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
+	audit.Dispatch(
+		ctx,
+		s.logService,
+		s.notifService,
+		s.emailService,
+		audit.DispatchParams{
 		Log: &audit.LogParams{
 			Level:    audit.LevelInfo,
 			Category: audit.CategoryAudit,
 			Action:   audit.ActionM2MClientCreated,
-			Message:  fmt.Sprintf("M2M Client %s requested by user %s", clientID, userID),
+			Message: fmt.Sprintf(
+				"M2M Client %s requested by user %s",
+				clientID,
+				userID,
+			),
 			Metadata: &audit.LogMetadata{
 				EntityType: "m2m_client",
 				EntityID:   clientID,
@@ -287,11 +296,17 @@ func (s *Service) issueTokens(
 	}, nil
 }
 
-func (s *Service) ListClients(ctx context.Context, includeRevoked bool) ([]M2MClient, error) {
+func (s *Service) ListClients(
+	ctx context.Context,
+	includeRevoked bool,
+) ([]M2MClient, error) {
 	return s.repo.ListClients(ctx, includeRevoked)
 }
 
-func (s *Service) GetClientByUserID(ctx context.Context, userID string) (*M2MClient, error) {
+func (s *Service) GetClientByUserID(
+	ctx context.Context,
+	userID string,
+) (*M2MClient, error) {
 	return s.repo.GetActiveByUserID(ctx, userID)
 }
 

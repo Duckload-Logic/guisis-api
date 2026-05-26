@@ -89,7 +89,8 @@ func (r *Repository) GetStudentsTrend(ctx context.Context) (int, error) {
 	err := r.db.GetContext(
 		ctx,
 		&total,
-		"SELECT COUNT(*) FROM student_personal_info WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+		`SELECT COUNT(*) FROM student_personal_info
+		 WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`,
 	)
 	return total, err
 }
@@ -99,7 +100,8 @@ func (r *Repository) GetReportsTrend(ctx context.Context) (int, error) {
 	err := r.db.GetContext(
 		ctx,
 		&total,
-		"SELECT COUNT(*) FROM significant_notes WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+		`SELECT COUNT(*) FROM significant_notes
+		 WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`,
 	)
 	return total, err
 }
@@ -109,7 +111,8 @@ func (r *Repository) GetAppointmentsTrend(ctx context.Context) (int, error) {
 	err := r.db.GetContext(
 		ctx,
 		&total,
-		"SELECT COUNT(*) FROM appointments WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+		`SELECT COUNT(*) FROM appointments
+		 WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`,
 	)
 	return total, err
 }
@@ -119,7 +122,8 @@ func (r *Repository) GetSlipsTrend(ctx context.Context) (int, error) {
 	err := r.db.GetContext(
 		ctx,
 		&total,
-		"SELECT COUNT(*) FROM admission_slips WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
+		`SELECT COUNT(*) FROM admission_slips
+		 WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)`,
 	)
 	return total, err
 }
@@ -140,7 +144,8 @@ func (r *Repository) GetMonthlyVisitorStats(
 		interval = "11 WEEK"
 		format = "Week %u"
 		groupBy = "%Y-%u"
-		baseDate = "DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)" // Start of current week
+		// Start of current week
+		baseDate = "DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)"
 	case "yearly":
 		interval = "4 YEAR"
 		format = "%Y"
@@ -163,7 +168,8 @@ func (r *Repository) GetMonthlyVisitorStats(
 			COUNT(*) as activity,
 			SUM(CASE WHEN action = 'LOGIN_SUCCESS' THEN 1 ELSE 0 END) as count
 		FROM system_logs
-		WHERE created_at >= DATE_SUB(` + baseDate + `, INTERVAL ` + interval + `)
+		WHERE created_at >= DATE_SUB(` + baseDate + `,
+			INTERVAL ` + interval + `)
 		GROUP BY DATE_FORMAT(created_at, '` + groupBy + `'), period, month
 		ORDER BY DATE_FORMAT(created_at, '` + groupBy + `') ASC;
 	`
@@ -212,7 +218,8 @@ func (r *Repository) GetMonthlyAppointmentStats(
 			COUNT(*) as count
 		FROM appointments a
 		JOIN statuses s ON s.id = a.status_id
-		WHERE when_date >= DATE_SUB(` + baseDate + `, INTERVAL ` + interval + `)
+		WHERE when_date >= DATE_SUB(` + baseDate + `,
+			INTERVAL ` + interval + `)
 		  AND UPPER(s.name) = 'COMPLETED'
 		GROUP BY DATE_FORMAT(when_date, '` + groupBy + `'), period, month
 		ORDER BY DATE_FORMAT(when_date, '` + groupBy + `') ASC;
@@ -231,7 +238,9 @@ func (r *Repository) GetAgeStats(
 	filter, args := r.buildFilter(year, courseID)
 	query := `
 		SELECT
-			CAST(TIMESTAMPDIFF(YEAR, spi.date_of_birth, CURDATE()) AS CHAR) AS category,
+			CAST(TIMESTAMPDIFF(
+				YEAR, spi.date_of_birth, CURDATE()
+			) AS CHAR) AS category,
 			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
 			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
@@ -461,7 +470,8 @@ func (r *Repository) GetHSGWAStats(
 			RANK() OVER (ORDER BY COUNT(*) DESC) as rank_pos
 		FROM student_personal_info spi
 		LEFT JOIN genders g ON spi.gender_id = g.id
-		WHERE spi.high_school_gwa IS NOT NULL AND spi.high_school_gwa > 0 ` + filter + `
+		WHERE spi.high_school_gwa IS NOT NULL
+		  AND spi.high_school_gwa > 0 ` + filter + `
 		GROUP BY category;`
 	return r.executeStatQuery(ctx, query, args...)
 }

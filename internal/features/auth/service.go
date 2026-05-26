@@ -712,18 +712,6 @@ func (s *Service) RefreshToken(
 	return newToken, newRefreshToken, nil
 }
 
-// RefreshIDPToken handles token refresh for IDP-authenticated sessions.
-func (s *Service) RefreshIDPToken(
-	ctx context.Context, refreshToken string, cfg *config.Config,
-) (string, string, error) {
-	// Call IDP refresh endpoint
-	tokenResp, err := s.idpClient.RefreshToken(ctx, refreshToken, cfg)
-	if err != nil {
-		return "", "", fmt.Errorf("[AuthService] {IDP Refresh}: %w", err)
-	}
-
-	return tokenResp.AccessToken, tokenResp.RefreshToken, nil
-}
 
 // GetMe retrieves the currently authenticated user's profile information.
 func (s *Service) GetMe(
@@ -1125,20 +1113,3 @@ func (s *Service) GetIDPUserInfo(
 	return userInfo, nil
 }
 
-func (s *Service) BlockUser(ctx context.Context, userID string) error {
-	return s.repo.WithTransaction(
-		ctx,
-		func(tx datastore.DB) error {
-			return s.repo.BlockUser(ctx, tx, userID)
-		},
-	)
-}
-
-func (s *Service) UnblockUser(ctx context.Context, userID string) error {
-	return s.repo.WithTransaction(
-		ctx,
-		func(tx datastore.DB) error {
-			return s.repo.UnblockUser(ctx, tx, userID)
-		},
-	)
-}

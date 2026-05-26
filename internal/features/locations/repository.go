@@ -16,16 +16,6 @@ func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) GetDB() *sqlx.DB {
-	return r.db
-}
-
-func (r *Repository) WithTransaction(
-	ctx context.Context,
-	fn func(datastore.DB) error,
-) error {
-	return datastore.RunInTransaction(ctx, r.db, fn)
-}
 
 func (r *Repository) GetRegions(ctx context.Context) ([]Region, error) {
 	query := "SELECT id, code, name FROM regions ORDER BY name"

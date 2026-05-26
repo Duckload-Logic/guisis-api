@@ -398,32 +398,3 @@ func (h *Handler) GetMe(c *gin.Context) {
 	response.SendSuccess(c, user)
 }
 
-func (h *Handler) PostBlockUser(c *gin.Context) {
-	userID := c.Param("id")
-	err := h.service.BlockUser(c.Request.Context(), userID)
-	if err != nil {
-		response.SendError(
-			c,
-			"Failed to block user",
-			http.StatusInternalServerError,
-			nil,
-		)
-		return
-	}
-	response.SendSuccess(c, gin.H{"message": "User blocked"})
-}
-
-func (h *Handler) PostUnblockUser(c *gin.Context) {
-	userID := c.Param("id")
-	err := h.service.UnblockUser(c.Request.Context(), userID)
-	if err != nil {
-		response.SendError(
-			c,
-			"Failed to unblock user",
-			http.StatusInternalServerError,
-			nil,
-		)
-		return
-	}
-	response.SendSuccess(c, gin.H{"message": "User unblocked"})
-}

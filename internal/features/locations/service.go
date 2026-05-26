@@ -89,41 +89,6 @@ func (s *Service) GetAddressByID(
 	return addrDTO, nil
 }
 
-func (s *Service) GetCityByCode(
-	ctx context.Context,
-	cityCode string,
-) (*City, error) {
-	return s.repo.GetCityByCode(ctx, cityCode)
-}
-
-func (s *Service) GetRegionByCode(
-	ctx context.Context,
-	regionCode string,
-) (*Region, error) {
-	return s.repo.GetRegionByCode(ctx, regionCode)
-}
-
-func (s *Service) GetBarangayByCode(
-	ctx context.Context,
-	barangayCode string,
-) (*Barangay, error) {
-	return s.repo.GetBarangayByCode(ctx, barangayCode)
-}
-
-func (s *Service) GetProvinceByCode(
-	ctx context.Context,
-	provinceCode string,
-) (*Province, error) {
-	return s.repo.GetProvinceByCode(ctx, provinceCode)
-}
-
-func (s *Service) SaveAddress(
-	ctx context.Context,
-	tx datastore.DB,
-	addr *Address,
-) (int, error) {
-	return s.repo.UpsertAddress(ctx, tx, addr)
-}
 
 func (s *Service) UpsertAddress(
 	ctx context.Context,

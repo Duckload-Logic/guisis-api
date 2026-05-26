@@ -68,7 +68,9 @@ func (s *Service) GetLatestCORsByUserIDs(
 }
 
 var (
-	ErrOutdatedCOR      = errors.New("uploaded COR is for an outdated academic year or term")
+	ErrOutdatedCOR      = errors.New(
+		"uploaded COR is for an outdated academic year or term",
+	)
 	ErrCOROwnerMismatch = errors.New("uploaded COR does not belong to the user")
 )
 
@@ -141,10 +143,14 @@ func (s *Service) SubmitCOR(
 			setting, sErr := s.repo.GetAcademicSetting(ctx)
 			if sErr != nil {
 				_ = s.filesSvc.DeleteFile(ctx, file.ID)
-				return "", fmt.Errorf("[StudentService] {SubmitCOR Fetch Setting}: %w", sErr)
+				return "", fmt.Errorf(
+					"[StudentService] {SubmitCOR Fetch Setting}: %w",
+					sErr,
+				)
 			}
 
-			if startYear != setting.CurrentYearStart || corData.Term != setting.CurrentTerm {
+			if startYear != setting.CurrentYearStart ||
+				corData.Term != setting.CurrentTerm {
 				_ = s.filesSvc.DeleteFile(ctx, file.ID)
 				return "", ErrOutdatedCOR
 			}
@@ -267,7 +273,9 @@ func (s *Service) GetEnrollmentYears(ctx context.Context) ([]int, error) {
 	return s.repo.GetEnrollmentYears(ctx)
 }
 
-func (s *Service) GetParentalStatusTypes(ctx context.Context) ([]ParentalStatusType, error) {
+func (s *Service) GetParentalStatusTypes(
+	ctx context.Context,
+) ([]ParentalStatusType, error) {
 	return s.repo.GetParentalStatusTypes(ctx)
 }
 
@@ -275,19 +283,27 @@ func (s *Service) GetIncomeRanges(ctx context.Context) ([]IncomeRange, error) {
 	return s.repo.GetIncomeRanges(ctx)
 }
 
-func (s *Service) GetStudentSupportTypes(ctx context.Context) ([]StudentSupportType, error) {
+func (s *Service) GetStudentSupportTypes(
+	ctx context.Context,
+) ([]StudentSupportType, error) {
 	return s.repo.GetStudentSupportTypes(ctx)
 }
 
-func (s *Service) GetSiblingSupportTypes(ctx context.Context) ([]SibilingSupportType, error) {
+func (s *Service) GetSiblingSupportTypes(
+	ctx context.Context,
+) ([]SibilingSupportType, error) {
 	return s.repo.GetSiblingSupportTypes(ctx)
 }
 
-func (s *Service) GetEducationalLevels(ctx context.Context) ([]EducationalLevel, error) {
+func (s *Service) GetEducationalLevels(
+	ctx context.Context,
+) ([]EducationalLevel, error) {
 	return s.repo.GetEducationalLevels(ctx)
 }
 
-func (s *Service) GetEducationalAttainments(ctx context.Context) ([]EducationalAttainment, error) {
+func (s *Service) GetEducationalAttainments(
+	ctx context.Context,
+) ([]EducationalAttainment, error) {
 	return s.repo.GetEducationalAttainments(ctx)
 }
 
@@ -295,7 +311,9 @@ func (s *Service) GetCourses(ctx context.Context) ([]Course, error) {
 	return s.repo.GetCourses(ctx)
 }
 
-func (s *Service) GetCivilStatusTypes(ctx context.Context) ([]CivilStatusType, error) {
+func (s *Service) GetCivilStatusTypes(
+	ctx context.Context,
+) ([]CivilStatusType, error) {
 	return s.repo.GetCivilStatusTypes(ctx)
 }
 
@@ -303,19 +321,27 @@ func (s *Service) GetReligions(ctx context.Context) ([]Religion, error) {
 	return s.repo.GetReligions(ctx)
 }
 
-func (s *Service) GetNatureOfResidenceTypes(ctx context.Context) ([]NatureOfResidenceType, error) {
+func (s *Service) GetNatureOfResidenceTypes(
+	ctx context.Context,
+) ([]NatureOfResidenceType, error) {
 	return s.repo.GetNatureOfResidenceTypes(ctx)
 }
 
-func (s *Service) GetActivityOptions(ctx context.Context) ([]ActivityOption, error) {
+func (s *Service) GetActivityOptions(
+	ctx context.Context,
+) ([]ActivityOption, error) {
 	return s.repo.GetActivityOptions(ctx)
 }
 
-func (s *Service) GetStudentRelationshipTypes(ctx context.Context) ([]StudentRelationshipType, error) {
+func (s *Service) GetStudentRelationshipTypes(
+	ctx context.Context,
+) ([]StudentRelationshipType, error) {
 	return s.repo.GetStudentRelationshipTypes(ctx)
 }
 
-func (s *Service) GetStudentStatuses(ctx context.Context) ([]StudentStatus, error) {
+func (s *Service) GetStudentStatuses(
+	ctx context.Context,
+) ([]StudentStatus, error) {
 	return s.repo.GetStudentStatuses(ctx)
 }
 
@@ -692,11 +718,23 @@ func (s *Service) GetStudentFamilyBackground(
 		return nil, nil
 	}
 
-	parentalStatus, err := s.repo.GetParentalStatusByID(ctx, studentFamily.ParentalStatusID)
-	natureOfResidence, err := s.repo.GetNatureOfResidenceByID(ctx, studentFamily.NatureOfResidenceId)
-	siblingSupportTypes, err := s.repo.GetStudentSiblingSupport(ctx, studentFamily.ID)
+	parentalStatus, err := s.repo.GetParentalStatusByID(
+		ctx,
+		studentFamily.ParentalStatusID,
+	)
+	natureOfResidence, err := s.repo.GetNatureOfResidenceByID(
+		ctx,
+		studentFamily.NatureOfResidenceId,
+	)
+	siblingSupportTypes, err := s.repo.GetStudentSiblingSupport(
+		ctx,
+		studentFamily.ID,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get student family background: %w", err)
+		return nil, fmt.Errorf(
+			"failed to get student family background: %w",
+			err,
+		)
 	}
 
 	supportTypes := make([]SibilingSupportType, 0)
@@ -918,7 +956,10 @@ func (s *Service) GetStudentSubjectPreferences(
 	return dtos, nil
 }
 
-func (s *Service) GetStudentHobbies(ctx context.Context, iirID string) ([]StudentHobbyDTO, error) {
+func (s *Service) GetStudentHobbies(
+	ctx context.Context,
+	iirID string,
+) ([]StudentHobbyDTO, error) {
 	hobbies, err := s.repo.GetStudentHobbies(ctx, iirID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get hobbies: %w", err)
@@ -1057,7 +1098,10 @@ func (s *Service) saveComprehensiveProfile(
 	}
 
 	// Validate Critical Dates
-	if err := s.validateDate(req.Student.DateOfBirth, "Student Date of Birth"); err != nil {
+	if err := s.validateDate(
+		req.Student.DateOfBirth,
+		"Student Date of Birth",
+	); err != nil {
 		return "", fmt.Errorf(
 			"[StudentService] {saveComprehensiveProfile}: %w",
 			err,
@@ -1209,7 +1253,10 @@ func (s *Service) saveComprehensiveProfile(
 	}
 
 	// 6. Educational Background
-	ebID, err := s.repo.UpsertEducationalBackground(ctx, tx, &EducationalBackground{
+	ebID, err := s.repo.UpsertEducationalBackground(
+		ctx,
+		tx,
+		&EducationalBackground{
 		IIRID:              iirID,
 		NatureOfSchooling:  req.Education.NatureOfSchooling,
 		InterruptedDetails: req.Education.InterruptedDetails,
@@ -1295,7 +1342,10 @@ func (s *Service) saveComprehensiveProfile(
 	for _, rpDTO := range req.Family.RelatedPersons {
 		// Validate DOB if not empty or if required
 		if rpDTO.DateOfBirth != "" {
-			if err := s.validateDate(rpDTO.DateOfBirth, "Related Person Date of Birth"); err != nil {
+			if err := s.validateDate(
+				rpDTO.DateOfBirth,
+				"Related Person Date of Birth",
+			); err != nil {
 				return "", fmt.Errorf(
 					"[StudentService] {saveComprehensiveProfile}: %w",
 					err,
@@ -1303,7 +1353,11 @@ func (s *Service) saveComprehensiveProfile(
 			}
 		} else {
 			// If it's mandatory in DB, we MUST provide a valid date.
-			return "", fmt.Errorf("date of birth is required for related person: %s %s", rpDTO.FirstName, rpDTO.LastName)
+			return "", fmt.Errorf(
+				"date of birth is required for related person: %s %s",
+				rpDTO.FirstName,
+				rpDTO.LastName,
+			)
 		}
 		rpID, err := s.repo.UpsertRelatedPerson(ctx, tx, &RelatedPerson{
 			FirstName:               rpDTO.FirstName,
@@ -1311,7 +1365,9 @@ func (s *Service) saveComprehensiveProfile(
 			LastName:                rpDTO.LastName,
 			SuffixName:              rpDTO.SuffixName,
 			DateOfBirth:             rpDTO.DateOfBirth,
-			EducationalAttainmentID: structs.Int64ToNullableInt64(int64(rpDTO.EducationalAttainment.ID)),
+			EducationalAttainmentID: structs.Int64ToNullableInt64(
+				int64(rpDTO.EducationalAttainment.ID),
+			),
 			Occupation:              rpDTO.Occupation,
 			EmployerName:            rpDTO.EmployerName,
 			EmployerAddress:         rpDTO.EmployerAddress,
@@ -1391,7 +1447,10 @@ func (s *Service) saveComprehensiveProfile(
 		}
 		seenSubjects[key] = true
 
-		_, err = s.repo.CreateStudentSubjectPreference(ctx, tx, &StudentSubjectPreference{
+		_, err = s.repo.CreateStudentSubjectPreference(
+			ctx,
+			tx,
+			&StudentSubjectPreference{
 			IIRID:       iirID,
 			SubjectName: subjName,
 			IsFavorite:  sspDTO.IsFavorite,

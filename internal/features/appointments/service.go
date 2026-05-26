@@ -50,7 +50,11 @@ func NewService(
 		userService:    userService,
 		noteService:    noteService,
 		studentService: studentService,
-		classifier:     classifier.NewClient(http.DefaultClient, cfg.AIBaseUrl, cfg.AiAPIKey),
+		classifier: classifier.NewClient(
+			http.DefaultClient,
+			cfg.AIBaseUrl,
+			cfg.AiAPIKey,
+		),
 	}
 }
 
@@ -126,21 +130,26 @@ func (s *Service) CreateAppointment(
 		},
 	)
 	if err != nil {
-		audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
-			Log: &audit.LogParams{
-				Level:    audit.LevelError,
-				Category: audit.CategoryAudit,
-				Action:   audit.ActionAppointmentFailed,
-				Message: fmt.Sprintf(
-					"Failed to create appointment for IIR #%s",
-					iirID,
-				),
-				Metadata: &audit.LogMetadata{
-					EntityType: constants.AppointmentEntityType,
-					NewValues:  req,
+		audit.Dispatch(
+			ctx,
+			s.logService,
+			s.notifService,
+			s.emailService,
+			audit.DispatchParams{
+				Log: &audit.LogParams{
+					Level:    audit.LevelError,
+					Category: audit.CategoryAudit,
+					Action:   audit.ActionAppointmentFailed,
+					Message: fmt.Sprintf(
+						"Failed to create appointment for IIR #%s",
+						iirID,
+					),
+					Metadata: &audit.LogMetadata{
+						EntityType: constants.AppointmentEntityType,
+						NewValues:  req,
+					},
 				},
-			},
-		})
+			})
 		return nil, err
 	}
 
@@ -149,7 +158,11 @@ func (s *Service) CreateAppointment(
 	student, _ := s.userService.GetUserByID(ctx, userID)
 	studentName := "A student"
 	if student != nil {
-		studentName = fmt.Sprintf("%s %s", student.FirstName, student.LastName)
+		studentName = fmt.Sprintf(
+			"%s %s",
+			student.FirstName,
+			student.LastName,
+		)
 	}
 
 	counselorIDs, _ := s.userService.GetUserIDsByRole(
@@ -193,42 +206,47 @@ func (s *Service) CreateAppointment(
 
 	newApptDTO := s.mapToDTO(createdAppt)
 
-	audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
-		Log: &audit.LogParams{
-			Level:    audit.LevelInfo,
-			Category: audit.CategoryAudit,
-			Action:   audit.ActionAppointmentCreated,
-			Message:  fmt.Sprintf("Appointment #%s created", appt.ID),
-			Metadata: &audit.LogMetadata{
-				EntityType: constants.AppointmentEntityType,
-				EntityID:   appt.ID,
-				NewValues:  req,
-			},
-		},
-		Notifications: notifications,
-		Email: []audit.EmailParams{
-			{
-				To:           counselorEmails,
-				Subject:      "New Appointment Request",
-				TemplatePath: "request.html",
-				TemplateData: map[string]any{
-					"EntityType":   constants.AppointmentEntityType,
-					"StudentName":  studentName,
-					"UrgencyLevel": newApptDTO.UrgencyLevel,
-					"Category":     newApptDTO.AppointmentCategory.Name,
-					"Reason":       newApptDTO.Reason.String,
-					"Time":         datetime.FormatTime(newApptDTO.TimeSlot.Time),
-					"Date":         datetime.FormatDate(newApptDTO.WhenDate),
-					"Status":       newApptDTO.Status.Name,
-					"RequestURL": fmt.Sprintf(
-						"%s/admin/appointments/%s",
-						cfg.BaseURL,
-						appt.ID,
-					),
+	audit.Dispatch(
+		ctx,
+		s.logService,
+		s.notifService,
+		s.emailService,
+		audit.DispatchParams{
+			Log: &audit.LogParams{
+				Level:    audit.LevelInfo,
+				Category: audit.CategoryAudit,
+				Action:   audit.ActionAppointmentCreated,
+				Message:  fmt.Sprintf("Appointment #%s created", appt.ID),
+				Metadata: &audit.LogMetadata{
+					EntityType: constants.AppointmentEntityType,
+					EntityID:   appt.ID,
+					NewValues:  req,
 				},
 			},
-		},
-	})
+			Notifications: notifications,
+			Email: []audit.EmailParams{
+				{
+					To:           counselorEmails,
+					Subject:      "New Appointment Request",
+					TemplatePath: "request.html",
+					TemplateData: map[string]any{
+						"EntityType":   constants.AppointmentEntityType,
+						"StudentName":  studentName,
+						"UrgencyLevel": newApptDTO.UrgencyLevel,
+						"Category":     newApptDTO.AppointmentCategory.Name,
+						"Reason":       newApptDTO.Reason.String,
+						"Time":         datetime.FormatTime(newApptDTO.TimeSlot.Time),
+						"Date":         datetime.FormatDate(newApptDTO.WhenDate),
+						"Status":       newApptDTO.Status.Name,
+						"RequestURL": fmt.Sprintf(
+							"%s/admin/appointments/%s",
+							cfg.BaseURL,
+							appt.ID,
+						),
+					},
+				},
+			},
+		})
 
 	return newApptDTO, nil
 }
@@ -283,7 +301,10 @@ func (s *Service) GetAppointmentByID(
 	// Fetch student COR URL
 	userID, _ := s.repo.GetUserIDByAppointmentID(ctx, id)
 	if userID != "" {
-		corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, []string{userID})
+		corMap, _ := s.studentService.GetLatestCORsByUserIDs(
+			ctx,
+			[]string{userID},
+		)
 		dto.StudentCORURL = corMap[userID]
 	}
 
@@ -351,7 +372,10 @@ func (s *Service) ListAppointments(
 			userIDs = append(userIDs, appts[i].UserID)
 		}
 	}
-	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, userIDs)
+	corMap, _ := s.studentService.GetLatestCORsByUserIDs(
+		ctx,
+		userIDs,
+	)
 
 	dtos := make([]AppointmentDTO, 0, len(appts))
 	for i := range appts {
@@ -410,79 +434,6 @@ func (s *Service) ListAppointments(
 	}, nil
 }
 
-func (s *Service) GetAppointmentsByUserID(
-	ctx context.Context,
-	userID string,
-	req ListAppointmentsRequest,
-) (*ListAppointmentsResponse, error) {
-	req.SetDefaults("created_at")
-
-	appts, err := s.repo.ListByUserID(
-		ctx,
-		userID,
-		req.GetOffset(),
-		req.PageSize,
-		req.OrderBy,
-		req.StatusID,
-		req.StartDate,
-		req.EndDate,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	dtos := make([]AppointmentDTO, 0, len(appts))
-	for i := range appts {
-		dto := AppointmentDTO{
-			ID: appts[i].ID,
-			User: users.UserResponse{
-				ID:         "",
-				FirstName:  appts[i].UserFirstName,
-				MiddleName: appts[i].UserMiddleName,
-				LastName:   appts[i].UserLastName,
-				Email:      appts[i].UserEmail,
-			},
-			Reason:     appts[i].Reason,
-			AdminNotes: appts[i].AdminNotes,
-			WhenDate:   appts[i].WhenDate,
-			TimeSlot: TimeSlot{
-				ID:   appts[i].TimeSlotID,
-				Time: appts[i].TimeSlotTime,
-			},
-			AppointmentCategory: AppointmentCategory{
-				ID:   appts[i].CategoryID,
-				Name: appts[i].CategoryName,
-			},
-			Status: AppointmentStatus{
-				ID:   appts[i].StatusID,
-				Name: appts[i].StatusName,
-			},
-			CreatedAt: appts[i].CreatedAt,
-			UpdatedAt: appts[i].UpdatedAt,
-		}
-
-		hasNote, _ := s.noteService.HasNoteForAppointment(ctx, appts[i].ID)
-		dto.HasSignificantNote = hasNote
-
-		dtos = append(dtos, dto)
-	}
-
-	total, err := s.repo.GetTotalAppointmentsCount(
-		ctx,
-		req.StatusID,
-		req.StartDate,
-		req.EndDate,
-		&userID,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return &ListAppointmentsResponse{
-		Appointments: dtos,
-		Meta:         structs.CalculateMetadata(total, req.Page, req.PageSize),
-	}, nil
-}
 
 func (s *Service) GetAppointmentsByIIRID(
 	ctx context.Context,
@@ -616,21 +567,26 @@ func (s *Service) UpdateAppointment(
 		},
 	)
 	if err != nil {
-		audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
-			Log: &audit.LogParams{
-				Level:    audit.LevelError,
-				Category: audit.CategoryAudit,
-				Action:   audit.ActionAppointmentUpdateFailed,
-				Message:  fmt.Sprintf("Failed to update appointment #%s", id),
-				Metadata: &audit.LogMetadata{
-					EntityType: "appointment",
-					EntityID:   id,
-					OldValues:  oldAppt,
-					NewValues:  req,
-					Error:      err.Error(),
+		audit.Dispatch(
+			ctx,
+			s.logService,
+			s.notifService,
+			s.emailService,
+			audit.DispatchParams{
+				Log: &audit.LogParams{
+					Level:    audit.LevelError,
+					Category: audit.CategoryAudit,
+					Action:   audit.ActionAppointmentUpdateFailed,
+					Message:  fmt.Sprintf("Failed to update appointment #%s", id),
+					Metadata: &audit.LogMetadata{
+						EntityType: "appointment",
+						EntityID:   id,
+						OldValues:  oldAppt,
+						NewValues:  req,
+						Error:      err.Error(),
+					},
 				},
-			},
-		})
+			})
 
 		return err
 	}
@@ -675,40 +631,45 @@ func (s *Service) UpdateAppointment(
 		},
 	}
 
-	audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
-		Log: &audit.LogParams{
-			Level:    audit.LevelInfo,
-			Category: audit.CategoryAudit,
-			Action:   audit.ActionAppointmentUpdated,
-			Message:  fmt.Sprintf("Appointment #%s updated", id),
-			Metadata: &audit.LogMetadata{
-				EntityType: constants.AppointmentEntityType,
-				EntityID:   id,
-				OldValues:  oldAppt,
-				NewValues:  req,
-			},
-		},
-		Notifications: notifications,
-		Email: []audit.EmailParams{
-			{
-				To:           []string{newAppt.UserEmail},
-				Subject:      "Appointment Status Updated",
-				TemplatePath: "appointment.html",
-				TemplateData: map[string]interface{}{
-					"StudentName": fmt.Sprintf(
-						"%s %s",
-						newAppt.UserFirstName,
-						newAppt.UserLastName,
-					),
-					"Date":       datetime.FormatDate(newAppt.WhenDate),
-					"Time":       datetime.FormatTime(newAppt.TimeSlotTime),
-					"Category":   newAppt.CategoryName,
-					"Status":     newAppt.StatusName,
-					"AdminNotes": newAppt.AdminNotes.String,
+	audit.Dispatch(
+		ctx,
+		s.logService,
+		s.notifService,
+		s.emailService,
+		audit.DispatchParams{
+			Log: &audit.LogParams{
+				Level:    audit.LevelInfo,
+				Category: audit.CategoryAudit,
+				Action:   audit.ActionAppointmentUpdated,
+				Message:  fmt.Sprintf("Appointment #%s updated", id),
+				Metadata: &audit.LogMetadata{
+					EntityType: constants.AppointmentEntityType,
+					EntityID:   id,
+					OldValues:  oldAppt,
+					NewValues:  req,
 				},
 			},
-		},
-	})
+			Notifications: notifications,
+			Email: []audit.EmailParams{
+				{
+					To:           []string{newAppt.UserEmail},
+					Subject:      "Appointment Status Updated",
+					TemplatePath: "appointment.html",
+					TemplateData: map[string]interface{}{
+						"StudentName": fmt.Sprintf(
+							"%s %s",
+							newAppt.UserFirstName,
+							newAppt.UserLastName,
+						),
+						"Date":       datetime.FormatDate(newAppt.WhenDate),
+						"Time":       datetime.FormatTime(newAppt.TimeSlotTime),
+						"Category":   newAppt.CategoryName,
+						"Status":     newAppt.StatusName,
+						"AdminNotes": newAppt.AdminNotes.String,
+					},
+				},
+			},
+		})
 
 	// Add special prompt for counselors if appointment is completed
 	// status_id 3 = Completed
