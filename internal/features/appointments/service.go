@@ -80,18 +80,7 @@ func (s *Service) CreateAppointment(
 		StatusID:              1,
 	}
 
-	// Graduated Student Protocol: Lock records for Graduated or Archived students
-	isLocked, err := s.studentService.IsStudentLocked(ctx, iirID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check student status: %w", err)
-	}
-	if isLocked {
-		return nil, fmt.Errorf(
-			"cannot create appointment: student record is locked (Graduated/Archived)",
-		)
-	}
-
-	// TODO: to be removed in future implementations
+	// Default values for urgency level and score
 	appt.UrgencyLevel = "MEDIUM"
 	appt.UrgencyScore = 0.0
 
@@ -146,7 +135,6 @@ func (s *Service) CreateAppointment(
 					),
 					Metadata: &audit.LogMetadata{
 						EntityType: constants.AppointmentEntityType,
-						NewValues:  req,
 					},
 				},
 			})
@@ -177,9 +165,10 @@ func (s *Service) CreateAppointment(
 			TargetType: structs.StringToNullableString(
 				constants.AppointmentEntityType,
 			),
-			Title:   "Appointment Created Successfully",
-			Message: "Your appointment has been created and is pending approval.",
-			Type:    constants.AppointmentEntityType,
+			Title: "Appointment Created Successfully",
+			Message: "Your appointment has been created and " +
+				"is pending approval.",
+			Type: constants.AppointmentEntityType,
 		},
 	}
 
@@ -220,7 +209,6 @@ func (s *Service) CreateAppointment(
 				Metadata: &audit.LogMetadata{
 					EntityType: constants.AppointmentEntityType,
 					EntityID:   appt.ID,
-					NewValues:  req,
 				},
 			},
 			Notifications: notifications,
@@ -235,9 +223,13 @@ func (s *Service) CreateAppointment(
 						"UrgencyLevel": newApptDTO.UrgencyLevel,
 						"Category":     newApptDTO.AppointmentCategory.Name,
 						"Reason":       newApptDTO.Reason.String,
-						"Time":         datetime.FormatTime(newApptDTO.TimeSlot.Time),
-						"Date":         datetime.FormatDate(newApptDTO.WhenDate),
-						"Status":       newApptDTO.Status.Name,
+						"Time": datetime.FormatTime(
+							newApptDTO.TimeSlot.Time,
+						),
+						"Date": datetime.FormatDate(
+							newApptDTO.WhenDate,
+						),
+						"Status": newApptDTO.Status.Name,
 						"RequestURL": fmt.Sprintf(
 							"%s/admin/appointments/%s",
 							cfg.BaseURL,
@@ -434,7 +426,6 @@ func (s *Service) ListAppointments(
 	}, nil
 }
 
-
 func (s *Service) GetAppointmentsByIIRID(
 	ctx context.Context,
 	iirID string,
@@ -577,12 +568,13 @@ func (s *Service) UpdateAppointment(
 					Level:    audit.LevelError,
 					Category: audit.CategoryAudit,
 					Action:   audit.ActionAppointmentUpdateFailed,
-					Message:  fmt.Sprintf("Failed to update appointment #%s", id),
+					Message: fmt.Sprintf(
+						"Failed to update appointment #%s",
+						id,
+					),
 					Metadata: &audit.LogMetadata{
 						EntityType: "appointment",
 						EntityID:   id,
-						OldValues:  oldAppt,
-						NewValues:  req,
 						Error:      err.Error(),
 					},
 				},
@@ -645,8 +637,6 @@ func (s *Service) UpdateAppointment(
 				Metadata: &audit.LogMetadata{
 					EntityType: constants.AppointmentEntityType,
 					EntityID:   id,
-					OldValues:  oldAppt,
-					NewValues:  req,
 				},
 			},
 			Notifications: notifications,
