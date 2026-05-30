@@ -16,7 +16,6 @@ func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
-
 func (r *Repository) GetStudentSignificantNotes(
 	ctx context.Context,
 	iirID string,

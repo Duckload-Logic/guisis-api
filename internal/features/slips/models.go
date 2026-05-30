@@ -15,8 +15,8 @@ type SlipCategory struct {
 
 // SlipStatus represents the lifecycle state of a slip request.
 type SlipStatus struct {
-	ID   int    `db:"id"        json:"id"`
-	Name string `db:"name"      json:"name"`
+	ID   int    `db:"id"   json:"id"`
+	Name string `db:"name" json:"name"`
 }
 
 // SlipWithDetailsView represents a denormalized view of a slip for listings.
@@ -32,24 +32,24 @@ type SlipWithDetailsView struct {
 	Reason         string                 `db:"reason"           json:"reason"`
 	DateOfAbsence  string                 `db:"date_of_absence"  json:"dateOfAbsence"`
 	DateNeeded     string                 `db:"date_needed"      json:"dateNeeded"`
-	AdminNotes     structs.NullableString `db:"admin_notes"       json:"adminNotes"`
+	AdminNotes     structs.NullableString `db:"admin_notes"      json:"adminNotes"`
 	CategoryID     int                    `db:"category_id"      json:"categoryId"`
 	CategoryName   string                 `db:"category_name"    json:"categoryName"`
 	StatusID       int                    `db:"status_id"        json:"statusId"`
 	StatusName     string                 `db:"status_name"      json:"statusName"`
 	UrgencyScore   int                    `db:"urgency_score"    json:"urgencyScore"`
-	TicketCode     structs.NullableString `db:"ticket_code"       json:"ticketCode,omitempty"`
-	IsVerified     sql.NullBool           `db:"is_verified"       json:"isVerified,omitempty"`
-	VerifiedAt     structs.NullableTime   `db:"verified_at"       json:"verifiedAt,omitempty"`
-	CreatedAt      time.Time              `db:"created_at"        json:"createdAt"`
-	UpdatedAt      time.Time              `db:"updated_at"        json:"updatedAt"`
+	TicketCode     structs.NullableString `db:"ticket_code"      json:"ticketCode,omitempty"`
+	IsVerified     sql.NullBool           `db:"is_verified"      json:"isVerified,omitempty"`
+	VerifiedAt     structs.NullableTime   `db:"verified_at"      json:"verifiedAt,omitempty"`
+	CreatedAt      time.Time              `db:"created_at"       json:"createdAt"`
+	UpdatedAt      time.Time              `db:"updated_at"       json:"updatedAt"`
 }
 
 // SlipStatusCount represents aggregated status metrics.
 type SlipStatusCount struct {
-	ID    int    `db:"id"        json:"id"`
-	Name  string `db:"name"      json:"name"`
-	Count int    `db:"count"     json:"count"`
+	ID    int    `db:"id"    json:"id"`
+	Name  string `db:"name"  json:"name"`
+	Count int    `db:"count" json:"count"`
 }
 
 // Slip represents the core entity for an excuse or admission slip.
@@ -59,7 +59,7 @@ type Slip struct {
 	Reason        string                 `db:"reason"          json:"reason"`
 	DateOfAbsence string                 `db:"date_of_absence" json:"dateOfAbsence"`
 	DateNeeded    string                 `db:"date_needed"     json:"dateNeeded"`
-	AdminNotes    structs.NullableString `db:"admin_notes"      json:"adminNotes"`
+	AdminNotes    structs.NullableString `db:"admin_notes"     json:"adminNotes"`
 	CategoryID    int                    `db:"category_id"     json:"categoryId"`
 	StatusID      int                    `db:"status_id"       json:"statusId"`
 	CreatedAt     time.Time              `db:"created_at"      json:"createdAt"`

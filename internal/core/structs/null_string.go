@@ -71,10 +71,6 @@ func FromSqlNull(ns sql.NullString) NullableString {
 	return NullableString{String: ns.String, Valid: ns.Valid}
 }
 
-func ToSqlNull(ns NullableString) sql.NullString {
-	return sql.NullString{String: ns.String, Valid: ns.Valid}
-}
-
 func (ni *NullableInt64) UnmarshalJSON(data []byte) error {
 	if string(data) == "null" {
 		ni.Valid = false
@@ -115,14 +111,6 @@ func (ni NullableInt64) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(ni.Int64)
-}
-
-func FromSqlNullInt64(ni sql.NullInt64) NullableInt64 {
-	return NullableInt64{Int64: ni.Int64, Valid: ni.Valid}
-}
-
-func ToSqlNullInt64(ni NullableInt64) sql.NullInt64 {
-	return sql.NullInt64{Int64: ni.Int64, Valid: ni.Valid}
 }
 
 func Int64ToNullableInt64(i int64) NullableInt64 {

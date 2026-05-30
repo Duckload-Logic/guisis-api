@@ -17,7 +17,11 @@ type ClassifierClient struct {
 }
 
 // NewIDPClient creates a new IDP client with configured timeout
-func NewClient(httpClient *http.Client, baseUrl string, apiKey string) *ClassifierClient {
+func NewClient(
+	httpClient *http.Client,
+	baseUrl string,
+	apiKey string,
+) *ClassifierClient {
 	return &ClassifierClient{
 		httpClient: httpClient,
 		baseUrl:    baseUrl,

@@ -59,18 +59,6 @@ func loadLookups() {
 		courseIDs = append(courseIDs, id)
 	}
 
-	// enrollment reasons
-	rows, err = db.Query("SELECT id FROM enrollment_reasons")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id int
-		rows.Scan(&id)
-		enrollmentReasonIDs = append(enrollmentReasonIDs, id)
-	}
-
 	// student support types
 	rows, err = db.Query("SELECT id FROM student_support_types")
 	if err != nil {

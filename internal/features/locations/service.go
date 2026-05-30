@@ -89,7 +89,6 @@ func (s *Service) GetAddressByID(
 	return addrDTO, nil
 }
 
-
 func (s *Service) UpsertAddress(
 	ctx context.Context,
 	tx datastore.DB,

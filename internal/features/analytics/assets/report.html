@@ -6,7 +6,7 @@
 		<style>
 			@page {
 				size: A4;
-				margin: 15mm;
+				margin: 15mm 15mm 30mm 15mm;
 			}
 			body {
 				font-family: "Arial", Times, serif;
@@ -81,17 +81,25 @@
 				color: #000000;
 			}
 			.footer {
-				margin-top: 30px;
-				font-size: 8pt;
+				position: fixed;
+				bottom: -20mm;
+				left: 0;
+				right: 0;
+				height: 10mm;
+				font-size: 12pt;
 				text-align: center;
 				color: #999;
-				border-top: 1px solid #eee;
+				border-top: 1px solid #000;
 				padding-top: 10px;
 			}
 			.summary {
 				width: 100%;
 				border-collapse: collapse;
 				margin-bottom: 20px;
+			}
+			tr {
+				page-break-inside: avoid;
+				break-inside: avoid;
 			}
 		</style>
 	</head>
@@ -309,7 +317,7 @@
 			<tbody>
 				{{range .Data}}
 				<!--  -->
-				{{if eq .Rank 1}}
+				{{if .IsTop}}
 				<tr class="highlight-row">
 					<td>{{.Category}}</td>
 					<td class="num-col">{{.MaleCount}}</td>
@@ -351,5 +359,6 @@
 			</tbody>
 		</table>
 		{{end}}
+		<!-- <div class="footer">This is a system generated report</div> -->
 	</body>
 </html>

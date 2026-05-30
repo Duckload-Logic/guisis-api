@@ -145,13 +145,6 @@ CREATE TABLE student_relationship_types (
 
 CREATE UNIQUE INDEX unique_idx_relationship_name ON student_relationship_types(relationship_name ASC);
 
-CREATE TABLE enrollment_reasons (
-    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    reason_text VARCHAR(100) NOT NULL UNIQUE
-) ENGINE = InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-CREATE UNIQUE INDEX unique_idx_reason_text ON enrollment_reasons(reason_text ASC);
-
 CREATE TABLE nature_of_residence_types (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     residence_type_name VARCHAR(100) NOT NULL UNIQUE

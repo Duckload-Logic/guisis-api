@@ -64,7 +64,6 @@ func (r *Repository) WithTransaction(
 	return datastore.RunInTransaction(ctx, r.db, fn)
 }
 
-
 func (r *Repository) CreateSlip(
 	ctx context.Context,
 	tx datastore.DB,
@@ -151,7 +150,6 @@ func (r *Repository) DeleteSlipAttachments(
 	}
 	return nil
 }
-
 
 func (r *Repository) GetSlipStatuses(
 	ctx context.Context,
@@ -370,7 +368,6 @@ func (r *Repository) GetAll(
 	return slips, nil
 }
 
-
 func (r *Repository) GetByIIRID(
 	ctx context.Context,
 	iirID string,
@@ -536,7 +533,6 @@ func (r *Repository) UpdateStatus(
 	return nil
 }
 
-
 func (r *Repository) CreateTicket(
 	ctx context.Context,
 	tx datastore.DB,
@@ -591,7 +587,6 @@ func (r *Repository) UpdateTicketVerification(
 	}
 	return nil
 }
-
 
 func (r *Repository) GetTicketBySlipID(
 	ctx context.Context,

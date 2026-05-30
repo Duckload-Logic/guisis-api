@@ -7,7 +7,19 @@
     <style>
         @page {
             size: A4;
-            margin: 0;
+            margin: 0 15mm 15mm 15mm;   /* top 0, right/left 15mm, bottom 15mm */
+            @bottom-center {
+                content: "This document contains personal-identifiable information that is subject to Data Privacy \a \0000a0\0000a0\0000a0\0000a0\0000a0\0000a0\0000a0\0000a0 Please keep this document protected and in a safe place.";
+                white-space: pre-wrap;
+                font-family: 'Times New Roman', serif;
+                font-size: 10pt;
+                color: rgb(163, 0, 0);
+                border-top: 0.5px solid #000;
+                padding-top: 5px;
+                width: auto;                /* stretches to the full page‑area width */
+                text-align: left;
+                margin-bottom: 10mm;        /* pushes the whole box 10mm up from the page edge */
+            }
         }
 
         body {
@@ -16,6 +28,7 @@
             line-height: 1.1;
             margin: 0;
             padding: 0;
+            padding-bottom: 45px;
             background-color: white;
             color: black;
         }
@@ -26,12 +39,17 @@
 
         .page {
             width: 100%;
-            min-height: 100%;
-            padding: 10mm 15mm 30mm 15mm;
+            height: 282mm;
+            padding: 10mm 15mm 0 15mm;
             margin: 0 auto;
             position: relative;
             box-sizing: border-box;
             page-break-after: always;
+
+        }
+
+        .page:last-of-type {
+            page-break-after: auto;
         }
 
         .header {
@@ -40,15 +58,35 @@
         }
 
         .footer {
-            position: absolute;
-            bottom: 10mm;
-            left: 15mm;
-            right: 15mm;
+            /* screen: fixed at the bottom of the viewport */
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 999;
+            background: white;
             font-size: 12pt;
             text-align: left;
             color: rgb(163, 0, 0);
             border-top: 0.5px solid #000;
-            padding-top: 5px;
+            padding: 6px 15mm 8px 15mm;
+            box-sizing: border-box;
+        }
+
+        /* print: repeat on every physical page */
+        @media print {
+            .footer {
+                position: fixed;
+                bottom: 10mm;
+                left: 15mm;
+                right: 15mm;
+                padding: 5px 0 0 0;
+                background: transparent;
+                z-index: 999;
+            }
+            body {
+                padding-bottom: 0;
+            }
         }
 
         .form-id {
@@ -163,7 +201,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 5px;
-            font-size: 8pt;
+            font-size: 10pt;
             border: 1px solid black;
         }
 
@@ -328,7 +366,7 @@
         <div class="student-no text-right">Student No. <span
                 class="field-fill w-200 text-center">{{.StudentNumber}}</span></div>
 
-        <div class="header mt-10" style="margin-top: 30px;">
+        <div class="header mt-10" style="margin-top: 15px;">
             <h2>Polytechnic University of the Philippines</h2>
             <h1>GUIDANCE, COUNSELING AND TESTING SERVICES</h1>
             <p>Taguig Campus</p>
@@ -752,15 +790,6 @@
                     "Self-supporting"}}✓{{end}}</div> Self-supporting/working student
             </div>
         </div>
-        <div class="footer">
-            <span>
-                This document contains personal-identifiable information that is subject to Data Privacy
-            </span>
-            <br>
-            <span class="">
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Please keep this document protected and in a safe place.
-            </span>
-        </div>
         {{end}} {{/* end with .Family */}}
         {{end}} {{/* end with .Profile */}}
     </div>
@@ -1179,18 +1208,41 @@
             <div class="signature-line w-250"></div><br>
             <span style="padding-right: 50px;">(Student's Signature)</span>
         </div>
-
-        <div class="footer">
-            <span>
-                This document contains personal-identifiable information that is subject to Data Privacy
-            </span>
-            <br>
-            <span class="">
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Please keep this document protected and in a safe place.
-            </span>
-        </div>
         {{end}} {{/* end with .Profile */}}
     </div>
+
+    {{if and .ShowSignificantNotes .SignificantNotes}}
+    <div class="page">
+        <div class="section-header">
+            VII. SIGNIFICANT NOTES (For Guidance Counselors only)
+        </div>
+        <table>
+            <tr>
+                <th style="width: 15%;">DATE</th>
+                <th style="width: 50%;">INCIDENT</th>
+                <th>REMARKS</th>
+            </tr>
+            {{range .SignificantNotes}}
+            <tr>
+                <td>{{.CreatedAt.Format "January 02, 2006"}}</td>
+                <td>{{.Note}}</td>
+                <td>{{.Remarks}}</td>
+            </tr>
+            {{end}}
+        </table>
+    </div>
+    {{end}}
+    <!-- <div class="footer">
+        <span>
+            This document contains personal-identifiable information that
+            is subject to Data Privacy
+        </span>
+        <br>
+        <span>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Please keep this document protected and in a safe place.
+        </span>
+    </div> -->
 
 </body>
 

@@ -8,7 +8,8 @@ type DemographicStatDTO struct {
 	FemalePct   float64 `json:"femalePct"`
 	Total       int     `json:"total"`
 	TotalPct    float64 `json:"totalPct"`
-	Rank        int     `json:"rank,omitempty"`
+	Rank        float64 `json:"rank,omitempty"`
+	IsTop       bool    `json:"isTop"`
 }
 
 type IIRAnalyticsReportResponse struct {

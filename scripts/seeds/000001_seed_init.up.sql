@@ -10,18 +10,6 @@ VALUES
     (3, 'SUPERADMIN'),
     (4, 'DEVELOPER');
 
-INSERT INTO enrollment_reasons (id, reason_text) VALUES
-    (1, 'Lower tuition fee'),
-    (2, 'Safety of the place'),
-    (3, 'Spacious Campus'),
-    (4, 'Nearness of home to school'),
-    (5, 'Accessible to transportation'),
-    (6, 'Better quality of education'),
-    (7, 'Adequate School Facilities'),
-    (8, 'Son / Daughter of PUP Employee'),
-    (9, 'Closer Student-Faculty Relations'),
-    (10, 'Expecting Scholarship Offer');
-
 INSERT INTO student_support_types (support_type_name) VALUES
     ('Parents'),
     ('Brother/Sister'),
@@ -52,7 +40,8 @@ INSERT INTO parental_status_types (id, status_name) VALUES
 INSERT INTO educational_levels (level_name) VALUES
     ('Pre-Elementary'),
     ('Elementary'),
-    ('High School'),
+    ('Junior High School'),
+    ('Senior High School'),
     ('Vocational'),
     ('College');
 
@@ -79,11 +68,16 @@ INSERT INTO civil_status_types (id, status_name) VALUES
 INSERT INTO student_relationship_types (relationship_name) VALUES
     ('Father'),
     ('Mother'),
-    ('Guardian'),
-    ('Relative'),
+    ('Uncle'),
+    ('Auntie'),
+    ('Brother'),
+    ('Sister'),
+    ('Grandma'),
+    ('Grandpa'),
+    ('Cousin'),
+    ('Legal Guardian'),
     ('Friend'),
-    ('Spouse'),
-    ('Other');
+    ('Other relative');
 
 INSERT INTO nature_of_residence_types (residence_type_name) VALUES
     ('Family home'),
@@ -166,4 +160,4 @@ INSERT INTO time_slots (id, time) VALUES
     (5, '13:00:00'),
     (6, '14:00:00'),
     (7, '15:00:00'),
-    (8, '16:00:00'),
+    (8, '16:00:00');

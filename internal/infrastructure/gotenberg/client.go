@@ -44,6 +44,13 @@ func (c *Client) ConvertHTML(
 		return nil, fmt.Errorf("failed to write html content: %w", err)
 	}
 
+	if err := writer.WriteField("preferCssPageSize", "true"); err != nil {
+		return nil, fmt.Errorf(
+			"failed to write field preferCssPageSize: %w",
+			err,
+		)
+	}
+
 	if err := writer.Close(); err != nil {
 		return nil, fmt.Errorf("failed to close multipart writer: %w", err)
 	}

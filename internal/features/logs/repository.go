@@ -271,4 +271,3 @@ func (r *Repository) DeleteLogsOlderThan(
 
 	return rows, nil
 }
-

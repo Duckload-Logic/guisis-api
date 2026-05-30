@@ -105,9 +105,6 @@ func generateFullStudentIIR(
 		log.Fatalf("[Seeder] {Upsert IIRRecord}: %v", err)
 	}
 
-	// selected reasons
-	insertSelectedReasons(ctx, tx, iirID)
-
 	// addresses (residential & provincial)
 	resAddr1 := insertAddress(ctx, tx, true)
 	resAddr2 := insertAddress(ctx, tx, false)
@@ -218,7 +215,7 @@ func generateFullStudentIIR(
 	insertSignificantNotes(ctx, tx, iirID, appointmentIDs,
 		admissionSlipIDs)
 
-	fmt.Printf("[Seeder] Created student %d | iirID: %s\n", index+1, iirID)
+	fmt.Printf("Created student %d %s\n", index+1, iirID)
 }
 
 func linkFamilyMembers(
@@ -252,7 +249,7 @@ func linkFamilyMembers(
 			true, false, true)
 		if guardian != nil {
 			linkRelatedPerson(ctx, tx, iirID, guardian.ID,
-				"Guardian", false, true, true)
+				"Legal Guardian", false, true, true)
 		}
 	}
 }
@@ -308,7 +305,7 @@ func deriveEmergencyContact(
 			MiddleName:     guardian.MiddleName,
 			LastName:       guardian.LastName,
 			Number:         validContact(guardian.ContactNumber),
-			RelationshipID: relationshipID("Guardian"),
+			RelationshipID: relationshipID("Legal Guardian"),
 			AddressID: safeAddressID(
 				guardian.AddressID,
 				provincialAddressID,
@@ -445,26 +442,6 @@ func insertPersonalInfo(
 	err := studentsRepo.UpsertStudentPersonalInfo(ctx, tx, info)
 	if err != nil {
 		log.Fatalf("[Seeder] {Upsert PersonalInfo}: %v", err)
-	}
-}
-
-func insertSelectedReasons(ctx context.Context, tx *sqlx.Tx, iirID string) {
-	// pick 1-3 random reasons
-	num := rand.Intn(3) + 1
-	selected := make(map[int]bool)
-	for len(selected) < num {
-		rid := randomChoice(enrollmentReasonIDs).(int)
-		selected[rid] = true
-	}
-	for rid := range selected {
-		ssr := &students.StudentSelectedReason{
-			IIRID:    iirID,
-			ReasonID: rid,
-		}
-		err := studentsRepo.CreateStudentSelectedReason(ctx, tx, ssr)
-		if err != nil {
-			log.Fatalf("[Seeder] {Create StudentSelectedReason}: %v", err)
-		}
 	}
 }
 
@@ -646,7 +623,10 @@ func insertFamilyBackground(
 	parentalID := randomChoice(parentalStatusIDs).(int)
 	var details structs.NullableString
 	if parentalID == 5 { // "Other"
-		details = structs.NullableString{String: gofakeit.Sentence(3), Valid: true}
+		details = structs.NullableString{
+			String: gofakeit.Sentence(3),
+			Valid:  true,
+		}
 	}
 	quiet := gofakeit.Bool()
 	sharing := gofakeit.Bool()
@@ -1020,7 +1000,10 @@ func insertActivities(ctx context.Context, tx *sqlx.Tx, iirID string) {
 		role := randomChoice([]string{"Officer", "Member", "Other"}).(string)
 		var roleSpec structs.NullableString
 		if role == "Other" {
-			roleSpec = structs.NullableString{String: gofakeit.Word(), Valid: true}
+			roleSpec = structs.NullableString{
+				String: gofakeit.Word(),
+				Valid:  true,
+			}
 		}
 
 		sa := &students.StudentActivity{

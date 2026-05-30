@@ -52,7 +52,7 @@ type UpdateRolesRequest struct {
 }
 
 type AddUserToWhitelistRequest struct {
-	Email   string `json:"email" binding:"required,email"`
+	Email   string `json:"email"   binding:"required,email"`
 	RoleIDs []int  `json:"roleIds" binding:"required,min=1"`
 }
 
@@ -72,4 +72,3 @@ type WhitelistResponse struct {
 	Roles     []Role `json:"roles"`
 	CreatedAt string `json:"createdAt"`
 }
-

@@ -67,7 +67,6 @@ func (r *Repository) GetDB() *sqlx.DB {
 	return r.db
 }
 
-
 func (r *Repository) GetCategories(
 	ctx context.Context,
 ) ([]AppointmentCategory, error) {
@@ -260,7 +259,6 @@ func (r *Repository) List(
 	return appts, nil
 }
 
-
 func (r *Repository) IsSlotAvailableForUpdate(
 	ctx context.Context,
 	tx datastore.DB,
@@ -323,7 +321,6 @@ func (r *Repository) GetStatuses(
 
 	return statuses, nil
 }
-
 
 func (r *Repository) ListByIIRID(
 	ctx context.Context,

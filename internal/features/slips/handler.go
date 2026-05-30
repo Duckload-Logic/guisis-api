@@ -324,7 +324,11 @@ func (h *Handler) GetSlipMe(c *gin.Context) {
 		return
 	}
 
-	slips, err := h.service.GetExcuseSlipsByIIRID(c.Request.Context(), iirID, req)
+	slips, err := h.service.GetExcuseSlipsByIIRID(
+		c.Request.Context(),
+		iirID,
+		req,
+	)
 	if err != nil {
 		fmt.Printf("[GetSlipMe] {Fetch Slips}: %v\n", err)
 		response.SendError(
@@ -386,7 +390,10 @@ func (h *Handler) GetSlipByID(c *gin.Context) {
 // @Router       /slips/id/{id}/attachments [get]
 func (h *Handler) GetSlipAttachments(c *gin.Context) {
 	idParam := c.Param("slipID")
-	attachments, err := h.service.GetSlipAttachments(c.Request.Context(), idParam)
+	attachments, err := h.service.GetSlipAttachments(
+		c.Request.Context(),
+		idParam,
+	)
 	if err != nil {
 		fmt.Printf("[GetSlipAttachments] {Fetch Attachments}: %v\n", err)
 		response.SendError(
@@ -635,12 +642,21 @@ func (h *Handler) GetTicketDetails(c *gin.Context) {
 	slip, err := h.service.GetSlipByTicketCode(c.Request.Context(), code)
 	if err != nil {
 		fmt.Printf("[GetTicketDetails] {Get Slip}: %v\n", err)
-		response.SendError(c, "Failed to get ticket details", http.StatusInternalServerError, nil)
+		response.SendError(
+			c,
+			"Failed to get ticket details",
+			http.StatusInternalServerError,
+			nil,
+		)
 		return
 	}
 
 	if slip == nil {
-		response.SendFail(c, gin.H{"error": "Ticket not found"}, http.StatusNotFound)
+		response.SendFail(
+			c,
+			gin.H{"error": "Ticket not found"},
+			http.StatusNotFound,
+		)
 		return
 	}
 

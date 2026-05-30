@@ -432,7 +432,9 @@ func (r *Repository) ListUsers(
 			}
 			for i := range users {
 				if url, ok := picMap[users[i].ID]; ok {
-					users[i].ProfilePicture = structs.StringToNullableString(url)
+					users[i].ProfilePicture = structs.StringToNullableString(
+						url,
+					)
 				}
 			}
 		}
@@ -522,4 +524,3 @@ func (r *Repository) ListWhitelist(
 	err := r.db.SelectContext(ctx, &entries, query)
 	return entries, err
 }
-

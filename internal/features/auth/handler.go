@@ -244,7 +244,12 @@ func (h *Handler) isAllowedOrigin(origin string) bool {
 // PostRefreshToken handles session refreshing using the refresh token.
 func (h *Handler) PostRefreshToken(c *gin.Context) {
 	if _, err := c.Cookie(constants.RefreshTokenCookieName); err != nil {
-		response.SendError(c, "Refresh token missing", http.StatusUnauthorized, nil)
+		response.SendError(
+			c,
+			"Refresh token missing",
+			http.StatusUnauthorized,
+			nil,
+		)
 		return
 	}
 
@@ -252,13 +257,23 @@ func (h *Handler) PostRefreshToken(c *gin.Context) {
 	// We need this to identify the session in Redis.
 	tokenString, err := c.Cookie(constants.AccessTokenCookieName)
 	if err != nil {
-		response.SendError(c, "Access token missing", http.StatusUnauthorized, nil)
+		response.SendError(
+			c,
+			"Access token missing",
+			http.StatusUnauthorized,
+			nil,
+		)
 		return
 	}
 
 	claims, err := tokens.NewService().ParseTokenUnverified(tokenString)
 	if err != nil {
-		response.SendError(c, "Invalid access token", http.StatusUnauthorized, nil)
+		response.SendError(
+			c,
+			"Invalid access token",
+			http.StatusUnauthorized,
+			nil,
+		)
 		return
 	}
 
@@ -397,4 +412,3 @@ func (h *Handler) GetMe(c *gin.Context) {
 
 	response.SendSuccess(c, user)
 }
-

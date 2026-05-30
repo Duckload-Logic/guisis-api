@@ -110,7 +110,10 @@ func (h *Handler) PostM2MTokenRefresh(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.RefreshM2MToken(c.Request.Context(), req.RefreshToken)
+	resp, err := h.service.RefreshM2MToken(
+		c.Request.Context(),
+		req.RefreshToken,
+	)
 	if err != nil {
 		response.SendError(c, err.Error(), http.StatusUnauthorized, nil)
 		return

@@ -387,10 +387,13 @@ func (s *Service) AuthenticateUser(
 
 	if !user.IsActive {
 		s.logger.Record(ctx, nil, audit.LogEntry{
-			Level:     audit.LevelWarning,
-			Category:  audit.CategorySecurity,
-			Action:    audit.ActionLoginFailed,
-			Message:   fmt.Sprintf("Failed login attempt (Inactive): %s", email),
+			Level:    audit.LevelWarning,
+			Category: audit.CategorySecurity,
+			Action:   audit.ActionLoginFailed,
+			Message: fmt.Sprintf(
+				"Failed login attempt (Inactive): %s",
+				email,
+			),
 			UserEmail: structs.StringToNullableString(email),
 			IPAddress: structs.StringToNullableString(ipAddress),
 			UserAgent: structs.StringToNullableString(userAgent),
@@ -711,7 +714,6 @@ func (s *Service) RefreshToken(
 
 	return newToken, newRefreshToken, nil
 }
-
 
 // GetMe retrieves the currently authenticated user's profile information.
 func (s *Service) GetMe(
@@ -1112,4 +1114,3 @@ func (s *Service) GetIDPUserInfo(
 	}
 	return userInfo, nil
 }
-

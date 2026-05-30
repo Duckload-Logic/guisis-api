@@ -107,7 +107,7 @@ func (s *Service) CreateClient(
 			ReceiverID: structs.StringToNullableString(aid),
 			Title:      "M2M Client Pending Approval",
 			Message: fmt.Sprintf(
-				"New M2M client request from user %s " +
+				"New M2M client request from user %s "+
 					"is pending for approval.",
 				userID,
 			),
@@ -126,41 +126,42 @@ func (s *Service) CreateClient(
 		s.notifService,
 		s.emailService,
 		audit.DispatchParams{
-		Log: &audit.LogParams{
-			Level:    audit.LevelInfo,
-			Category: audit.CategoryAudit,
-			Action:   audit.ActionM2MClientCreated,
-			Message: fmt.Sprintf(
-				"M2M Client %s requested by user %s",
-				clientID,
-				userID,
-			),
-			Metadata: &audit.LogMetadata{
-				EntityType: "m2m_client",
-				EntityID:   clientID,
-			},
-		},
-		Notifications: notifications,
-		Email: []audit.EmailParams{
-			{
-				To:           superadminEmails,
-				Subject:      "New M2M Client Request",
-				TemplatePath: "request.html",
-				TemplateData: map[string]any{
-					"EntityType":   "M2M Client",
-					"StudentName":  userID,
-					"Category":     "M2M Access",
-					"Reason":       req.ClientDescription,
-					"TimeSlot":     time.Now().Format("2006-01-02 15:04:05"),
-					"UrgencyLevel": "HIGH",
-					"RequestURL": fmt.Sprintf(
-						"%s/superadmin/m2m-management",
-						s.cfg.BaseURL,
-					),
+			Log: &audit.LogParams{
+				Level:    audit.LevelInfo,
+				Category: audit.CategoryAudit,
+				Action:   audit.ActionM2MClientCreated,
+				Message: fmt.Sprintf(
+					"M2M Client %s requested by user %s",
+					clientID,
+					userID,
+				),
+				Metadata: &audit.LogMetadata{
+					EntityType: "m2m_client",
+					EntityID:   clientID,
 				},
 			},
-		},
-	})
+			Notifications: notifications,
+			Email: []audit.EmailParams{
+				{
+					To:           superadminEmails,
+					Subject:      "New M2M Client Request",
+					TemplatePath: "request.html",
+					TemplateData: map[string]any{
+						"EntityType":  "M2M Client",
+						"StudentName": userID,
+						"Category":    "M2M Access",
+						"Reason":      req.ClientDescription,
+						"TimeSlot": time.Now().
+							Format("2006-01-02 15:04:05"),
+						"UrgencyLevel": "HIGH",
+						"RequestURL": fmt.Sprintf(
+							"%s/superadmin/m2m-management",
+							s.cfg.BaseURL,
+						),
+					},
+				},
+			},
+		})
 
 	return &CreateM2MClientResponse{
 		M2MClientDTO: M2MClientDTO{
@@ -388,7 +389,7 @@ func (s *Service) Verify(ctx context.Context, id string) error {
 					),
 					Title: "M2M Client Approved",
 					Message: fmt.Sprintf(
-						"Your M2M client '%s' has " +
+						"Your M2M client '%s' has "+
 							"been approved and is ready for use.",
 						client.ClientName,
 					),
@@ -448,7 +449,7 @@ func (s *Service) Reject(ctx context.Context, id string) error {
 					),
 					Title: "M2M Client Rejected",
 					Message: fmt.Sprintf(
-						"Your M2M client request '%s' " +
+						"Your M2M client request '%s' "+
 							"has been rejected.",
 						client.ClientName,
 					),

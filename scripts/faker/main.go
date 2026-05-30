@@ -251,7 +251,6 @@ func clearStudentData() {
 		"related_persons",
 		"student_addresses",
 		"addresses",
-		"student_selected_reasons",
 		"emergency_contacts",
 		"student_personal_info",
 		"iir_records",

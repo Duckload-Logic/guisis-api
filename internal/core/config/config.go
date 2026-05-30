@@ -120,14 +120,6 @@ func LoadConfig() *Config {
 	return config
 }
 
-// NewTestConfig creates a configuration for testing without validation.
-func NewTestConfig() *Config {
-	return &Config{
-		JWTSecret: "test_secret",
-		AIBaseUrl: "http://test-ai",
-	}
-}
-
 func validateConfig(config *Config) {
 	validateDBConfig(config)
 	validateCoreConfig(config)
@@ -172,7 +164,8 @@ func validateStorageConfig(config *Config) {
 	if config.IsProduction {
 		if config.AzureStorageConnectionString == "" {
 			panic(
-				"AZURE_STORAGE_CONNECTION_STRING is required for Azure Blob Storage",
+				"AZURE_STORAGE_CONNECTION_STRING is required for " +
+					"Azure Blob Storage",
 			)
 		}
 		if config.AzureContainerName == "" {

@@ -45,7 +45,10 @@ func (r *Repository) GetFilesByIDs(
 	ids []string,
 ) ([]File, error) {
 	var files []File
-	query, args, err := sqlx.In(`SELECT id, file_name, file_url, file_type, file_size, mime_type, created_at, updated_at, deleted_at FROM files WHERE id IN (?)`, ids)
+	query, args, err := sqlx.In(
+		`SELECT id, file_name, file_url, file_type, file_size, mime_type, created_at, updated_at, deleted_at FROM files WHERE id IN (?)`,
+		ids,
+	)
 	if err != nil {
 		return nil, err
 	}
