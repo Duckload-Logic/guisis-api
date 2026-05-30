@@ -103,8 +103,7 @@ INSERT INTO religions (religion_name) VALUES
     ('UCCP'),
     ('COC'),
     ('United Pentecostal'),
-    ('Other'),
-    ('Not Applicable');
+    ('Not Indicated');
 
 INSERT INTO sibling_support_types (`name`) VALUES
     ('Family'),

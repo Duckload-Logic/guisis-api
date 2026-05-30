@@ -407,7 +407,9 @@ func (s *Service) GetStudentProfile(
 		if err != nil {
 			return err
 		}
-		profile.Student.BasicInfo = *basicInfo
+		if basicInfo != nil {
+			profile.Student.BasicInfo = *basicInfo
+		}
 		return nil
 	})
 
@@ -416,7 +418,9 @@ func (s *Service) GetStudentProfile(
 		if err != nil {
 			return err
 		}
-		profile.Student.StudentPersonalInfoDTO = *personalInfo
+		if personalInfo != nil {
+			profile.Student.StudentPersonalInfoDTO = *personalInfo
+		}
 		return nil
 	})
 
@@ -434,7 +438,9 @@ func (s *Service) GetStudentProfile(
 		if err != nil {
 			return err
 		}
-		profile.Education = *education
+		if education != nil {
+			profile.Education = *education
+		}
 		return nil
 	})
 
@@ -443,7 +449,9 @@ func (s *Service) GetStudentProfile(
 		if err != nil {
 			return err
 		}
-		profile.Family.FamilyBackgroundDTO = *familyBackground
+		if familyBackground != nil {
+			profile.Family.FamilyBackgroundDTO = *familyBackground
+		}
 		return nil
 	})
 
@@ -461,7 +469,9 @@ func (s *Service) GetStudentProfile(
 		if err != nil {
 			return err
 		}
-		profile.Family.Finance = *finance
+		if finance != nil {
+			profile.Family.Finance = *finance
+		}
 		return nil
 	})
 
@@ -470,7 +480,9 @@ func (s *Service) GetStudentProfile(
 		if err != nil {
 			return err
 		}
-		profile.Health.StudentHealthRecordDTO = *healthRecord
+		if healthRecord != nil {
+			profile.Health.StudentHealthRecordDTO = *healthRecord
+		}
 		return nil
 	})
 
