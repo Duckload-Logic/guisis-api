@@ -411,7 +411,19 @@ func (r *Repository) GetFatherEducationStats(
 		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE srt.relationship_name = 'Father' ` + filter + `
 		GROUP BY category
-		ORDER BY category ASC;`
+		ORDER BY FIELD(
+			category,
+			'Doctorate Degree',
+			'Master''s Degree',
+			'College Graduate',
+			'College Undergraduate',
+			'Vocational',
+			'High School Graduate',
+			'High School Undergraduate',
+			'Elementary Graduate',
+			'Elementary Undergraduate',
+			'Not Indicated'
+		);`
 	return r.executeStatQuery(ctx, query, args...)
 }
 
@@ -436,7 +448,20 @@ func (r *Repository) GetMotherEducationStats(
 		LEFT JOIN educational_attainments ea ON rp.educational_attainment_id = ea.id
 		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE srt.relationship_name = 'Mother' ` + filter + `
-		GROUP BY category;`
+		GROUP BY category
+		ORDER BY FIELD(
+			category,
+			'Doctorate Degree',
+			'Master''s Degree',
+			'College Graduate',
+			'College Undergraduate',
+			'Vocational',
+			'High School Graduate',
+			'High School Undergraduate',
+			'Elementary Graduate',
+			'Elementary Undergraduate',
+			'Not Indicated'
+		);`
 	return r.executeStatQuery(ctx, query, args...)
 }
 
