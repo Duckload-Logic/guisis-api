@@ -259,6 +259,53 @@ func (r *Repository) List(
 	return appts, nil
 }
 
+func (r *Repository) GetTimeSlotByID(
+	ctx context.Context,
+	id int,
+) (*TimeSlot, error) {
+	query := `SELECT id, time FROM time_slots WHERE id = ?`
+	var slot TimeSlot
+	err := r.db.GetContext(ctx, &slot, query, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get time slot: %w", err)
+	}
+
+	return &slot, nil
+}
+
+func (r *Repository) GetAppointmentCategoryByID(
+	ctx context.Context,
+	id int,
+) (*AppointmentCategory, error) {
+	query := `SELECT id, name FROM appointment_categories WHERE id = ?`
+	var category AppointmentCategory
+	err := r.db.GetContext(ctx, &category, query, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get category: %w", err)
+	}
+
+	return &category, nil
+}
+
+func (r *Repository) GetStatusByID(
+	ctx context.Context,
+	id int,
+) (*AppointmentStatus, error) {
+	query := `
+		SELECT id, name
+		FROM statuses
+		WHERE status_type IN ('appointment', 'both')
+		AND id = ?
+	`
+
+	var status AppointmentStatus
+	err := r.db.GetContext(ctx, &status, query, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get status: %w", err)
+	}
+
+	return &status, nil
+}
 func (r *Repository) IsSlotAvailableForUpdate(
 	ctx context.Context,
 	tx datastore.DB,
@@ -322,6 +369,37 @@ func (r *Repository) GetStatuses(
 	return statuses, nil
 }
 
+func (r *Repository) ListByUserID(
+	ctx context.Context,
+	userID string,
+	offset, limit int,
+	orderBy string,
+	statusID, startDate, endDate string,
+) ([]AppointmentWithDetailsView, error) {
+	query, args := r.applyFilters(
+		appointmentsBaseQuery+" WHERE ir.user_id = ?",
+		[]interface{}{userID},
+		statusID,
+		startDate,
+		endDate,
+		nil,
+	)
+
+	query += fmt.Sprintf(
+		" ORDER BY a.%s DESC LIMIT %d OFFSET %d",
+		orderBy,
+		limit,
+		offset,
+	)
+
+	var appts []AppointmentWithDetailsView
+	err := r.db.SelectContext(ctx, &appts, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get appointments: %w", err)
+	}
+
+	return appts, nil
+}
 func (r *Repository) ListByIIRID(
 	ctx context.Context,
 	iirID string,

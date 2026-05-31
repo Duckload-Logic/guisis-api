@@ -38,11 +38,11 @@ type SlipWithDetailsView struct {
 	StatusID       int                    `db:"status_id"        json:"statusId"`
 	StatusName     string                 `db:"status_name"      json:"statusName"`
 	UrgencyScore   int                    `db:"urgency_score"    json:"urgencyScore"`
-	TicketCode     structs.NullableString `db:"ticket_code"      json:"ticketCode,omitempty"`
-	IsVerified     sql.NullBool           `db:"is_verified"      json:"isVerified,omitempty"`
-	VerifiedAt     structs.NullableTime   `db:"verified_at"      json:"verifiedAt,omitempty"`
-	CreatedAt      time.Time              `db:"created_at"       json:"createdAt"`
-	UpdatedAt      time.Time              `db:"updated_at"       json:"updatedAt"`
+	TicketCode     structs.NullableString `db:"ticket_code"`
+	IsVerified     sql.NullBool           `db:"is_verified"`
+	VerifiedAt     structs.NullableTime   `db:"verified_at"`
+	CreatedAt      time.Time              `db:"created_at"`
+	UpdatedAt      time.Time              `db:"updated_at"`
 }
 
 // SlipStatusCount represents aggregated status metrics.

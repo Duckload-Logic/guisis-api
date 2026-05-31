@@ -488,7 +488,6 @@ type StudentFinanceView struct {
 	OtherIncome     structs.NullableString `db:"other_income"`
 	WeeklyAllowance float64                `db:"weekly_allowance"`
 }
-
 // SignificantNote represents a note record from the database.
 type SignificantNote struct {
 	ID              string                 `db:"id"`

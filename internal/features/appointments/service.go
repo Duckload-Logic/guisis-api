@@ -71,13 +71,13 @@ func (s *Service) CreateAppointment(
 	cfg *config.Config,
 ) (*AppointmentDTO, error) {
 	appt := &Appointment{
-		ID:                    uuid.New().String(),
-		IIRID:                 iirID,
-		Reason:                req.Reason,
-		WhenDate:              strings.Split(req.WhenDate, "T")[0],
-		TimeSlotID:            req.TimeSlot.ID,
-		AppointmentCategoryID: req.AppointmentCategory.ID,
-		StatusID:              1,
+		ID:         uuid.New().String(),
+		IIRID:      iirID,
+		Reason:     req.Reason,
+		WhenDate:   strings.Split(req.WhenDate, "T")[0],
+		TimeSlotID: req.TimeSlot.ID,
+		CategoryID: req.AppointmentCategory.ID,
+		StatusID:   1,
 	}
 
 	// Default values for urgency level and score
@@ -426,6 +426,83 @@ func (s *Service) ListAppointments(
 	}, nil
 }
 
+func (s *Service) GetAppointmentsByUserID(
+	ctx context.Context,
+	userID string,
+	req ListAppointmentsRequest,
+) (*ListAppointmentsResponse, error) {
+	req.SetDefaults("created_at")
+
+	appts, err := s.repo.ListByUserID(
+		ctx,
+		userID,
+		req.GetOffset(),
+		req.PageSize,
+		req.OrderBy,
+		req.StatusID,
+		req.StartDate,
+		req.EndDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	dtos := make([]AppointmentDTO, 0, len(appts))
+	for i := range appts {
+		dto := AppointmentDTO{
+			ID: appts[i].ID,
+			User: users.UserResponse{
+				ID:         "",
+				FirstName:  appts[i].UserFirstName,
+				MiddleName: appts[i].UserMiddleName,
+				LastName:   appts[i].UserLastName,
+				Email:      appts[i].UserEmail,
+			},
+			Reason:     appts[i].Reason,
+			AdminNotes: appts[i].AdminNotes,
+			WhenDate:   appts[i].WhenDate,
+			TimeSlot: TimeSlot{
+				ID:   appts[i].TimeSlotID,
+				Time: appts[i].TimeSlotTime,
+			},
+			AppointmentCategory: AppointmentCategory{
+				ID:   appts[i].CategoryID,
+				Name: appts[i].CategoryName,
+			},
+			Status: AppointmentStatus{
+				ID:   appts[i].StatusID,
+				Name: appts[i].StatusName,
+			},
+			CreatedAt: appts[i].CreatedAt,
+			UpdatedAt: appts[i].UpdatedAt,
+		}
+
+		hasNote, _ := s.noteService.HasNoteForAppointment(ctx, appts[i].ID)
+		dto.HasSignificantNote = hasNote
+
+		dtos = append(dtos, dto)
+	}
+
+	total, err := s.repo.GetTotalAppointmentsCount(
+		ctx,
+		req.StatusID,
+		req.StartDate,
+		req.EndDate,
+		&userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ListAppointmentsResponse{
+		Appointments: dtos,
+		Meta: structs.CalculateMetadata(
+			total,
+			req.Page,
+			req.PageSize,
+		),
+	}, nil
+}
 func (s *Service) GetAppointmentsByIIRID(
 	ctx context.Context,
 	iirID string,
@@ -542,13 +619,13 @@ func (s *Service) UpdateAppointment(
 	oldAppt, _ := s.repo.GetAppointment(ctx, s.repo.GetDB(), id)
 
 	appt := Appointment{
-		ID:                    id,
-		StatusID:              req.Status.ID,
-		Reason:                req.Reason,
-		AdminNotes:            req.AdminNotes,
-		WhenDate:              strings.Split(req.WhenDate, "T")[0],
-		TimeSlotID:            req.TimeSlot.ID,
-		AppointmentCategoryID: req.AppointmentCategory.ID,
+		ID:         id,
+		StatusID:   req.Status.ID,
+		Reason:     req.Reason,
+		AdminNotes: req.AdminNotes,
+		WhenDate:   strings.Split(req.WhenDate, "T")[0],
+		TimeSlotID: req.TimeSlot.ID,
+		CategoryID: req.AppointmentCategory.ID,
 	}
 
 	err := s.repo.WithTransaction(

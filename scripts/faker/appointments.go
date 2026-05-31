@@ -314,7 +314,7 @@ func insertAppointment(
 			TimeSlotID:            timeSlotID,
 			UrgencyLevel:          selectedAppt["urgency_level"],
 			UrgencyScore:          0.95,
-			AppointmentCategoryID: concernCategoryIDInt,
+			CategoryID:            concernCategoryIDInt,
 			StatusID:              statusID,
 		}
 

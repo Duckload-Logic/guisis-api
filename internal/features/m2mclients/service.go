@@ -161,7 +161,8 @@ func (s *Service) CreateClient(
 					},
 				},
 			},
-		})
+		},
+	)
 
 	return &CreateM2MClientResponse{
 		M2MClientDTO: M2MClientDTO{
@@ -389,7 +390,7 @@ func (s *Service) Verify(ctx context.Context, id string) error {
 					),
 					Title: "M2M Client Approved",
 					Message: fmt.Sprintf(
-						"Your M2M client '%s' has "+
+						"Your M2M client '%s' has " +
 							"been approved and is ready for use.",
 						client.ClientName,
 					),
@@ -449,7 +450,7 @@ func (s *Service) Reject(ctx context.Context, id string) error {
 					),
 					Title: "M2M Client Rejected",
 					Message: fmt.Sprintf(
-						"Your M2M client request '%s' "+
+						"Your M2M client request '%s' " +
 							"has been rejected.",
 						client.ClientName,
 					),

@@ -445,8 +445,29 @@ func (r *Repository) GetStudentPersonalInfoView(
 			err,
 		)
 	}
-
 	return &view, nil
+}
+
+func (r *Repository) GetEmergencyContactByIIRID(
+	ctx context.Context,
+	iirID string,
+) (*EmergencyContact, error) {
+	query := fmt.Sprintf(`
+		SELECT %s FROM emergency_contacts WHERE iir_id = ? LIMIT 1
+	`, datastore.GetColumns(EmergencyContact{}))
+
+	var model EmergencyContact
+	err := r.db.GetContext(ctx, &model, query, iirID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf(
+			"failed to get emergency contact: %w",
+			err,
+		)
+	}
+	return &model, nil
 }
 
 func (r *Repository) GetCourseByID(
@@ -580,7 +601,6 @@ func (r *Repository) GetFinancialSupportTypes(
 		FROM v_student_financial_supports
 		WHERE sf_id = ?
 	`
-
 	var supports []StudentSupportType
 	err := r.db.SelectContext(ctx, &supports, query, sfID)
 	if err != nil {
@@ -803,6 +823,23 @@ func (r *Repository) GetStudentRelatedPersonsView(
 	}
 
 	return views, nil
+}
+
+func (r *Repository) GetRelatedPersonByID(
+	ctx context.Context, personID int,
+) (*RelatedPerson, error) {
+	query := fmt.Sprintf(`
+		SELECT %s FROM related_persons WHERE id = ?
+	`, datastore.GetColumns(RelatedPerson{}))
+	var model RelatedPerson
+	err := r.db.GetContext(ctx, &model, query, personID)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get related person by ID: %w",
+			err,
+		)
+	}
+	return &model, nil
 }
 
 func (r *Repository) UpsertIIRDraft(
