@@ -301,7 +301,9 @@ func (r *Repository) GetReligionStats(
 		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE 1=1 ` + filter + `
 		GROUP BY category
-		ORDER BY category ASC;`
+		ORDER BY
+			CASE WHEN category = 'Not Indicated' THEN 1 ELSE 0 END ASC,
+			category ASC;`
 	return r.executeStatQuery(ctx, query, args...)
 }
 
@@ -541,7 +543,20 @@ func (r *Repository) GetHSGWAStats(
 		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE spi.high_school_gwa IS NOT NULL
 		  AND spi.high_school_gwa > 0 ` + filter + `
-		GROUP BY category;`
+		GROUP BY category
+		ORDER BY FIELD(
+			category,
+			'97.00 - 100.00',
+			'94.00 - 96.99',
+			'91.00 - 93.99',
+			'88.00 - 90.99',
+			'85.00 - 87.99',
+			'82.00 - 84.99',
+			'79.00 - 81.99',
+			'76.00 - 78.99',
+			'75.00',
+			'Below 75.00'
+		);`
 	return r.executeStatQuery(ctx, query, args...)
 }
 
