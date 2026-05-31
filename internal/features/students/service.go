@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/pdf"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
@@ -909,6 +910,50 @@ func (s *Service) UpdateStudentIIR(
 		return "", fmt.Errorf(
 			"[StudentService] {UpdateStudentIIR Save}: %w",
 			err,
+		)
+	}
+
+	// Notify counselors when student updates their IIR details
+	counselorIDs, err := s.userService.GetUserIDsByRole(
+		ctx,
+		int(constants.AdminRoleID),
+	)
+	if err == nil && len(counselorIDs) > 0 {
+		student, _ := s.userService.GetUserByID(ctx, existing.UserID)
+		studentName := "A student"
+		if student != nil {
+			studentName = fmt.Sprintf(
+				"%s %s",
+				student.FirstName,
+				student.LastName,
+			)
+		}
+
+		notifications := make([]audit.NotificationParams, 0, len(counselorIDs))
+		for _, cid := range counselorIDs {
+			notifications = append(notifications, audit.NotificationParams{
+				ReceiverID: structs.StringToNullableString(cid),
+				TargetID:   structs.StringToNullableString(iirID),
+				TargetType: structs.StringToNullableString(
+					constants.IIREntityType,
+				),
+				Title: "Student IIR Details Updated",
+				Message: fmt.Sprintf(
+					"%s updated their Individual Inventory Record details.",
+					studentName,
+				),
+				Type: constants.IIREntityType,
+			})
+		}
+
+		audit.Dispatch(
+			ctx,
+			s.logService,
+			s.notifService,
+			nil,
+			audit.DispatchParams{
+				Notifications: notifications,
+			},
 		)
 	}
 
