@@ -68,7 +68,9 @@ func (s *Service) GetLatestCORsByUserIDs(
 }
 
 var (
-	ErrOutdatedCOR      = errors.New("uploaded COR is for an outdated academic year or term")
+	ErrOutdatedCOR = errors.New(
+		"uploaded COR is for an outdated academic year or term",
+	)
 	ErrCOROwnerMismatch = errors.New("uploaded COR does not belong to the user")
 )
 
@@ -141,10 +143,14 @@ func (s *Service) SubmitCOR(
 			setting, sErr := s.repo.GetAcademicSetting(ctx)
 			if sErr != nil {
 				_ = s.filesSvc.DeleteFile(ctx, file.ID)
-				return "", fmt.Errorf("[StudentService] {SubmitCOR Fetch Setting}: %w", sErr)
+				return "", fmt.Errorf(
+					"[StudentService] {SubmitCOR Fetch Setting}: %w",
+					sErr,
+				)
 			}
 
-			if startYear != setting.CurrentYearStart || corData.Term != setting.CurrentTerm {
+			if startYear != setting.CurrentYearStart ||
+				corData.Term != setting.CurrentTerm {
 				_ = s.filesSvc.DeleteFile(ctx, file.ID)
 				return "", ErrOutdatedCOR
 			}
@@ -153,22 +159,24 @@ func (s *Service) SubmitCOR(
 			// Verify that the COR really belongs to the student.
 			// Check user's first name, last name, and student number.
 			/*
-			userRecord, uErr := s.repo.GetUserByID(ctx, userID)
-			if uErr == nil {
-				ocrStudNum := strings.TrimSpace(corData.StudentNumber)
-				dbStudNum := strings.TrimSpace(userRecord.StudentNumber)
-				
-				// Perform matches on student number, first name, last name
-				if ocrStudNum != "" && dbStudNum != "" && ocrStudNum != dbStudNum {
-					_ = s.filesSvc.DeleteFile(ctx, file.ID)
-					return "", ErrCOROwnerMismatch
+				userRecord, uErr := s.repo.GetUserByID(ctx, userID)
+				if uErr == nil {
+					ocrStudNum := strings.TrimSpace(corData.StudentNumber)
+					dbStudNum := strings.TrimSpace(userRecord.StudentNumber)
+
+					// Perform matches on student number, first name, last name
+					if ocrStudNum != "" && dbStudNum != "" && ocrStudNum != dbStudNum {
+						_ = s.filesSvc.DeleteFile(ctx, file.ID)
+						return "", ErrCOROwnerMismatch
+					}
 				}
-			}
 			*/
 
 			// If valid, set ValidFrom/ValidUntil
 			cor.ValidFrom = structs.TimeToNullableTime(time.Now())
-			cor.ValidUntil = structs.TimeToNullableTime(time.Now().AddDate(0, 5, 0))
+			cor.ValidUntil = structs.TimeToNullableTime(
+				time.Now().AddDate(0, 5, 0),
+			)
 		}
 	}
 
@@ -267,7 +275,9 @@ func (s *Service) GetEnrollmentYears(ctx context.Context) ([]int, error) {
 	return s.repo.GetEnrollmentYears(ctx)
 }
 
-func (s *Service) GetParentalStatusTypes(ctx context.Context) ([]ParentalStatusType, error) {
+func (s *Service) GetParentalStatusTypes(
+	ctx context.Context,
+) ([]ParentalStatusType, error) {
 	return s.repo.GetParentalStatusTypes(ctx)
 }
 
@@ -275,19 +285,27 @@ func (s *Service) GetIncomeRanges(ctx context.Context) ([]IncomeRange, error) {
 	return s.repo.GetIncomeRanges(ctx)
 }
 
-func (s *Service) GetStudentSupportTypes(ctx context.Context) ([]StudentSupportType, error) {
+func (s *Service) GetStudentSupportTypes(
+	ctx context.Context,
+) ([]StudentSupportType, error) {
 	return s.repo.GetStudentSupportTypes(ctx)
 }
 
-func (s *Service) GetSiblingSupportTypes(ctx context.Context) ([]SibilingSupportType, error) {
+func (s *Service) GetSiblingSupportTypes(
+	ctx context.Context,
+) ([]SibilingSupportType, error) {
 	return s.repo.GetSiblingSupportTypes(ctx)
 }
 
-func (s *Service) GetEducationalLevels(ctx context.Context) ([]EducationalLevel, error) {
+func (s *Service) GetEducationalLevels(
+	ctx context.Context,
+) ([]EducationalLevel, error) {
 	return s.repo.GetEducationalLevels(ctx)
 }
 
-func (s *Service) GetEducationalAttainments(ctx context.Context) ([]EducationalAttainment, error) {
+func (s *Service) GetEducationalAttainments(
+	ctx context.Context,
+) ([]EducationalAttainment, error) {
 	return s.repo.GetEducationalAttainments(ctx)
 }
 
@@ -295,7 +313,9 @@ func (s *Service) GetCourses(ctx context.Context) ([]Course, error) {
 	return s.repo.GetCourses(ctx)
 }
 
-func (s *Service) GetCivilStatusTypes(ctx context.Context) ([]CivilStatusType, error) {
+func (s *Service) GetCivilStatusTypes(
+	ctx context.Context,
+) ([]CivilStatusType, error) {
 	return s.repo.GetCivilStatusTypes(ctx)
 }
 
@@ -303,19 +323,27 @@ func (s *Service) GetReligions(ctx context.Context) ([]Religion, error) {
 	return s.repo.GetReligions(ctx)
 }
 
-func (s *Service) GetNatureOfResidenceTypes(ctx context.Context) ([]NatureOfResidenceType, error) {
+func (s *Service) GetNatureOfResidenceTypes(
+	ctx context.Context,
+) ([]NatureOfResidenceType, error) {
 	return s.repo.GetNatureOfResidenceTypes(ctx)
 }
 
-func (s *Service) GetActivityOptions(ctx context.Context) ([]ActivityOption, error) {
+func (s *Service) GetActivityOptions(
+	ctx context.Context,
+) ([]ActivityOption, error) {
 	return s.repo.GetActivityOptions(ctx)
 }
 
-func (s *Service) GetStudentRelationshipTypes(ctx context.Context) ([]StudentRelationshipType, error) {
+func (s *Service) GetStudentRelationshipTypes(
+	ctx context.Context,
+) ([]StudentRelationshipType, error) {
 	return s.repo.GetStudentRelationshipTypes(ctx)
 }
 
-func (s *Service) GetStudentStatuses(ctx context.Context) ([]StudentStatus, error) {
+func (s *Service) GetStudentStatuses(
+	ctx context.Context,
+) ([]StudentStatus, error) {
 	return s.repo.GetStudentStatuses(ctx)
 }
 
@@ -324,65 +352,31 @@ func (s *Service) ListStudents(
 ) (*ListStudentsResponse, error) {
 	req.SetDefaults("last_name")
 
-	students, err := s.repo.ListStudents(
-		ctx,
-		req.Search,
-		req.GetOffset(),
-		req.PageSize,
-		req.OrderBy,
-		req.CourseID,
-		req.GenderID,
-		req.YearLevel,
-		req.StatusID,
-	)
+	students, err := s.repo.ListStudents(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list students: %w", err)
 	}
 
 	studentDTOs := make([]StudentProfileDTO, len(students))
 	for i, st := range students {
-		studentDTOs[i] = StudentProfileDTO{
-			IIRID:         st.IIRID,
-			UserID:        st.UserID,
-			FirstName:     st.FirstName,
-			MiddleName:    st.MiddleName,
-			LastName:      st.LastName,
-			SuffixName:    st.SuffixName,
-			Gender: Gender{
-				ID:   st.GenderID,
-				Name: st.GenderName,
-			},
-			Email:         st.Email,
-			StudentNumber: st.StudentNumber,
-			Course: Course{
-				ID:   st.CourseID,
-				Code: st.CourseCode,
-				Name: st.CourseName,
-			},
-			Section:       st.Section,
-			YearLevel:     st.YearLevel,
-			Status: StudentStatus{
-				ID:   st.StatusID,
-				Name: st.StatusName,
-			},
-		}
+		studentDTOs[i] = st.ToDTO()
 	}
 
-	total, err := s.repo.GetTotalStudentsCount(
-		ctx,
-		req.Search,
-		req.CourseID,
-		req.GenderID,
-		req.YearLevel,
-		req.StatusID,
-	)
+	total, err := s.repo.GetTotalStudentsCount(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get total students count: %w", err)
+		return nil, fmt.Errorf(
+			"failed to get total students count: %w",
+			err,
+		)
 	}
 
 	return &ListStudentsResponse{
 		Students: studentDTOs,
-		Meta:     structs.CalculateMetadata(total, req.Page, req.PageSize),
+		Meta: structs.CalculateMetadata(
+			total,
+			req.Page,
+			req.PageSize,
+		),
 	}, nil
 }
 
@@ -413,7 +407,9 @@ func (s *Service) GetStudentProfile(
 		if err != nil {
 			return err
 		}
-		profile.Student.BasicInfo = *basicInfo
+		if basicInfo != nil {
+			profile.Student.BasicInfo = *basicInfo
+		}
 		return nil
 	})
 
@@ -422,7 +418,9 @@ func (s *Service) GetStudentProfile(
 		if err != nil {
 			return err
 		}
-		profile.Student.StudentPersonalInfoDTO = *personalInfo
+		if personalInfo != nil {
+			profile.Student.StudentPersonalInfoDTO = *personalInfo
+		}
 		return nil
 	})
 
@@ -440,7 +438,9 @@ func (s *Service) GetStudentProfile(
 		if err != nil {
 			return err
 		}
-		profile.Education = *education
+		if education != nil {
+			profile.Education = *education
+		}
 		return nil
 	})
 
@@ -449,7 +449,9 @@ func (s *Service) GetStudentProfile(
 		if err != nil {
 			return err
 		}
-		profile.Family.FamilyBackgroundDTO = *familyBackground
+		if familyBackground != nil {
+			profile.Family.FamilyBackgroundDTO = *familyBackground
+		}
 		return nil
 	})
 
@@ -467,7 +469,9 @@ func (s *Service) GetStudentProfile(
 		if err != nil {
 			return err
 		}
-		profile.Family.Finance = *finance
+		if finance != nil {
+			profile.Family.Finance = *finance
+		}
 		return nil
 	})
 
@@ -476,7 +480,9 @@ func (s *Service) GetStudentProfile(
 		if err != nil {
 			return err
 		}
-		profile.Health.StudentHealthRecordDTO = *healthRecord
+		if healthRecord != nil {
+			profile.Health.StudentHealthRecordDTO = *healthRecord
+		}
 		return nil
 	})
 
@@ -592,69 +598,7 @@ func (s *Service) GetStudentPersonalInfo(
 		view.EmergencyAddressID,
 	)
 
-	emergencyContactDTO := EmergencyContactDTO{
-		ID:            view.EmergencyID,
-		FirstName:     view.EmergencyFirstName,
-		MiddleName:    view.EmergencyMiddleName,
-		LastName:      view.EmergencyLastName,
-		ContactNumber: view.EmergencyContactNumber,
-		Relationship: StudentRelationshipType{
-			ID:   view.EmergencyRelationshipID,
-			Name: view.EmergencyRelationshipName,
-		},
-		Address:       emergencyAddressDTO,
-	}
-
-	statusDTO := StudentStatus{
-		ID:   view.StatusID,
-		Name: view.StatusName,
-	}
-
-	var gradYear *int
-	if view.GraduationYear.Valid {
-		gy := int(view.GraduationYear.Int64)
-		gradYear = &gy
-	}
-
-	return &StudentPersonalInfoDTO{
-		ID:                    view.ID,
-		IIRID:                 view.IIRID,
-		StudentNumber:         view.StudentNumber,
-		Gender: Gender{
-			ID:   view.GenderID,
-			Name: view.GenderName,
-		},
-		CivilStatus: CivilStatusType{
-			ID:   view.CivilStatusID,
-			Name: view.CivilStatusName,
-		},
-		Religion: Religion{
-			ID:   view.ReligionID,
-			Name: view.ReligionName,
-		},
-		HeightM:               view.HeightM,
-		WeightKg:              view.WeightKg,
-		Complexion:            view.Complexion,
-		HighSchoolGWA:         view.HighSchoolGWA,
-		Course: Course{
-			ID:   view.CourseID,
-			Code: view.CourseCode,
-			Name: view.CourseName,
-		},
-		YearLevel:             view.YearLevel,
-		Section:               view.Section,
-		PlaceOfBirth:          view.PlaceOfBirth,
-		DateOfBirth:           view.DateOfBirth,
-		TelephoneNumber:       view.TelephoneNumber,
-		MobileNumber:          view.MobileNumber,
-		IsEmployed:            view.IsEmployed,
-		EmployerName:          view.EmployerName,
-		EmployerAddress:       view.EmployerAddress,
-		EmployerContactNumber: view.EmployerContactNumber,
-		Status:                statusDTO,
-		GraduationYear:        gradYear,
-		EmergencyContact:      emergencyContactDTO,
-	}, nil
+	return view.ToDTO(emergencyAddressDTO), nil
 }
 
 func (s *Service) GetStudentAddresses(
@@ -669,13 +613,7 @@ func (s *Service) GetStudentAddresses(
 	var addresses []StudentAddressDTO
 	for _, addr := range studentAddresses {
 		addrDTO, _ := s.locationsSvc.GetAddressByID(ctx, addr.AddressID)
-		addresses = append(addresses, StudentAddressDTO{
-			ID:          addr.ID,
-			Address:     addrDTO,
-			AddressType: addr.AddressType,
-			CreatedAt:   addr.CreatedAt,
-			UpdatedAt:   addr.UpdatedAt,
-		})
+		addresses = append(addresses, addr.ToDTO(addrDTO))
 	}
 	return addresses, nil
 }
@@ -692,36 +630,43 @@ func (s *Service) GetStudentFamilyBackground(
 		return nil, nil
 	}
 
-	parentalStatus, err := s.repo.GetParentalStatusByID(ctx, studentFamily.ParentalStatusID)
-	natureOfResidence, err := s.repo.GetNatureOfResidenceByID(ctx, studentFamily.NatureOfResidenceId)
-	siblingSupportTypes, err := s.repo.GetStudentSiblingSupport(ctx, studentFamily.ID)
+	parentalStatus, err := s.repo.GetParentalStatusByID(
+		ctx,
+		studentFamily.ParentalStatusID,
+	)
+	natureOfResidence, err := s.repo.GetNatureOfResidenceByID(
+		ctx,
+		studentFamily.NatureOfResidenceId,
+	)
+	siblingSupportTypes, err := s.repo.GetStudentSiblingSupport(
+		ctx,
+		studentFamily.ID,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get student family background: %w", err)
+		return nil, fmt.Errorf(
+			"failed to get student family background: %w",
+			err,
+		)
 	}
 
 	supportTypes := make([]SibilingSupportType, 0)
 	for _, sst := range siblingSupportTypes {
 		st, err := s.repo.GetSiblingSupportTypeByID(ctx, sst.SupportTypeID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get sibling support type: %w", err)
+			return nil, fmt.Errorf(
+				"failed to get sibling support type: %w",
+				err,
+			)
 		}
 		supportTypes = append(supportTypes, *st)
 	}
 
-	return &FamilyBackgroundDTO{
-		ID:                    studentFamily.ID,
-		ParentalStatus:        *parentalStatus,
-		ParentalStatusDetails: studentFamily.ParentalStatusDetails,
-		Brothers:              &studentFamily.Brothers,
-		Sisters:               &studentFamily.Sisters,
-		EmployedSiblings:      &studentFamily.EmployedSiblings,
-		OrdinalPosition:       studentFamily.OrdinalPosition,
-		HaveQuietPlaceToStudy: studentFamily.HaveQuietPlaceToStudy,
-		IsSharingRoom:         studentFamily.IsSharingRoom,
-		SiblingSupportTypes:   supportTypes,
-		RoomSharingDetails:    studentFamily.RoomSharingDetails,
-		NatureOfResidence:     *natureOfResidence,
-	}, nil
+	fbDTO := studentFamily.ToDTO(
+		*parentalStatus,
+		*natureOfResidence,
+		supportTypes,
+	)
+	return &fbDTO, nil
 }
 
 func (s *Service) GetStudentRelatedPersons(
@@ -735,28 +680,7 @@ func (s *Service) GetStudentRelatedPersons(
 
 	related := make([]RelatedPersonDTO, len(views))
 	for i, view := range views {
-		related[i] = RelatedPersonDTO{
-			ID: view.ID,
-			EducationalAttainment: EducationalAttainment{
-				ID:   view.EducationalAttainmentID,
-				Name: view.EducationalAttainmentName,
-			},
-			DateOfBirth:     view.DateOfBirth,
-			LastName:        view.LastName,
-			FirstName:       view.FirstName,
-			MiddleName:      view.MiddleName,
-			SuffixName:      view.SuffixName,
-			Occupation:      view.Occupation,
-			EmployerName:    view.EmployerName,
-			EmployerAddress: view.EmployerAddress,
-			Relationship: StudentRelationshipType{
-				ID:   view.RelationshipID,
-				Name: view.RelationshipName,
-			},
-			IsParent:   view.IsParent,
-			IsGuardian: view.IsGuardian,
-			IsLiving:   view.IsLiving,
-		}
+		related[i] = view.ToDTO()
 	}
 	return related, nil
 }
@@ -814,16 +738,8 @@ func (s *Service) GetStudentFinancialInfo(
 		supportDTOs = []StudentSupportType{}
 	}
 
-	return &StudentFinanceDTO{
-		ID: view.ID,
-		MonthlyFamilyIncomeRange: IncomeRange{
-			ID:   view.IncomeRangeID,
-			Text: view.IncomeRangeText,
-		},
-		OtherIncomeDetails:    view.OtherIncome,
-		WeeklyAllowance:       view.WeeklyAllowance,
-		FinancialSupportTypes: supportDTOs,
-	}, nil
+	fbDTO := view.ToDTO(supportDTOs)
+	return &fbDTO, nil
 }
 
 func (s *Service) GetStudentHealthRecord(
@@ -838,19 +754,8 @@ func (s *Service) GetStudentHealthRecord(
 		return nil, nil
 	}
 
-	return &StudentHealthRecordDTO{
-		ID:                        hr.ID,
-		VisionHasProblem:          hr.VisionHasProblem,
-		VisionDetails:             hr.VisionDetails,
-		HearingHasProblem:         hr.HearingHasProblem,
-		HearingDetails:            hr.HearingDetails,
-		SpeechHasProblem:          hr.SpeechHasProblem,
-		SpeechDetails:             hr.SpeechDetails,
-		GeneralHealthHasProblem:   hr.GeneralHealthHasProblem,
-		GeneralHealthDetails:      hr.GeneralHealthDetails,
-		MentalEmotionalHasProblem: hr.MentalEmotionalHasProblem,
-		MentalEmotionalDetails:    hr.MentalEmotionalDetails,
-	}, nil
+	hrDTO := hr.ToDTO()
+	return &hrDTO, nil
 }
 
 func (s *Service) GetStudentConsultations(
@@ -862,15 +767,9 @@ func (s *Service) GetStudentConsultations(
 		return nil, fmt.Errorf("failed to get consultations: %w", err)
 	}
 
-	var dtos []StudentConsultationDTO
-	for _, c := range consultations {
-		dtos = append(dtos, StudentConsultationDTO{
-			ID:               c.ID,
-			ProfessionalType: c.ProfessionalType,
-			HasConsulted:     c.HasConsulted,
-			WhenDate:         c.WhenDate,
-			ForWhat:          c.ForWhat,
-		})
+	dtos := make([]StudentConsultationDTO, len(consultations))
+	for i, c := range consultations {
+		dtos[i] = c.ToDTO()
 	}
 	return dtos, nil
 }
@@ -884,16 +783,10 @@ func (s *Service) GetStudentActivities(
 		return nil, fmt.Errorf("failed to get activities: %w", err)
 	}
 
-	var dtos []StudentActivityDTO
-	for _, a := range activities {
+	dtos := make([]StudentActivityDTO, len(activities))
+	for i, a := range activities {
 		option, _ := s.repo.GetActivityOptionByID(ctx, a.OptionID)
-		dtos = append(dtos, StudentActivityDTO{
-			ID:                 a.ID,
-			ActivityOption:     *option,
-			OtherSpecification: a.OtherSpecification,
-			Role:               a.Role,
-			RoleSpecification:  a.RoleSpecification,
-		})
+		dtos[i] = a.ToDTO(*option)
 	}
 	return dtos, nil
 }
@@ -907,30 +800,25 @@ func (s *Service) GetStudentSubjectPreferences(
 		return nil, fmt.Errorf("failed to get subject preferences: %w", err)
 	}
 
-	var dtos []StudentSubjectPreferenceDTO
-	for _, p := range prefs {
-		dtos = append(dtos, StudentSubjectPreferenceDTO{
-			ID:          p.ID,
-			SubjectName: p.SubjectName,
-			IsFavorite:  p.IsFavorite,
-		})
+	dtos := make([]StudentSubjectPreferenceDTO, len(prefs))
+	for i, p := range prefs {
+		dtos[i] = p.ToDTO()
 	}
 	return dtos, nil
 }
 
-func (s *Service) GetStudentHobbies(ctx context.Context, iirID string) ([]StudentHobbyDTO, error) {
+func (s *Service) GetStudentHobbies(
+	ctx context.Context,
+	iirID string,
+) ([]StudentHobbyDTO, error) {
 	hobbies, err := s.repo.GetStudentHobbies(ctx, iirID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get hobbies: %w", err)
 	}
 
-	var dtos []StudentHobbyDTO
-	for _, h := range hobbies {
-		dtos = append(dtos, StudentHobbyDTO{
-			ID:           h.ID,
-			HobbyName:    h.HobbyName,
-			PriorityRank: h.PriorityRank,
-		})
+	dtos := make([]StudentHobbyDTO, len(hobbies))
+	for i, h := range hobbies {
+		dtos[i] = h.ToDTO()
 	}
 	return dtos, nil
 }
@@ -944,16 +832,9 @@ func (s *Service) GetStudentTestResults(
 		return nil, fmt.Errorf("failed to get test results: %w", err)
 	}
 
-	var dtos []TestResultDTO
-	for _, r := range results {
-		dtos = append(dtos, TestResultDTO{
-			ID:          r.ID,
-			TestDate:    r.TestDate,
-			TestName:    r.TestName,
-			RawScore:    r.RawScore,
-			Percentile:  r.Percentile,
-			Description: r.Description,
-		})
+	dtos := make([]TestResultDTO, len(results))
+	for i, r := range results {
+		dtos[i] = r.ToDTO()
 	}
 	return dtos, nil
 }
@@ -1040,7 +921,10 @@ func (s *Service) validateDate(dateStr string, fieldName string) error {
 	}
 	_, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
-		return fmt.Errorf("invalid date format for %s: must be YYYY-MM-DD", fieldName)
+		return fmt.Errorf(
+			"invalid date format for %s: must be YYYY-MM-DD",
+			fieldName,
+		)
 	}
 	return nil
 }
@@ -1057,7 +941,10 @@ func (s *Service) saveComprehensiveProfile(
 	}
 
 	// Validate Critical Dates
-	if err := s.validateDate(req.Student.DateOfBirth, "Student Date of Birth"); err != nil {
+	if err := s.validateDate(
+		req.Student.DateOfBirth,
+		"Student Date of Birth",
+	); err != nil {
 		return "", fmt.Errorf(
 			"[StudentService] {saveComprehensiveProfile}: %w",
 			err,
@@ -1196,10 +1083,14 @@ func (s *Service) saveComprehensiveProfile(
 
 	_ = s.repo.DeleteStudentSiblingSupportsByFamilyID(ctx, tx, fbID)
 	for _, sst := range req.Family.SiblingSupportTypes {
-		err = s.repo.CreateStudentSiblingSupport(ctx, tx, &StudentSiblingSupport{
-			FamilyBackgroundID: fbID,
-			SupportTypeID:      sst.ID,
-		})
+		err = s.repo.CreateStudentSiblingSupport(
+			ctx,
+			tx,
+			&StudentSiblingSupport{
+				FamilyBackgroundID: fbID,
+				SupportTypeID:      sst.ID,
+			},
+		)
 		if err != nil {
 			return "", fmt.Errorf(
 				"[StudentService] {saveComprehensiveProfile}: %w",
@@ -1209,11 +1100,14 @@ func (s *Service) saveComprehensiveProfile(
 	}
 
 	// 6. Educational Background
-	ebID, err := s.repo.UpsertEducationalBackground(ctx, tx, &EducationalBackground{
-		IIRID:              iirID,
-		NatureOfSchooling:  req.Education.NatureOfSchooling,
-		InterruptedDetails: req.Education.InterruptedDetails,
-	})
+	ebID, err := s.repo.UpsertEducationalBackground(
+		ctx,
+		tx,
+		&EducationalBackground{
+			IIRID:              iirID,
+			NatureOfSchooling:  req.Education.NatureOfSchooling,
+			InterruptedDetails: req.Education.InterruptedDetails,
+		})
 	if err != nil {
 		return "", fmt.Errorf(
 			"[StudentService] {saveComprehensiveProfile}: %w",
@@ -1223,6 +1117,9 @@ func (s *Service) saveComprehensiveProfile(
 
 	_ = s.repo.DeleteSchoolDetailsByEBID(ctx, tx, ebID)
 	for _, sd := range req.Education.School {
+		if strings.TrimSpace(sd.SchoolName) == "" {
+			continue
+		}
 		_, err = s.repo.UpsertSchoolDetails(ctx, tx, &SchoolDetails{
 			EducationalLevelID: sd.EducationalLevel.ID,
 			SchoolName:         sd.SchoolName,
@@ -1278,10 +1175,14 @@ func (s *Service) saveComprehensiveProfile(
 
 	_ = s.repo.DeleteStudentFinancialSupportsByFinanceID(ctx, tx, sfID)
 	for _, st := range req.Family.Finance.FinancialSupportTypes {
-		err = s.repo.CreateStudentFinancialSupport(ctx, tx, &StudentFinancialSupport{
-			StudentFinanceID: sfID,
-			SupportTypeID:    st.ID,
-		})
+		err = s.repo.CreateStudentFinancialSupport(
+			ctx,
+			tx,
+			&StudentFinancialSupport{
+				StudentFinanceID: sfID,
+				SupportTypeID:    st.ID,
+			},
+		)
 		if err != nil {
 			return "", fmt.Errorf(
 				"[StudentService] {saveComprehensiveProfile}: %w",
@@ -1292,10 +1193,34 @@ func (s *Service) saveComprehensiveProfile(
 
 	// 9. Related Persons
 	_ = s.repo.DeleteStudentRelatedPersons(ctx, tx, iirID)
+	hasGuardian := false
 	for _, rpDTO := range req.Family.RelatedPersons {
+		if rpDTO.IsGuardian {
+			hasGuardian = true
+			if strings.TrimSpace(rpDTO.FirstName) == "" ||
+				strings.TrimSpace(rpDTO.LastName) == "" {
+				return "", fmt.Errorf(
+					"guardian first and last name are required",
+				)
+			}
+		}
+	}
+	if !hasGuardian {
+		return "", fmt.Errorf("guardian information is required")
+	}
+
+	for _, rpDTO := range req.Family.RelatedPersons {
+		if !rpDTO.IsGuardian &&
+			strings.TrimSpace(rpDTO.FirstName) == "" &&
+			strings.TrimSpace(rpDTO.LastName) == "" {
+			continue
+		}
 		// Validate DOB if not empty or if required
 		if rpDTO.DateOfBirth != "" {
-			if err := s.validateDate(rpDTO.DateOfBirth, "Related Person Date of Birth"); err != nil {
+			if err := s.validateDate(
+				rpDTO.DateOfBirth,
+				"Related Person Date of Birth",
+			); err != nil {
 				return "", fmt.Errorf(
 					"[StudentService] {saveComprehensiveProfile}: %w",
 					err,
@@ -1303,19 +1228,30 @@ func (s *Service) saveComprehensiveProfile(
 			}
 		} else {
 			// If it's mandatory in DB, we MUST provide a valid date.
-			return "", fmt.Errorf("date of birth is required for related person: %s %s", rpDTO.FirstName, rpDTO.LastName)
+			return "", fmt.Errorf(
+				"date of birth is required for related person: %s %s",
+				rpDTO.FirstName,
+				rpDTO.LastName,
+			)
 		}
-		rpID, err := s.repo.UpsertRelatedPerson(ctx, tx, &RelatedPerson{
-			FirstName:               rpDTO.FirstName,
-			MiddleName:              rpDTO.MiddleName,
-			LastName:                rpDTO.LastName,
-			SuffixName:              rpDTO.SuffixName,
-			DateOfBirth:             rpDTO.DateOfBirth,
-			EducationalAttainmentID: structs.Int64ToNullableInt64(int64(rpDTO.EducationalAttainment.ID)),
-			Occupation:              rpDTO.Occupation,
-			EmployerName:            rpDTO.EmployerName,
-			EmployerAddress:         rpDTO.EmployerAddress,
-		})
+
+		eduID := structs.Int64ToNullableInt64(
+			int64(rpDTO.EducationalAttainment.ID),
+		)
+
+		rpID, err := s.repo.UpsertRelatedPerson(
+			ctx, tx, &RelatedPerson{
+				FirstName:       rpDTO.FirstName,
+				MiddleName:      rpDTO.MiddleName,
+				LastName:        rpDTO.LastName,
+				SuffixName:      rpDTO.SuffixName,
+				DateOfBirth:     rpDTO.DateOfBirth,
+				EducationalAttainmentID: eduID,
+				Occupation:      rpDTO.Occupation,
+				EmployerName:    rpDTO.EmployerName,
+				EmployerAddress: rpDTO.EmployerAddress,
+			},
+		)
 		if err != nil {
 			return "", fmt.Errorf(
 				"[StudentService] {saveComprehensiveProfile}: %w",
@@ -1323,14 +1259,16 @@ func (s *Service) saveComprehensiveProfile(
 			)
 		}
 
-		err = s.repo.UpsertStudentRelatedPerson(ctx, tx, &StudentRelatedPerson{
-			IIRID:           iirID,
-			RelatedPersonID: rpID,
-			RelationshipID:  rpDTO.Relationship.ID,
-			IsParent:        rpDTO.IsParent,
-			IsGuardian:      rpDTO.IsGuardian,
-			IsLiving:        rpDTO.IsLiving,
-		})
+		err = s.repo.UpsertStudentRelatedPerson(
+			ctx, tx, &StudentRelatedPerson{
+				IIRID:           iirID,
+				RelatedPersonID: rpID,
+				RelationshipID:  rpDTO.Relationship.ID,
+				IsParent:        rpDTO.IsParent,
+				IsGuardian:      rpDTO.IsGuardian,
+				IsLiving:        rpDTO.IsLiving,
+			},
+		)
 		if err != nil {
 			return "", fmt.Errorf(
 				"[StudentService] {saveComprehensiveProfile}: %w",
@@ -1391,11 +1329,14 @@ func (s *Service) saveComprehensiveProfile(
 		}
 		seenSubjects[key] = true
 
-		_, err = s.repo.CreateStudentSubjectPreference(ctx, tx, &StudentSubjectPreference{
-			IIRID:       iirID,
-			SubjectName: subjName,
-			IsFavorite:  sspDTO.IsFavorite,
-		})
+		_, err = s.repo.CreateStudentSubjectPreference(
+			ctx,
+			tx,
+			&StudentSubjectPreference{
+				IIRID:       iirID,
+				SubjectName: subjName,
+				IsFavorite:  sspDTO.IsFavorite,
+			})
 		if err != nil {
 			return "", fmt.Errorf(
 				"[StudentService] {saveComprehensiveProfile}: %w",
@@ -1439,18 +1380,44 @@ func (s *Service) saveComprehensiveProfile(
 func (s *Service) GenerateIIR(
 	ctx context.Context,
 	iirID string,
+	isCounselor bool,
 ) ([]byte, string, error) {
 	profile, err := s.GetStudentProfile(ctx, iirID)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get student profile: %w", err)
 	}
 
+	iir, err := s.repo.GetStudentIIR(ctx, iirID)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to fetch IIR record: %w", err)
+	}
+
+	dateStr := s.GetFormattedDate(iir.UpdatedAt.Format("2006-01-02"))
+	if dateStr == "" {
+		dateStr = s.GetFormattedDate(time.Now().Format("2006-01-02"))
+	}
+
+	var notes []SignificantNote
+	if isCounselor {
+		notes, err = s.repo.GetStudentSignificantNotes(ctx, iirID)
+		if err != nil {
+			return nil, "", fmt.Errorf(
+				"failed to fetch significant notes: %w",
+				err,
+			)
+		}
+	}
+
 	data := struct {
-		Profile   *ComprehensiveProfileDTO
-		DateToday string
+		Profile              *ComprehensiveProfileDTO
+		DateToday            string
+		ShowSignificantNotes bool
+		SignificantNotes     []SignificantNote
 	}{
-		Profile:   profile,
-		DateToday: s.GetFormattedDate(time.Now().Format("2006-01-02")),
+		Profile:              profile,
+		DateToday:            dateStr,
+		ShowSignificantNotes: isCounselor,
+		SignificantNotes:     notes,
 	}
 
 	pdfBytes, err := s.pdfService.GenerateFromContent(
@@ -1460,7 +1427,10 @@ func (s *Service) GenerateIIR(
 		data,
 	)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to generate pdf from template: %w", err)
+		return nil, "", fmt.Errorf(
+			"failed to generate pdf from template: %w",
+			err,
+		)
 	}
 
 	fileName := fmt.Sprintf(
@@ -1479,64 +1449,4 @@ func (s *Service) GetFormattedDate(date string) string {
 		return ""
 	}
 	return t.Format("January 02, 2006")
-}
-
-func (s *Service) IsStudentLocked(
-	ctx context.Context,
-	iirID string,
-) (bool, error) {
-	return s.repo.IsStudentLocked(ctx, iirID)
-}
-
-const (
-	diplomaFinalYear  = 3
-	bachelorFinalYear = 4
-	statusIDGraduated = 2
-)
-
-func (s *Service) BulkUpdateStudentStatus(
-	ctx context.Context,
-	req BulkUpdateStatusRequest,
-) error {
-	if req.StatusID != statusIDGraduated {
-		return s.repo.BulkUpdateStudentStatus(ctx, req)
-	}
-
-	// Eligibility logic for graduation
-	rows, err := s.repo.ListStudents(
-		ctx,
-		req.Filters.Search,
-		0, 100000,
-		"created_at DESC",
-		req.Filters.CourseID,
-		0,
-		req.Filters.YearLevel,
-		0,
-	)
-	if err != nil {
-		return err
-	}
-
-	var eligibleIDs []string
-	for _, r := range rows {
-		course, _ := s.repo.GetCourseByID(ctx, r.CourseID)
-		code := strings.ToUpper(course.Code)
-		isDiploma := strings.HasPrefix(code, "D") && !strings.HasPrefix(code, "DS")
-		isBachelor := strings.HasPrefix(code, "BS")
-
-		if (isDiploma && r.YearLevel == diplomaFinalYear) ||
-			(isBachelor && r.YearLevel == bachelorFinalYear) {
-			eligibleIDs = append(eligibleIDs, r.IIRID)
-		}
-	}
-
-	if len(eligibleIDs) == 0 {
-		return nil
-	}
-
-	req.SelectAllMatching = false
-	req.ExcludedIIRIDs = nil
-	req.IIRIDs = eligibleIDs
-
-	return s.repo.BulkUpdateStudentStatus(ctx, req)
 }

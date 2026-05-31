@@ -129,7 +129,11 @@ func (s *Service) GetUserNotifications(
 	return dtos, nil
 }
 
-func (s *Service) MarkAsRead(ctx context.Context, id string, userID string) error {
+func (s *Service) MarkAsRead(
+	ctx context.Context,
+	id string,
+	userID string,
+) error {
 	return s.repo.MarkAsRead(ctx, nil, id, userID)
 }
 

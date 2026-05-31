@@ -20,17 +20,17 @@ type ListSlipsResponse struct {
 }
 
 type SlipDTO struct {
-	ID            string                 `json:"id,omitempty"`
-	UserID        string                 `json:"userId,omitempty"`
-	IIRID         string                 `json:"iirId,omitempty"`
-	User          users.UserResponse     `json:"user,omitempty"`
-	StudentNumber string                 `json:"studentNumber,omitempty"`
-	Reason        string                 `json:"reason"                  form:"reason"        binding:"required"`
-	DateOfAbsence string                 `json:"dateOfAbsence"           form:"dateOfAbsence" binding:"required"`
-	DateNeeded    string                 `json:"dateNeeded"              form:"dateNeeded"    binding:"required"`
-	AdminNotes    structs.NullableString `json:"adminNotes,omitempty"`
-	Category      SlipCategory           `json:"category"                form:"categoryId"    binding:"required"`
-	Status        SlipStatus             `json:"status,omitempty"`
+	ID                 string                 `json:"id,omitempty"`
+	UserID             string                 `json:"userId,omitempty"`
+	IIRID              string                 `json:"iirId,omitempty"`
+	User               users.UserResponse     `json:"user,omitempty"`
+	StudentNumber      string                 `json:"studentNumber,omitempty"`
+	Reason             string                 `json:"reason"`
+	DateOfAbsence      string                 `json:"dateOfAbsence"`
+	DateNeeded         string                 `json:"dateNeeded"`
+	AdminNotes         structs.NullableString `json:"adminNotes,omitempty"`
+	Category           SlipCategory           `json:"category"`
+	Status             SlipStatus             `json:"status,omitempty"`
 	StudentCORURL      string                 `json:"studentCorUrl,omitempty"`
 	Ticket             *TicketDTO             `json:"ticket,omitempty"`
 	HasSignificantNote bool                   `json:"hasSignificantNote"`

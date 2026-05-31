@@ -37,7 +37,7 @@ type User struct {
 	IsActive       bool                   `db:"is_active"     json:"isActive"`
 	CreatedAt      structs.NullableTime   `db:"created_at"    json:"createdAt"`
 	UpdatedAt      structs.NullableTime   `db:"updated_at"    json:"updatedAt"`
-	ProfilePicture structs.NullableString `db:"-" json:"profilePicture"`
+	ProfilePicture structs.NullableString `db:"-"             json:"profilePicture"`
 	Roles          []Role                 `db:"-"             json:"roles"`
 }
 

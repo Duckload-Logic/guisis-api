@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
 )
 
@@ -788,7 +789,6 @@ func (h *Handler) PatchStudentIIR(c *gin.Context) {
 	)
 }
 
-
 // GenerateIIR godoc
 // @Summary      Generate Student IIR PDF
 // @Description  Generates and downloads the student's Initial Interview Record
@@ -807,7 +807,38 @@ func (h *Handler) GetStudentIIRPDF(c *gin.Context) {
 		return
 	}
 
-	pdfBytes, fileName, err := h.service.GenerateIIR(c.Request.Context(), iirID)
+	var isCounselor bool
+	if roleIDsVal, exists := c.Get("roleIDs"); exists {
+		if rids, ok := roleIDsVal.([]int); ok {
+			for _, rid := range rids {
+				if rid == int(constants.AdminRoleID) ||
+					rid == int(constants.SuperAdminRoleID) {
+					isCounselor = true
+					break
+				}
+			}
+		} else if rids, ok := roleIDsVal.([]interface{}); ok {
+			for _, item := range rids {
+				var rid int
+				if f, ok := item.(float64); ok {
+					rid = int(f)
+				} else if i, ok := item.(int); ok {
+					rid = i
+				}
+				if rid == int(constants.AdminRoleID) ||
+					rid == int(constants.SuperAdminRoleID) {
+					isCounselor = true
+					break
+				}
+			}
+		}
+	}
+
+	pdfBytes, fileName, err := h.service.GenerateIIR(
+		c.Request.Context(),
+		iirID,
+		isCounselor,
+	)
 	if err != nil {
 		log.Printf("[GetStudentIIRPDF] {Service Call}: %v", err)
 		response.SendError(
@@ -828,37 +859,15 @@ func (h *Handler) GetStudentIIRPDF(c *gin.Context) {
 	c.Data(http.StatusOK, "application/pdf", pdfBytes)
 }
 
-// PatchStudentBulkStatus handles PATCH /students/inventory/records/bulk-status.
-// It applies a lifecycle status transition to multiple student records in a
-// single transaction. For the "Graduated" status the service layer enforces
-// eligibility (Diploma/Year-3, Bachelor/Year-4) and quietly skips ineligible
-// records — the response always reports the attempted count so the frontend
-// can surface a warning if the actual count differs.
-func (h *Handler) PatchStudentStatusBulk(c *gin.Context) {
-	var req BulkUpdateStatusRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("[PatchStudentStatusBulk] {Bind JSON}: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
-		return
-	}
-
-	if err := h.service.BulkUpdateStudentStatus(c.Request.Context(), req); err != nil {
-		log.Printf("[PatchStudentStatusBulk] {Service Call}: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to update student status pool",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Bulk status update successful"})
-}
-
 func (h *Handler) PostStudentCOR(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 
 	file, err := c.FormFile("cor")
 	if err != nil {
-		response.SendFail(c, gin.H{"error": "COR file is required (field: cor)"})
+		response.SendFail(
+			c,
+			gin.H{"error": "COR file is required (field: cor)"},
+		)
 		return
 	}
 
@@ -909,7 +918,10 @@ func (h *Handler) PostStudentCORByIIRID(c *gin.Context) {
 
 	file, err := c.FormFile("cor")
 	if err != nil {
-		response.SendFail(c, gin.H{"error": "COR file is required (field: cor)"})
+		response.SendFail(
+			c,
+			gin.H{"error": "COR file is required (field: cor)"},
+		)
 		return
 	}
 
@@ -1026,4 +1038,3 @@ func (h *Handler) PutAcademicSetting(c *gin.Context) {
 		"message": "Academic setting updated successfully",
 	})
 }
-

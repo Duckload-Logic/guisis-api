@@ -48,12 +48,12 @@ func Initialize(db *sqlx.DB, cfg *config.Config) (*Application, error) {
 
 			fileStorage = blobStorage
 		}
-			emailer = email.NewSMTPMailer(
-				cfg.SMTPHost,
-				cfg.SMTPPort,
-				cfg.SMTPUser,
-				cfg.SMTPPass,
-			)
+		emailer = email.NewSMTPMailer(
+			cfg.SMTPHost,
+			cfg.SMTPPort,
+			cfg.SMTPUser,
+			cfg.SMTPPass,
+		)
 	} else {
 		{
 			uploadDir := cfg.LocalUploadDIR

@@ -67,21 +67,6 @@ func (r *Repository) GetDB() *sqlx.DB {
 	return r.db
 }
 
-func (r *Repository) GetTimeSlots(
-	ctx context.Context,
-	date string,
-) ([]TimeSlot, error) {
-	query := `SELECT id, time FROM time_slots`
-
-	var slots []TimeSlot
-	err := r.db.SelectContext(ctx, &slots, query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get time slots: %w", err)
-	}
-
-	return slots, nil
-}
-
 func (r *Repository) GetCategories(
 	ctx context.Context,
 ) ([]AppointmentCategory, error) {
@@ -321,7 +306,6 @@ func (r *Repository) GetStatusByID(
 
 	return &status, nil
 }
-
 func (r *Repository) IsSlotAvailableForUpdate(
 	ctx context.Context,
 	tx datastore.DB,
@@ -416,7 +400,6 @@ func (r *Repository) ListByUserID(
 
 	return appts, nil
 }
-
 func (r *Repository) ListByIIRID(
 	ctx context.Context,
 	iirID string,

@@ -237,7 +237,10 @@ func (h *Handler) PostLogsCleanup(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, gin.H{
-		"message":       fmt.Sprintf("Logs older than %d days cleaned up", days),
+		"message": fmt.Sprintf(
+			"Logs older than %d days cleaned up",
+			days,
+		),
 		"rows_affected": rows,
 	})
 }
@@ -292,4 +295,3 @@ func (h *Handler) GetTraceTracks(c *gin.Context) {
 
 	response.SendSuccess(c, result)
 }
-

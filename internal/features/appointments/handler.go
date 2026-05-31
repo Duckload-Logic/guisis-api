@@ -96,7 +96,10 @@ func (h *Handler) GetAppointmentDailyStats(c *gin.Context) {
 		return
 	}
 
-	dsc, err := h.service.GetDailyStatusCount(c.Request.Context(), req.StartDate)
+	dsc, err := h.service.GetDailyStatusCount(
+		c.Request.Context(),
+		req.StartDate,
+	)
 	if err != nil {
 		fmt.Printf("[GetAppointmentDailyStats] {Fetch Daily Stats}: %v\n", err)
 		response.SendError(

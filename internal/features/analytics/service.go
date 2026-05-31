@@ -195,6 +195,7 @@ func (s *Service) mapToDTO(
 		return dtos
 	}
 
+	minRank := math.MaxFloat64
 	for _, stat := range rawStats {
 		dto := DemographicStatDTO{
 			Category:    stat.Category,
@@ -208,7 +209,17 @@ func (s *Service) mapToDTO(
 		dto.MalePct = s.calculatePercentage(stat.MaleCount, totalStudents)
 		dto.FemalePct = s.calculatePercentage(stat.FemaleCount, totalStudents)
 
+		if stat.RankPos < minRank && stat.RankPos > 0 {
+			minRank = stat.RankPos
+		}
+
 		dtos = append(dtos, dto)
+	}
+
+	for i := range dtos {
+		if dtos[i].Rank == minRank {
+			dtos[i].IsTop = true
+		}
 	}
 
 	return dtos
@@ -255,7 +266,9 @@ func (s *Service) ExportIIRAnalyticsReport(
 	hsgwaCats, hsgwaPct := getTopCategoriesText(data.HighSchoolGWA)
 	fatherCats, fatherPct := getTopCategoriesText(data.FatherEducation)
 	motherCats, motherPct := getTopCategoriesText(data.MotherEducation)
-	parentsMaritalCats, parentsMaritalPct := getTopCategoriesText(data.ParentsMaritalStatus)
+	parentsMaritalCats, parentsMaritalPct := getTopCategoriesText(
+		data.ParentsMaritalStatus,
+	)
 	incomeCats, incomePct := getTopCategoriesText(data.MonthlyIncome)
 	ordinalCats, ordinalPct := getTopCategoriesText(data.OrdinalPosition)
 
@@ -358,7 +371,9 @@ func (s *Service) ExportIIRAnalyticsReport(
 	return pdfBytes, nil
 }
 
-func getTopCategoriesText(stats []DemographicStatDTO) (string, float64) {
+func getTopCategoriesText(
+	stats []DemographicStatDTO,
+) (string, float64) {
 	if len(stats) == 0 {
 		return "N/A", 0
 	}
@@ -367,7 +382,7 @@ func getTopCategoriesText(stats []DemographicStatDTO) (string, float64) {
 	var topPct float64
 
 	for _, s := range stats {
-		if s.Rank == 1 {
+		if s.IsTop {
 			labels = append(labels, s.Category)
 			topPct = s.TotalPct
 		}

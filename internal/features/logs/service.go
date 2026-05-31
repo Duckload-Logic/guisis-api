@@ -53,8 +53,27 @@ func (s *Service) Record(
 
 	var metaStr string
 	if entry.Metadata != nil {
-		s.sanitizeMetadata(entry.Metadata)
-		b, _ := json.Marshal(entry.Metadata)
+		status := "Success"
+		if level == audit.LevelError ||
+			level == audit.LevelCritical ||
+			entry.Metadata.Error != "" {
+			status = "Failed"
+		}
+
+		secureMeta := map[string]interface{}{
+			"status": status,
+		}
+		if entry.Metadata.EntityType != "" {
+			secureMeta["entityType"] = entry.Metadata.EntityType
+		}
+		if entry.Metadata.EntityID != "" {
+			secureMeta["entityId"] = entry.Metadata.EntityID
+		}
+		if entry.Metadata.Error != "" {
+			secureMeta["error"] = entry.Metadata.Error
+		}
+
+		b, _ := json.Marshal(secureMeta)
 		metaStr = string(b)
 	}
 
@@ -262,7 +281,6 @@ func (s *Service) DeleteLogsOlderThan(
 ) (int64, error) {
 	return s.repo.DeleteLogsOlderThan(ctx, days)
 }
-
 
 func (s *Service) sanitizeMetadata(meta *audit.LogMetadata) {
 	if meta == nil {

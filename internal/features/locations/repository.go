@@ -16,17 +16,6 @@ func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) GetDB() *sqlx.DB {
-	return r.db
-}
-
-func (r *Repository) WithTransaction(
-	ctx context.Context,
-	fn func(datastore.DB) error,
-) error {
-	return datastore.RunInTransaction(ctx, r.db, fn)
-}
-
 func (r *Repository) GetRegions(ctx context.Context) ([]Region, error) {
 	query := "SELECT id, code, name FROM regions ORDER BY name"
 	var regions []Region
@@ -64,7 +53,7 @@ func (r *Repository) GetCitiesByProvince(
 	query := `
 		SELECT id, code, name, province_code, type, zip_code, district, region_code
 		FROM cities
-		WHERE province_code = ?
+		WHERE province_code = ? AND type IN ('City', 'Mun', 'SubMun')
 		ORDER BY name ASC
 	`
 	var cities []City
@@ -83,7 +72,7 @@ func (r *Repository) GetCitiesByRegion(
 	query := `
 		SELECT id, code, name, province_code, type, zip_code, district, region_code
 		FROM cities
-		WHERE region_code = ?
+		WHERE region_code = ? AND type IN ('City', 'Mun', 'SubMun')
 		ORDER BY name ASC
 	`
 	var cities []City

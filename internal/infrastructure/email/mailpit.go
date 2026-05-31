@@ -69,6 +69,9 @@ func (m *MailPit) SendOTP(ctx context.Context, to, otp string) error {
 	return m.Send(ctx, audit.EmailEntry{
 		To:      []string{to},
 		Subject: "Your Verification Code",
-		Body:    fmt.Sprintf("<h1>Verification Code</h1><p>Your code is: <b>%s</b></p>", otp),
+		Body: fmt.Sprintf(
+			"<h1>Verification Code</h1><p>Your code is: <b>%s</b></p>",
+			otp,
+		),
 	})
 }

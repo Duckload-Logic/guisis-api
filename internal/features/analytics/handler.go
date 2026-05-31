@@ -68,7 +68,10 @@ func (h *Handler) ExportIIRAnalyticsReport(c *gin.Context) {
 	}
 
 	c.Header("Content-Type", "application/pdf")
-	c.Header("Content-Disposition", "attachment; filename=iir_analytics_report.pdf")
+	c.Header(
+		"Content-Disposition",
+		"attachment; filename=iir_analytics_report.pdf",
+	)
 	c.Data(http.StatusOK, "application/pdf", pdfBytes)
 }
 

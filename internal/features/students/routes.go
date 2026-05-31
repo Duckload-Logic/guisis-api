@@ -47,7 +47,10 @@ func RegisterRoutes(
 		)
 		lookupRoutes.GET("/student-statuses", h.GetStudentStatuses)
 		lookupRoutes.GET("/educational-levels", h.GetEducationalLevels)
-		lookupRoutes.GET("/educational-attainments", h.GetEducationalAttainments)
+		lookupRoutes.GET(
+			"/educational-attainments",
+			h.GetEducationalAttainments,
+		)
 	}
 
 	inventoryRoutes := routes.Group("/inventory")
@@ -58,7 +61,6 @@ func RegisterRoutes(
 	))
 	{
 		counselorRoutes.GET("/records", h.GetStudentList)
-		counselorRoutes.PATCH("/records/bulk-status", h.PatchStudentStatusBulk)
 	}
 
 	userRoutes := inventoryRoutes.Group("/")
@@ -195,4 +197,3 @@ func RegisterRoutes(
 		counselorSettingsRoutes.PUT("/academic", h.PutAcademicSetting)
 	}
 }
-

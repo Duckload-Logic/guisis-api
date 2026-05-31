@@ -53,10 +53,6 @@ func FromSqlNullTime(nt sql.NullTime) NullableTime {
 	return NullableTime{Time: nt.Time, Valid: nt.Valid}
 }
 
-func ToSqlNullTime(nt NullableTime) sql.NullTime {
-	return sql.NullTime{Time: nt.Time, Valid: nt.Valid}
-}
-
 func TimeToNullableTime(t time.Time) NullableTime {
 	if t.IsZero() {
 		return NullableTime{Valid: false}

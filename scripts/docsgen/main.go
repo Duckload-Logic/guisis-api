@@ -154,7 +154,11 @@ func writeTypes(file *os.File, docPkg *doc.Package) {
 			for _, m := range t.Methods {
 				fmt.Fprintf(file, "- `%s`\n", m.Name)
 				if m.Doc != "" {
-					fmt.Fprintf(file, "  - *%s*\n", strings.ReplaceAll(strings.TrimSpace(m.Doc), "\n", " "))
+					fmt.Fprintf(
+						file,
+						"  - *%s*\n",
+						strings.ReplaceAll(strings.TrimSpace(m.Doc), "\n", " "),
+					)
 				}
 			}
 			fmt.Fprintf(file, "\n")

@@ -31,7 +31,14 @@ func (s *Service) GenerateToken(
 	tokenType string,
 	expireSeconds int,
 ) (string, *Claims, error) {
-	return s.GenerateM2MToken(userEmail, userID, roleIDs, tokenType, "", expireSeconds)
+	return s.GenerateM2MToken(
+		userEmail,
+		userID,
+		roleIDs,
+		tokenType,
+		"",
+		expireSeconds,
+	)
 }
 
 func (s *Service) GenerateM2MToken(

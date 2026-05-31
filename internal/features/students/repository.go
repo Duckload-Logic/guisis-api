@@ -22,10 +22,6 @@ func (r *Repository) GetDB() *sqlx.DB {
 	return r.db
 }
 
-func (r *Repository) BeginTx(ctx context.Context) (datastore.DB, error) {
-	return r.db.BeginTxx(ctx, nil)
-}
-
 func (r *Repository) WithTransaction(
 	ctx context.Context,
 	fn func(datastore.DB) error,
@@ -35,10 +31,6 @@ func (r *Repository) WithTransaction(
 
 // Lookup
 func (r *Repository) GetEnrollmentYears(ctx context.Context) ([]int, error) {
-	// To adjust to created_at later, swap with:
-	// SELECT DISTINCT EXTRACT(YEAR FROM created_at) AS year
-	// FROM student_personal_info
-	// ORDER BY year DESC
 	query := `
 		SELECT DISTINCT
 			CAST(SUBSTRING(student_number, 1, 4) AS UNSIGNED) AS year
@@ -82,21 +74,6 @@ func (r *Repository) GetParentalStatusTypes(
 		return nil, fmt.Errorf("failed to get parental status types: %w", err)
 	}
 	return statuses, nil
-}
-
-func (r *Repository) GetEnrollmentReasons(
-	ctx context.Context,
-) ([]EnrollmentReason, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM enrollment_reasons ORDER BY id
-	`, datastore.GetColumns(EnrollmentReason{}))
-
-	var reasons []EnrollmentReason
-	err := r.db.SelectContext(ctx, &reasons, query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get enrollment reasons: %w", err)
-	}
-	return reasons, nil
 }
 
 func (r *Repository) GetIncomeRanges(
@@ -174,23 +151,6 @@ func (r *Repository) GetEducationalAttainments(
 	return attainments, nil
 }
 
-func (r *Repository) GetEducationalAttainmentByID(
-	ctx context.Context,
-	attainmentID int,
-) (*EducationalAttainment, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM educational_attainments WHERE id = ?
-	`, datastore.GetColumns(EducationalAttainment{}))
-
-	var model EducationalAttainment
-	err := r.db.GetContext(ctx, &model, query, attainmentID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get educational attainment by ID: %w", err)
-	}
-
-	return &model, nil
-}
-
 func (r *Repository) GetStudentStatuses(
 	ctx context.Context,
 ) ([]StudentStatus, error) {
@@ -257,7 +217,10 @@ func (r *Repository) GetStudentRelationshipTypes(
 	var relationships []StudentRelationshipType
 	err := r.db.SelectContext(ctx, &relationships, query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get student relationship types: %w", err)
+		return nil, fmt.Errorf(
+			"failed to get student relationship types: %w",
+			err,
+		)
 	}
 	return relationships, nil
 }
@@ -272,7 +235,10 @@ func (r *Repository) GetNatureOfResidenceTypes(
 	var residences []NatureOfResidenceType
 	err := r.db.SelectContext(ctx, &residences, query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get nature of residence types: %w", err)
+		return nil, fmt.Errorf(
+			"failed to get nature of residence types: %w",
+			err,
+		)
 	}
 	return residences, nil
 }
@@ -280,23 +246,12 @@ func (r *Repository) GetNatureOfResidenceTypes(
 // Retrieve - Count
 func (r *Repository) GetTotalStudentsCount(
 	ctx context.Context,
-	search string,
-	courseID int,
-	genderID int,
-	yearLevel int,
-	statusID int,
+	req ListStudentsRequest,
 ) (int, error) {
 	query, args := r.applyStudentFilters(
-		`SELECT COUNT(iir.id) FROM iir_records iir
-         JOIN users u ON iir.user_id = u.id
-         JOIN student_personal_info spi ON iir.id = spi.iir_id
-         WHERE iir.is_submitted = TRUE`,
+		"SELECT COUNT(iir_id) FROM v_student_profiles WHERE 1=1",
 		nil,
-		search,
-		courseID,
-		genderID,
-		yearLevel,
-		statusID,
+		req,
 	)
 
 	var total int
@@ -311,40 +266,39 @@ func (r *Repository) GetTotalStudentsCount(
 func (r *Repository) applyStudentFilters(
 	query string,
 	args []interface{},
-	search string,
-	courseID, genderID, yearLevel, statusID int,
+	req ListStudentsRequest,
 ) (string, []interface{}) {
 	if args == nil {
 		args = []interface{}{}
 	}
 
-	if courseID > 0 {
-		query += " AND spi.course_id = ?"
-		args = append(args, courseID)
+	if req.CourseID > 0 {
+		query += " AND course_id = ?"
+		args = append(args, req.CourseID)
 	}
 
-	if genderID > 0 {
-		query += " AND spi.gender_id = ?"
-		args = append(args, genderID)
+	if req.GenderID > 0 {
+		query += " AND gender_id = ?"
+		args = append(args, req.GenderID)
 	}
 
-	if yearLevel > 0 {
-		query += " AND spi.year_level = ?"
-		args = append(args, yearLevel)
+	if req.YearLevel > 0 {
+		query += " AND year_level = ?"
+		args = append(args, req.YearLevel)
 	}
 
-	if statusID > 0 {
-		query += " AND spi.status_id = ?"
-		args = append(args, statusID)
+	if req.StatusID > 0 {
+		query += " AND status_id = ?"
+		args = append(args, req.StatusID)
 	}
 
-	if search != "" {
-		query += ` AND (u.first_name LIKE ?
-                 OR u.last_name LIKE ?
-                 OR u.email LIKE ?
-                 OR spi.student_number LIKE ?)`
+	if req.Search != "" {
+		query += ` AND (first_name LIKE ?
+                 OR last_name LIKE ?
+                 OR email LIKE ?
+                 OR student_number LIKE ?)`
 
-		pattern := "%" + search + "%"
+		pattern := "%" + req.Search + "%"
 		args = append(args, pattern, pattern, pattern, pattern)
 	}
 
@@ -354,68 +308,37 @@ func (r *Repository) applyStudentFilters(
 // Retrieve - List
 func (r *Repository) ListStudents(
 	ctx context.Context,
-	search string,
-	offset, limit int,
-	orderBy string,
-	courseID, genderID, yearLevel, statusID int,
+	req ListStudentsRequest,
 ) ([]StudentProfileView, error) {
-	query := `
-		SELECT
-			iir.id AS iir_id,
-			iir.user_id,
-			u.first_name,
-			u.middle_name,
-			u.last_name,
-			u.suffix_name,
-			u.email,
-			spi.student_number,
-			spi.gender_id,
-			spi.course_id,
-			spi.section,
-			spi.year_level,
-			spi.status_id,
-			COALESCE(ss.status_name, '') AS status_name,
-			COALESCE(g.gender_name, '') AS gender_name,
-			COALESCE(c.code, '') AS course_code,
-			COALESCE(c.course_name, '') AS course_name
-		FROM iir_records iir
-		JOIN users u ON iir.user_id = u.id
-		JOIN student_personal_info spi ON iir.id = spi.iir_id
-		LEFT JOIN student_statuses ss ON spi.status_id = ss.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
-		LEFT JOIN courses c ON spi.course_id = c.id
-		WHERE iir.is_submitted = TRUE
-	`
+	query := fmt.Sprintf(`
+		SELECT %s FROM v_student_profiles WHERE 1 = 1
+	`, datastore.GetColumns(StudentProfileView{}))
 
 	query, args := r.applyStudentFilters(
 		query,
 		nil,
-		search,
-		courseID,
-		genderID,
-		yearLevel,
-		statusID,
+		req,
 	)
 
 	allowedSortColumns := map[string]string{
-		"last_name":      "u.last_name",
-		"first_name":     "u.first_name",
-		"year_level":     "spi.year_level",
-		"course_id":      "spi.course_id",
-		"created_at":     "iir.created_at",
-		"updated_at":     "iir.updated_at",
-		"student_number": "spi.student_number",
-		"iir_id":         "iir.id",
+		"last_name":      "last_name",
+		"first_name":     "first_name",
+		"year_level":     "year_level",
+		"course_id":      "course_id",
+		"created_at":     "created_at",
+		"updated_at":     "updated_at",
+		"student_number": "student_number",
+		"iir_id":         "iir_id",
 	}
 
-	sortColumn, ok := allowedSortColumns[orderBy]
+	sortColumn, ok := allowedSortColumns[req.OrderBy]
 	if !ok {
 		sortColumn = allowedSortColumns["last_name"]
 	}
 
-	query += fmt.Sprintf(" ORDER BY %s ASC, iir.id ASC", sortColumn)
+	query += fmt.Sprintf(" ORDER BY %s ASC, iir_id ASC", sortColumn)
 	query += " LIMIT ? OFFSET ?"
-	args = append(args, limit, offset)
+	args = append(args, req.PageSize, req.GetOffset())
 
 	var views []StudentProfileView
 	err := r.db.SelectContext(ctx, &views, query, args...)
@@ -431,11 +354,7 @@ func (r *Repository) GetStudentBasicInfo(
 	iirID string,
 ) (*StudentBasicInfoView, error) {
 	query := fmt.Sprintf(`
-		SELECT
-			%s
-		FROM users u
-		JOIN iir_records iir ON u.id = iir.user_id
-		WHERE iir.id = ?
+		SELECT %s FROM v_student_basic_info WHERE iir_id = ?
 	`, datastore.GetColumns(StudentBasicInfoView{}))
 
 	var view StudentBasicInfoView
@@ -507,79 +426,13 @@ func (r *Repository) GetStudentIIR(
 	return &model, nil
 }
 
-func (r *Repository) GetStudentPersonalInfo(
-	ctx context.Context,
-	iirID string,
-) (*StudentPersonalInfo, error) {
-	query := fmt.Sprintf(`
-		SELECT %s
-		FROM student_personal_info
-		WHERE iir_id = ?
-	`, datastore.GetColumns(StudentPersonalInfo{}))
-
-	var model StudentPersonalInfo
-	err := r.db.GetContext(ctx, &model, query, iirID)
-	if err != nil {
-		return nil, err
-	}
-
-	return &model, nil
-}
-
 func (r *Repository) GetStudentPersonalInfoView(
 	ctx context.Context,
 	iirID string,
 ) (*StudentPersonalInfoView, error) {
-	query := `
-		SELECT
-			spi.id,
-			spi.iir_id,
-			spi.student_number,
-			spi.gender_id,
-			COALESCE(g.gender_name, '') AS gender_name,
-			spi.civil_status_id,
-			COALESCE(cst.status_name, '') AS civil_status_name,
-			spi.religion_id,
-			COALESCE(rel.religion_name, '') AS religion_name,
-			spi.height_m,
-			spi.weight_kg,
-			spi.complexion,
-			spi.high_school_gwa,
-			spi.course_id,
-			COALESCE(c.code, '') AS course_code,
-			COALESCE(c.course_name, '') AS course_name,
-			spi.year_level,
-			spi.section,
-			spi.place_of_birth,
-			spi.date_of_birth,
-			spi.is_employed,
-			spi.employer_name,
-			spi.employer_address,
-			spi.mobile_number,
-			spi.telephone_number,
-			spi.employer_contact_number,
-			spi.status_id,
-			COALESCE(ss.status_name, '') AS status_name,
-			spi.graduation_year,
-			COALESCE(ec.id, 0) AS emergency_id,
-			COALESCE(ec.first_name, '') AS emergency_first_name,
-			COALESCE(ec.middle_name, '') AS emergency_middle_name,
-			COALESCE(ec.last_name, '') AS emergency_last_name,
-			COALESCE(ec.contact_number, '') AS emergency_contact_number,
-			COALESCE(ec.relationship_id, 0) AS emergency_relationship_id,
-			COALESCE(ert.relationship_name, '') AS emergency_relationship_name,
-			COALESCE(ec.address_id, 0) AS emergency_address_id
-		FROM student_personal_info spi
-		LEFT JOIN genders g ON spi.gender_id = g.id
-		LEFT JOIN civil_status_types cst ON spi.civil_status_id = cst.id
-		LEFT JOIN religions rel ON spi.religion_id = rel.id
-		LEFT JOIN courses c ON spi.course_id = c.id
-		LEFT JOIN student_statuses ss ON spi.status_id = ss.id
-		LEFT JOIN emergency_contacts ec ON spi.iir_id = ec.iir_id
-		LEFT JOIN student_relationship_types ert ON ec.relationship_id = ert.id
-		WHERE spi.iir_id = ?
-		LIMIT 1
-	`
+	query := fmt.Sprintf(`
+		SELECT %s FROM v_student_personal_info WHERE iir_id = ? LIMIT 1
+	`, datastore.GetColumns(StudentPersonalInfoView{}))
 
 	var view StudentPersonalInfoView
 	err := r.db.GetContext(ctx, &view, query, iirID)
@@ -587,9 +440,11 @@ func (r *Repository) GetStudentPersonalInfoView(
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get personal info view: %w", err)
+		return nil, fmt.Errorf(
+			"failed to get personal info view: %w",
+			err,
+		)
 	}
-
 	return &view, nil
 }
 
@@ -607,60 +462,11 @@ func (r *Repository) GetEmergencyContactByIIRID(
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get emergency contact: %w", err)
+		return nil, fmt.Errorf(
+			"failed to get emergency contact: %w",
+			err,
+		)
 	}
-
-	return &model, nil
-}
-
-func (r *Repository) GetGenderByID(
-	ctx context.Context,
-	genderID int,
-) (*Gender, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM genders WHERE id = ?
-	`, datastore.GetColumns(Gender{}))
-
-	var model Gender
-	err := r.db.GetContext(ctx, &model, query, genderID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get gender by ID: %w", err)
-	}
-
-	return &model, nil
-}
-
-func (r *Repository) GetCivilStatusByID(
-	ctx context.Context,
-	statusID int,
-) (*CivilStatusType, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM civil_status_types WHERE id = ?
-	`, datastore.GetColumns(CivilStatusType{}))
-
-	var model CivilStatusType
-	err := r.db.GetContext(ctx, &model, query, statusID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get civil status by ID: %w", err)
-	}
-
-	return &model, nil
-}
-
-func (r *Repository) GetReligionByID(
-	ctx context.Context,
-	religionID int,
-) (*Religion, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM religions WHERE id = ?
-	`, datastore.GetColumns(Religion{}))
-
-	var model Religion
-	err := r.db.GetContext(ctx, &model, query, religionID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get religion by ID: %w", err)
-	}
-
 	return &model, nil
 }
 
@@ -678,21 +484,6 @@ func (r *Repository) GetCourseByID(
 		return nil, fmt.Errorf("failed to get course by ID: %w", err)
 	}
 
-	return &model, nil
-}
-
-func (r *Repository) GetStudentRelationshipByID(
-	ctx context.Context, relationshipID int,
-) (*StudentRelationshipType, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM student_relationship_types WHERE id = ?
-	`, datastore.GetColumns(StudentRelationshipType{}))
-
-	var model StudentRelationshipType
-	err := r.db.GetContext(ctx, &model, query, relationshipID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get relationship by ID: %w", err)
-	}
 	return &model, nil
 }
 
@@ -771,26 +562,10 @@ func (r *Repository) GetSiblingSupportTypeByID(
 	var model SibilingSupportType
 	err := r.db.GetContext(ctx, &model, query, supportID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get sibling support type by ID: %w", err)
-	}
-	return &model, nil
-}
-
-func (r *Repository) GetStudentFinancialInfo(
-	ctx context.Context,
-	iirID string,
-) (*StudentFinance, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM student_finances WHERE iir_id = ? LIMIT 1
-	`, datastore.GetColumns(StudentFinance{}))
-
-	var model StudentFinance
-	err := r.db.GetContext(ctx, &model, query, iirID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to get financial info: %w", err)
+		return nil, fmt.Errorf(
+			"failed to get sibling support type by ID: %w",
+			err,
+		)
 	}
 	return &model, nil
 }
@@ -799,20 +574,9 @@ func (r *Repository) GetStudentFinancialInfoView(
 	ctx context.Context,
 	iirID string,
 ) (*StudentFinanceView, error) {
-	query := `
-		SELECT
-			sf.id,
-			sf.iir_id,
-			sf.monthly_family_income_range_id AS income_range_id,
-			COALESCE(ir.range_text, '') AS income_range_text,
-			sf.other_income_details AS other_income,
-			sf.weekly_allowance
-		FROM student_finances sf
-		LEFT JOIN income_ranges ir
-			ON sf.monthly_family_income_range_id = ir.id
-		WHERE sf.iir_id = ?
-		LIMIT 1
-	`
+	query := fmt.Sprintf(`
+		SELECT %s FROM v_student_finances WHERE iir_id = ? LIMIT 1
+	`, datastore.GetColumns(StudentFinanceView{}))
 
 	var view StudentFinanceView
 	err := r.db.GetContext(ctx, &view, query, iirID)
@@ -820,7 +584,10 @@ func (r *Repository) GetStudentFinancialInfoView(
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to get financial info view: %w", err)
+		return nil, fmt.Errorf(
+			"failed to get financial info view: %w",
+			err,
+		)
 	}
 	return &view, nil
 }
@@ -830,62 +597,19 @@ func (r *Repository) GetFinancialSupportTypes(
 	sfID int,
 ) ([]StudentSupportType, error) {
 	query := `
-		SELECT
-			sst.id,
-			sst.support_type_name
-		FROM student_financial_support sfs
-		JOIN student_support_types sst ON sfs.support_type_id = sst.id
-		WHERE sfs.sf_id = ?
+		SELECT id, support_type_name
+		FROM v_student_financial_supports
+		WHERE sf_id = ?
 	`
-
 	var supports []StudentSupportType
 	err := r.db.SelectContext(ctx, &supports, query, sfID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get financial support types: %w", err)
+		return nil, fmt.Errorf(
+			"failed to get financial support types: %w",
+			err,
+		)
 	}
 	return supports, nil
-}
-
-func (r *Repository) GetFinancialSupportTypeByFinanceID(
-	ctx context.Context,
-	financeID int,
-) ([]StudentFinancialSupport, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM student_financial_support WHERE sf_id = ?
-	`, datastore.GetColumns(StudentFinancialSupport{}))
-
-	var supports []StudentFinancialSupport
-	err := r.db.SelectContext(ctx, &supports, query, financeID)
-	return supports, err
-}
-
-func (r *Repository) GetIncomeRangeByID(ctx context.Context, rangeID int) (*IncomeRange, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM income_ranges WHERE id = ?
-	`, datastore.GetColumns(IncomeRange{}))
-
-	var model IncomeRange
-	err := r.db.GetContext(ctx, &model, query, rangeID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get income range by ID: %w", err)
-	}
-	return &model, nil
-}
-
-func (r *Repository) GetStudentSupportByID(
-	ctx context.Context,
-	supportID int,
-) (*StudentSupportType, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM student_support_types WHERE id = ?
-	`, datastore.GetColumns(StudentSupportType{}))
-
-	var model StudentSupportType
-	err := r.db.GetContext(ctx, &model, query, supportID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get support type by ID: %w", err)
-	}
-	return &model, nil
 }
 
 func (r *Repository) GetStudentHealthRecord(
@@ -907,7 +631,9 @@ func (r *Repository) GetStudentHealthRecord(
 	return &model, nil
 }
 
-func (r *Repository) GetActivityOptions(ctx context.Context) ([]ActivityOption, error) {
+func (r *Repository) GetActivityOptions(
+	ctx context.Context,
+) ([]ActivityOption, error) {
 	query := fmt.Sprintf(`
 		SELECT %s FROM activity_options WHERE is_active = 1 ORDER BY id
 	`, datastore.GetColumns(ActivityOption{}))
@@ -972,7 +698,10 @@ func (r *Repository) GetStudentSubjectPreferences(
 	return prefs, err
 }
 
-func (r *Repository) GetStudentHobbies(ctx context.Context, iirID string) ([]StudentHobby, error) {
+func (r *Repository) GetStudentHobbies(
+	ctx context.Context,
+	iirID string,
+) ([]StudentHobby, error) {
 	query := fmt.Sprintf(`
 		SELECT %s FROM student_hobbies WHERE iir_id = ? ORDER BY priority_rank
 	`, datastore.GetColumns(StudentHobby{}))
@@ -987,7 +716,14 @@ func (r *Repository) GetStudentTestResults(
 	iirID string,
 ) ([]TestResult, error) {
 	query := fmt.Sprintf(`
-		SELECT %s FROM student_test_results WHERE iir_id = ? ORDER BY test_date DESC
+		SELECT
+			%s
+		FROM
+			student_test_results
+		WHERE
+			iir_id = ?
+		ORDER BY
+			test_date DESC
 	`, datastore.GetColumns(TestResult{}))
 
 	var results []TestResult
@@ -1069,56 +805,21 @@ func (r *Repository) GetEducationalLevelByID(
 	return &model, nil
 }
 
-func (r *Repository) GetStudentRelatedPersons(
-	ctx context.Context, iirID string,
-) ([]StudentRelatedPerson, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM student_related_persons WHERE iir_id = ?
-	`, datastore.GetColumns(StudentRelatedPerson{}))
-
-	var persons []StudentRelatedPerson
-	err := r.db.SelectContext(ctx, &persons, query, iirID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get related persons: %w", err)
-	}
-
-	return persons, nil
-}
-
 func (r *Repository) GetStudentRelatedPersonsView(
 	ctx context.Context,
 	iirID string,
 ) ([]RelatedPersonView, error) {
-	query := `
-		SELECT
-			rp.id,
-			rp.last_name,
-			rp.first_name,
-			rp.middle_name,
-			rp.suffix_name,
-			rp.date_of_birth,
-			COALESCE(rp.educational_attainment_id, 0) AS educational_attainment_id,
-			COALESCE(ea.name, '') AS educational_attainment_name,
-			COALESCE(rp.occupation, '') AS occupation,
-			COALESCE(rp.employer_name, '') AS employer_name,
-			COALESCE(rp.employer_address, '') AS employer_address,
-			srp.relationship_id,
-			COALESCE(ert.relationship_name, '') AS relationship_name,
-			srp.is_parent,
-			srp.is_guardian,
-			srp.is_living
-		FROM student_related_persons srp
-		JOIN related_persons rp ON srp.related_person_id = rp.id
-		LEFT JOIN educational_attainments ea
-			ON rp.educational_attainment_id = ea.id
-		LEFT JOIN student_relationship_types ert ON srp.relationship_id = ert.id
-		WHERE srp.iir_id = ?
-	`
+	query := fmt.Sprintf(`
+		SELECT %s FROM v_related_persons WHERE iir_id = ?
+	`, datastore.GetColumns(RelatedPersonView{}))
 
 	var views []RelatedPersonView
 	err := r.db.SelectContext(ctx, &views, query, iirID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get related persons view: %w", err)
+		return nil, fmt.Errorf(
+			"failed to get related persons view: %w",
+			err,
+		)
 	}
 
 	return views, nil
@@ -1130,13 +831,14 @@ func (r *Repository) GetRelatedPersonByID(
 	query := fmt.Sprintf(`
 		SELECT %s FROM related_persons WHERE id = ?
 	`, datastore.GetColumns(RelatedPerson{}))
-
 	var model RelatedPerson
 	err := r.db.GetContext(ctx, &model, query, personID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get related person by ID: %w", err)
+		return nil, fmt.Errorf(
+			"failed to get related person by ID: %w",
+			err,
+		)
 	}
-
 	return &model, nil
 }
 
@@ -1146,7 +848,10 @@ func (r *Repository) UpsertIIRDraft(
 ) (int, error) {
 	exclude := []string{"id", "created_at"}
 	cols, vals := datastore.GetInsertStatement(IIRDraft{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(IIRDraft{}, exclude)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		IIRDraft{},
+		exclude,
+	)
 
 	query := fmt.Sprintf(`
 		INSERT INTO iir_drafts (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s
@@ -1166,19 +871,19 @@ func (r *Repository) UpsertIIRRecord(
 	tx datastore.DB,
 	iir *IIRRecord,
 ) (string, error) {
-	// NOTE: We do NOT use GetOnDuplicateKeyUpdateStatement here because
-	// that helper appends `id = LAST_INSERT_ID(id)` whenever the struct
-	// has an `id` field — which is only valid for auto-increment INTEGER
-	// PKs. iir_records.id is a char(36) UUID; MySQL would try to coerce
-	// it to INTEGER inside LAST_INSERT_ID() and throw Error 1292.
-	// Only update the mutable columns on conflict.
-	query := `
-		INSERT INTO iir_records (id, user_id, is_submitted)
-		VALUES (:id, :user_id, :is_submitted)
+	cols, vals := datastore.GetInsertStatement(IIRRecord{}, nil)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		IIRRecord{},
+		nil,
+	)
+	query := fmt.Sprintf(`
+		INSERT INTO
+			iir_records (id, %s)
+		VALUES
+			(:id, %s)
 		ON DUPLICATE KEY UPDATE
-			user_id      = VALUES(user_id),
-			is_submitted = VALUES(is_submitted)
-	`
+			%s
+	`, cols, vals, onDuplicate)
 
 	_, err := tx.NamedExecContext(ctx, query, iir)
 	return iir.ID, err
@@ -1189,12 +894,19 @@ func (r *Repository) UpsertStudentPersonalInfo(
 	tx datastore.DB,
 	info *StudentPersonalInfo,
 ) error {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(StudentPersonalInfo{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(StudentPersonalInfo{}, exclude)
+	cols, vals := datastore.GetInsertStatement(StudentPersonalInfo{}, nil)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		StudentPersonalInfo{},
+		nil,
+	)
 
 	query := fmt.Sprintf(`
-		INSERT INTO student_personal_info (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s
+		INSERT INTO
+			student_personal_info (%s)
+		VALUES
+			(%s)
+		ON DUPLICATE KEY UPDATE
+			%s
 	`, cols, vals, onDuplicate)
 
 	_, err := tx.NamedExecContext(ctx, query, info)
@@ -1206,12 +918,19 @@ func (r *Repository) UpsertEmergencyContact(
 	tx datastore.DB,
 	ec *EmergencyContact,
 ) (int, error) {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(EmergencyContact{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(EmergencyContact{}, exclude)
+	cols, vals := datastore.GetInsertStatement(EmergencyContact{}, nil)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		EmergencyContact{},
+		nil,
+	)
 
 	query := fmt.Sprintf(`
-		INSERT INTO emergency_contacts (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s
+		INSERT INTO
+			emergency_contacts (%s)
+		VALUES
+			(%s)
+		ON DUPLICATE KEY UPDATE
+			%s
 	`, cols, vals, onDuplicate)
 
 	result, err := tx.NamedExecContext(ctx, query, ec)
@@ -1227,12 +946,19 @@ func (r *Repository) UpsertStudentAddress(
 	tx datastore.DB,
 	sa *StudentAddress,
 ) (int, error) {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(StudentAddress{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(StudentAddress{}, exclude)
+	cols, vals := datastore.GetInsertStatement(StudentAddress{}, nil)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		StudentAddress{},
+		nil,
+	)
 
 	query := fmt.Sprintf(`
-		INSERT INTO student_addresses (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s
+		INSERT INTO
+			student_addresses (%s)
+		VALUES
+			(%s)
+		ON DUPLICATE KEY UPDATE
+			%s
 	`, cols, vals, onDuplicate)
 
 	result, err := tx.NamedExecContext(ctx, query, sa)
@@ -1253,27 +979,6 @@ func (r *Repository) DeleteStudentAddressesByIIRID(
 	return err
 }
 
-func (r *Repository) CreateStudentSelectedReason(
-	ctx context.Context,
-	tx datastore.DB,
-	ssr *StudentSelectedReason,
-) error {
-	cols, vals := datastore.GetInsertStatement(StudentSelectedReason{}, nil)
-	query := fmt.Sprintf(`INSERT INTO student_selected_reasons (%s) VALUES (%s)`, cols, vals)
-	_, err := tx.NamedExecContext(ctx, query, ssr)
-	return err
-}
-
-func (r *Repository) DeleteStudentSelectedReasons(
-	ctx context.Context,
-	tx datastore.DB,
-	iirID string,
-) error {
-	query := `DELETE FROM student_selected_reasons WHERE iir_id = ?`
-	_, err := tx.ExecContext(ctx, query, iirID)
-	return err
-}
-
 func (r *Repository) UpsertRelatedPerson(
 	ctx context.Context,
 	tx datastore.DB,
@@ -1281,7 +986,10 @@ func (r *Repository) UpsertRelatedPerson(
 ) (int, error) {
 	exclude := []string{"id", "created_at"}
 	cols, vals := datastore.GetInsertStatement(RelatedPerson{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(RelatedPerson{}, exclude)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		RelatedPerson{},
+		exclude,
+	)
 
 	query := fmt.Sprintf(`
 		INSERT INTO related_persons (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s
@@ -1300,12 +1008,19 @@ func (r *Repository) UpsertStudentRelatedPerson(
 	tx datastore.DB,
 	srp *StudentRelatedPerson,
 ) error {
-	exclude := []string{"created_at"}
-	cols, vals := datastore.GetInsertStatement(StudentRelatedPerson{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(StudentRelatedPerson{}, exclude)
+	cols, vals := datastore.GetInsertStatement(StudentRelatedPerson{}, nil)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		StudentRelatedPerson{},
+		nil,
+	)
 
 	query := fmt.Sprintf(`
-		INSERT INTO student_related_persons (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s
+		INSERT INTO
+			student_related_persons (%s)
+		VALUES
+			(%s)
+		ON DUPLICATE KEY UPDATE
+			%s
 	`, cols, vals, onDuplicate)
 
 	_, err := tx.NamedExecContext(ctx, query, srp)
@@ -1385,12 +1100,19 @@ func (r *Repository) UpsertFamilyBackground(
 	tx datastore.DB,
 	fb *FamilyBackground,
 ) (int, error) {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(FamilyBackground{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(FamilyBackground{}, exclude)
+	cols, vals := datastore.GetInsertStatement(FamilyBackground{}, nil)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		FamilyBackground{},
+		nil,
+	)
 
 	query := fmt.Sprintf(`
-		INSERT INTO family_backgrounds (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s
+		INSERT INTO
+			family_backgrounds (%s)
+		VALUES
+			(%s)
+		ON DUPLICATE KEY UPDATE
+			%s
 	`, cols, vals, onDuplicate)
 
 	result, err := tx.NamedExecContext(ctx, query, fb)
@@ -1407,7 +1129,11 @@ func (r *Repository) CreateStudentSiblingSupport(
 	sss *StudentSiblingSupport,
 ) error {
 	cols, vals := datastore.GetInsertStatement(StudentSiblingSupport{}, nil)
-	query := fmt.Sprintf(`INSERT INTO student_sibling_supports (%s) VALUES (%s)`, cols, vals)
+	query := fmt.Sprintf(
+		`INSERT INTO student_sibling_supports (%s) VALUES (%s)`,
+		cols,
+		vals,
+	)
 	_, err := tx.NamedExecContext(ctx, query, sss)
 	return err
 }
@@ -1417,7 +1143,10 @@ func (r *Repository) DeleteStudentSiblingSupportsByFamilyID(
 	tx datastore.DB,
 	familyBackgroundID int,
 ) error {
-	query := `DELETE FROM student_sibling_supports WHERE family_background_id = ?`
+	query := `
+		DELETE FROM student_sibling_supports
+		WHERE family_background_id = ?
+	`
 	_, err := tx.ExecContext(ctx, query, familyBackgroundID)
 	return err
 }
@@ -1427,12 +1156,19 @@ func (r *Repository) UpsertEducationalBackground(
 	tx datastore.DB,
 	eb *EducationalBackground,
 ) (int, error) {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(EducationalBackground{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(EducationalBackground{}, exclude)
+	cols, vals := datastore.GetInsertStatement(EducationalBackground{}, nil)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		EducationalBackground{},
+		nil,
+	)
 
 	query := fmt.Sprintf(`
-		INSERT INTO educational_backgrounds (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s
+		INSERT INTO
+			educational_backgrounds (%s)
+		VALUES
+			(%s)
+		ON DUPLICATE KEY UPDATE
+			%s
 	`, cols, vals, onDuplicate)
 
 	result, err := tx.NamedExecContext(ctx, query, eb)
@@ -1448,12 +1184,19 @@ func (r *Repository) UpsertSchoolDetails(
 	tx datastore.DB,
 	sd *SchoolDetails,
 ) (int, error) {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(SchoolDetails{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(SchoolDetails{}, exclude)
+	cols, vals := datastore.GetInsertStatement(SchoolDetails{}, nil)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		SchoolDetails{},
+		nil,
+	)
 
 	query := fmt.Sprintf(`
-		INSERT INTO school_details (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s
+		INSERT INTO
+			school_details (%s)
+		VALUES
+			(%s)
+		ON DUPLICATE KEY UPDATE
+			%s
 	`, cols, vals, onDuplicate)
 
 	result, err := tx.NamedExecContext(ctx, query, sd)
@@ -1479,12 +1222,18 @@ func (r *Repository) UpsertStudentHealthRecord(
 	tx datastore.DB,
 	hr *StudentHealthRecord,
 ) (int, error) {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(StudentHealthRecord{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(StudentHealthRecord{}, exclude)
+	cols, vals := datastore.GetInsertStatement(StudentHealthRecord{}, nil)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		StudentHealthRecord{},
+		nil,
+	)
 
 	query := fmt.Sprintf(`
-		INSERT INTO student_health_records (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s
+		INSERT INTO
+			student_health_records (%s)
+		VALUES
+			(%s)
+		ON DUPLICATE KEY UPDATE %s
 	`, cols, vals, onDuplicate)
 
 	result, err := tx.NamedExecContext(ctx, query, hr)
@@ -1500,12 +1249,19 @@ func (r *Repository) UpsertStudentConsultation(
 	tx datastore.DB,
 	sc *StudentConsultation,
 ) (int, error) {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(StudentConsultation{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(StudentConsultation{}, exclude)
+	cols, vals := datastore.GetInsertStatement(StudentConsultation{}, nil)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		StudentConsultation{},
+		nil,
+	)
 
 	query := fmt.Sprintf(`
-		INSERT INTO student_consultations (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s
+		INSERT INTO
+			student_consultations (%s)
+		VALUES
+			(%s)
+		ON DUPLICATE KEY UPDATE
+			%s
 	`, cols, vals, onDuplicate)
 
 	result, err := tx.NamedExecContext(ctx, query, sc)
@@ -1531,9 +1287,11 @@ func (r *Repository) UpsertStudentFinance(
 	tx datastore.DB,
 	sf *StudentFinance,
 ) (int, error) {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(StudentFinance{}, exclude)
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(StudentFinance{}, exclude)
+	cols, vals := datastore.GetInsertStatement(StudentFinance{}, nil)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		StudentFinance{},
+		nil,
+	)
 
 	query := fmt.Sprintf(`
 		INSERT INTO student_finances (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s
@@ -1552,10 +1310,7 @@ func (r *Repository) CreateStudentFinancialSupport(
 	tx datastore.DB,
 	sfs *StudentFinancialSupport,
 ) error {
-	cols, vals := datastore.GetInsertStatement(
-		StudentFinancialSupport{},
-		[]string{"created_at", "updated_at"},
-	)
+	cols, vals := datastore.GetInsertStatement(StudentFinancialSupport{}, nil)
 	query := fmt.Sprintf(
 		`INSERT INTO student_financial_supports (%s) VALUES (%s)`,
 		cols,
@@ -1580,9 +1335,12 @@ func (r *Repository) CreateStudentActivity(
 	tx datastore.DB,
 	sa *StudentActivity,
 ) (int, error) {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(StudentActivity{}, exclude)
-	query := fmt.Sprintf(`INSERT INTO student_activities (%s) VALUES (%s)`, cols, vals)
+	cols, vals := datastore.GetInsertStatement(StudentActivity{}, nil)
+	query := fmt.Sprintf(
+		`INSERT INTO student_activities (%s) VALUES (%s)`,
+		cols,
+		vals,
+	)
 	result, err := tx.NamedExecContext(ctx, query, sa)
 	if err != nil {
 		return 0, err
@@ -1606,9 +1364,12 @@ func (r *Repository) CreateStudentSubjectPreference(
 	tx datastore.DB,
 	ssp *StudentSubjectPreference,
 ) (int, error) {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(StudentSubjectPreference{}, exclude)
-	query := fmt.Sprintf(`INSERT INTO student_subject_preferences (%s) VALUES (%s)`, cols, vals)
+	cols, vals := datastore.GetInsertStatement(StudentSubjectPreference{}, nil)
+	query := fmt.Sprintf(
+		`INSERT INTO student_subject_preferences (%s) VALUES (%s)`,
+		cols,
+		vals,
+	)
 	result, err := tx.NamedExecContext(ctx, query, ssp)
 	if err != nil {
 		return 0, err
@@ -1632,9 +1393,12 @@ func (r *Repository) CreateStudentHobby(
 	tx datastore.DB,
 	sh *StudentHobby,
 ) (int, error) {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(StudentHobby{}, exclude)
-	query := fmt.Sprintf(`INSERT INTO student_hobbies (%s) VALUES (%s)`, cols, vals)
+	cols, vals := datastore.GetInsertStatement(StudentHobby{}, nil)
+	query := fmt.Sprintf(
+		`INSERT INTO student_hobbies (%s) VALUES (%s)`,
+		cols,
+		vals,
+	)
 	result, err := tx.NamedExecContext(ctx, query, sh)
 	if err != nil {
 		return 0, err
@@ -1653,133 +1417,23 @@ func (r *Repository) DeleteStudentHobbiesByIIRID(
 	return err
 }
 
-func (r *Repository) CreateTestResult(
-	ctx context.Context,
-	tx datastore.DB,
-	tr *TestResult,
-) (int, error) {
-	exclude := []string{"id", "created_at"}
-	cols, vals := datastore.GetInsertStatement(TestResult{}, exclude)
-	query := fmt.Sprintf(`INSERT INTO student_test_results (%s) VALUES (%s)`, cols, vals)
-	result, err := tx.NamedExecContext(ctx, query, tr)
-	if err != nil {
-		return 0, err
-	}
-	lastID, _ := result.LastInsertId()
-	return int(lastID), nil
-}
-
-func (r *Repository) DeleteTestResultsByIIRID(
-	ctx context.Context,
-	tx datastore.DB,
-	iirID string,
-) error {
-	query := `DELETE FROM student_test_results WHERE iir_id = ?`
-	_, err := tx.ExecContext(ctx, query, iirID)
-	return err
-}
-
-func (r *Repository) DeleteSignificantNotesByIIRID(
-	ctx context.Context,
-	tx datastore.DB,
-	iirID string,
-) error {
-	query := `DELETE FROM significant_notes WHERE iir_id = ?`
-	_, err := tx.ExecContext(ctx, query, iirID)
-	return err
-}
-
-func (r *Repository) IsStudentLocked(
-	ctx context.Context,
-	iirID string,
-) (bool, error) {
-	var statusID int
-	err := r.db.GetContext(ctx, &statusID,
-		"SELECT status_id FROM student_personal_info WHERE iir_id = ?", iirID)
-	if err != nil {
-		return false, err
-	}
-	return (statusID == 2 || statusID == 4 || statusID == 5), nil
-}
-
-func (r *Repository) BulkUpdateStudentStatus(
-	ctx context.Context,
-	req BulkUpdateStatusRequest,
-) error {
-	var args []interface{}
-	var setClause string
-
-	if req.GraduationYear != nil {
-		setClause = "SET status_id = ?, graduation_year = ?"
-		args = append(args, req.StatusID, *req.GraduationYear)
-	} else {
-		setClause = "SET status_id = ?"
-		args = append(args, req.StatusID)
-	}
-
-	base := fmt.Sprintf("UPDATE student_personal_info %s WHERE", setClause)
-
-	if req.SelectAllMatching {
-		var conditions []string
-		conditions = append(conditions, "status_id NOT IN (2, 4, 5)")
-
-		if req.Filters.Search != "" {
-			conditions = append(conditions,
-				"iir_id IN ("+
-					"SELECT i.id FROM iir_records i "+
-					"JOIN users u ON u.id = i.user_id "+
-					"WHERE CONCAT(u.first_name,' ',u.last_name) "+
-					"LIKE ? OR u.email LIKE ?)",
-			)
-			like := "%" + req.Filters.Search + "%"
-			args = append(args, like, like)
-		}
-		if req.Filters.CourseID > 0 {
-			conditions = append(conditions, "course_id = ?")
-			args = append(args, req.Filters.CourseID)
-		}
-		if req.Filters.YearLevel > 0 {
-			conditions = append(conditions, "year_level = ?")
-			args = append(args, req.Filters.YearLevel)
-		}
-
-		if len(req.ExcludedIIRIDs) > 0 {
-			placeholders := strings.Repeat("?,", len(req.ExcludedIIRIDs))
-			placeholders = placeholders[:len(placeholders)-1]
-			conditions = append(conditions, fmt.Sprintf("iir_id NOT IN (%s)", placeholders))
-			for _, id := range req.ExcludedIIRIDs {
-				args = append(args, id)
-			}
-		}
-
-		query := fmt.Sprintf("%s %s", base, strings.Join(conditions, " AND "))
-		_, err := r.db.ExecContext(ctx, query, args...)
-		return err
-	}
-
-	if len(req.IIRIDs) == 0 {
-		return nil
-	}
-	placeholders := strings.Repeat("?,", len(req.IIRIDs))
-	placeholders = placeholders[:len(placeholders)-1]
-	for _, id := range req.IIRIDs {
-		args = append(args, id)
-	}
-
-	query := fmt.Sprintf("%s iir_id IN (%s) AND status_id NOT IN (2, 4, 5)", base, placeholders)
-	_, err := r.db.ExecContext(ctx, query, args...)
-	return err
-}
-
 func (r *Repository) SaveStudentCOR(
 	ctx context.Context,
 	tx datastore.DB,
 	cor StudentCOR,
 ) error {
-	cols, vals := datastore.GetInsertStatement(StudentCOR{}, []string{})
-	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(StudentCOR{}, []string{})
+	cols, vals := datastore.GetInsertStatement(StudentCOR{}, nil)
+	onDuplicate := datastore.GetOnDuplicateKeyUpdateStatement(
+		StudentCOR{},
+		nil,
+	)
 
-	query := fmt.Sprintf(`INSERT INTO student_cors (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s`, cols, vals, onDuplicate)
+	query := fmt.Sprintf(
+		`INSERT INTO student_cors (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s`,
+		cols,
+		vals,
+		onDuplicate,
+	)
 	_, err := tx.NamedExecContext(ctx, query, &cor)
 	return err
 }
@@ -1796,10 +1450,9 @@ func (r *Repository) GetLatestCORsByUserIDs(
 	placeholders = placeholders[:len(placeholders)-1]
 
 	query := fmt.Sprintf(`
-		SELECT sc.student_id, f.file_url
-		FROM student_cors sc
-		JOIN files f ON f.id = sc.file_id
-		WHERE sc.student_id IN (%s)
+		SELECT student_id, file_url
+		FROM v_student_cors_files
+		WHERE student_id IN (%s)
 	`, placeholders)
 
 	args := make([]interface{}, len(userIDs))
@@ -1829,19 +1482,9 @@ func (r *Repository) GetStudentCORByUserID(
 	ctx context.Context,
 	userID string,
 ) (StudentCOR, error) {
-	query := `
-		SELECT 
-			sc.file_id, sc.student_id, sc.student_number, sc.course_desc, 
-			sc.course_code, sc.year_level, sc.section, sc.campus, 
-			sc.year_start, sc.year_end, sc.term, sc.valid_from, sc.valid_until
-		FROM student_cors sc
-		JOIN academic_settings ac ON ac.id = 1
-		WHERE sc.student_id = ? 
-		  AND sc.year_start = ac.current_year_start 
-		  AND sc.term = ac.current_term
-		  AND sc.valid_from IS NOT NULL 
-		  AND sc.valid_until IS NOT NULL
-	`
+	query := fmt.Sprintf(`
+		SELECT %s FROM v_student_current_cors WHERE student_id = ?
+	`, datastore.GetColumns(StudentCOR{}))
 
 	var model StudentCOR
 	err := r.db.GetContext(ctx, &model, query, userID)
@@ -1864,11 +1507,10 @@ func (r *Repository) GetStudentCORsByUserID(
 func (r *Repository) GetAcademicSetting(
 	ctx context.Context,
 ) (*AcademicSetting, error) {
-	query := `
-		SELECT id, current_year_start, current_year_end,
-		       current_term, updated_at
-		FROM academic_settings WHERE id = 1 LIMIT 1
-	`
+	cols := datastore.GetColumns(AcademicSetting{})
+	query := fmt.Sprintf(`
+		SELECT %s FROM academic_settings WHERE id = 1 LIMIT 1
+	`, cols)
 	var setting AcademicSetting
 	err := r.db.GetContext(ctx, &setting, query)
 	if err != nil {
@@ -1900,3 +1542,25 @@ func (r *Repository) UpdateAcademicSetting(
 	return nil
 }
 
+func (r *Repository) GetStudentSignificantNotes(
+	ctx context.Context,
+	iirID string,
+) ([]SignificantNote, error) {
+	query := `
+		SELECT id, iir_id, appointment_id, admission_slip_id,
+		       note, remarks, created_at, updated_at
+		FROM significant_notes
+		WHERE iir_id = ?
+	`
+
+	var results []SignificantNote
+	err := r.db.SelectContext(ctx, &results, query, iirID)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"[Repository] {GetStudentSignificantNotes}: %w",
+			err,
+		)
+	}
+
+	return results, nil
+}

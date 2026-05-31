@@ -7,16 +7,16 @@ CREATE TABLE educational_attainments (
 
 -- Seed initial data
 INSERT INTO educational_attainments (name) VALUES
-('Elementary Undergraduate'),
-('Elementary Graduate'),
-('High School Undergraduate'),
-('High School Graduate'),
+("Doctorate Degree"),
+("Master's Degree"),
 ('College Undergraduate'),
 ('College Graduate'),
-("Master's Degree"),
-("Doctorate Degree"),
 ('Vocational'),
-('Not Applicable');
+('High School Undergraduate'),
+('High School Graduate'),
+('Elementary Undergraduate'),
+('Elementary Graduate'),
+('Not Indicated');
 
 -- Add column to related_persons and remove obsolete educational_level
 ALTER TABLE related_persons ADD COLUMN educational_attainment_id INT;

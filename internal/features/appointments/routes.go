@@ -58,7 +58,11 @@ func RegisterRoutes(
 		constants.DeveloperRoleID,
 	))
 	{
-		sharedRoutes.GET("/id/:appointmentID", appointmentLookup, h.GetAppointmentByID)
+		sharedRoutes.GET(
+			"/id/:appointmentID",
+			appointmentLookup,
+			h.GetAppointmentByID,
+		)
 		sharedRoutes.GET("/stats", h.GetAppointmentStats)
 		sharedRoutes.GET("/lookups/categories", h.GetAppointmentCategories)
 		sharedRoutes.GET("/lookups/slots", h.GetAppointmentSlots)

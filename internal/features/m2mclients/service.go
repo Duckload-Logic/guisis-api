@@ -107,7 +107,7 @@ func (s *Service) CreateClient(
 			ReceiverID: structs.StringToNullableString(aid),
 			Title:      "M2M Client Pending Approval",
 			Message: fmt.Sprintf(
-				"New M2M client request from user %s " +
+				"New M2M client request from user %s "+
 					"is pending for approval.",
 				userID,
 			),
@@ -120,38 +120,49 @@ func (s *Service) CreateClient(
 		int(constants.SuperAdminRoleID),
 	)
 
-	audit.Dispatch(ctx, s.logService, s.notifService, s.emailService, audit.DispatchParams{
-		Log: &audit.LogParams{
-			Level:    audit.LevelInfo,
-			Category: audit.CategoryAudit,
-			Action:   audit.ActionM2MClientCreated,
-			Message:  fmt.Sprintf("M2M Client %s requested by user %s", clientID, userID),
-			Metadata: &audit.LogMetadata{
-				EntityType: "m2m_client",
-				EntityID:   clientID,
+	audit.Dispatch(
+		ctx,
+		s.logService,
+		s.notifService,
+		s.emailService,
+		audit.DispatchParams{
+			Log: &audit.LogParams{
+				Level:    audit.LevelInfo,
+				Category: audit.CategoryAudit,
+				Action:   audit.ActionM2MClientCreated,
+				Message: fmt.Sprintf(
+					"M2M Client %s requested by user %s",
+					clientID,
+					userID,
+				),
+				Metadata: &audit.LogMetadata{
+					EntityType: "m2m_client",
+					EntityID:   clientID,
+				},
 			},
-		},
-		Notifications: notifications,
-		Email: []audit.EmailParams{
-			{
-				To:           superadminEmails,
-				Subject:      "New M2M Client Request",
-				TemplatePath: "request.html",
-				TemplateData: map[string]any{
-					"EntityType":   "M2M Client",
-					"StudentName":  userID,
-					"Category":     "M2M Access",
-					"Reason":       req.ClientDescription,
-					"TimeSlot":     time.Now().Format("2006-01-02 15:04:05"),
-					"UrgencyLevel": "HIGH",
-					"RequestURL": fmt.Sprintf(
-						"%s/superadmin/m2m-management",
-						s.cfg.BaseURL,
-					),
+			Notifications: notifications,
+			Email: []audit.EmailParams{
+				{
+					To:           superadminEmails,
+					Subject:      "New M2M Client Request",
+					TemplatePath: "request.html",
+					TemplateData: map[string]any{
+						"EntityType":  "M2M Client",
+						"StudentName": userID,
+						"Category":    "M2M Access",
+						"Reason":      req.ClientDescription,
+						"TimeSlot": time.Now().
+							Format("2006-01-02 15:04:05"),
+						"UrgencyLevel": "HIGH",
+						"RequestURL": fmt.Sprintf(
+							"%s/superadmin/m2m-management",
+							s.cfg.BaseURL,
+						),
+					},
 				},
 			},
 		},
-	})
+	)
 
 	return &CreateM2MClientResponse{
 		M2MClientDTO: M2MClientDTO{
@@ -287,11 +298,17 @@ func (s *Service) issueTokens(
 	}, nil
 }
 
-func (s *Service) ListClients(ctx context.Context, includeRevoked bool) ([]M2MClient, error) {
+func (s *Service) ListClients(
+	ctx context.Context,
+	includeRevoked bool,
+) ([]M2MClient, error) {
 	return s.repo.ListClients(ctx, includeRevoked)
 }
 
-func (s *Service) GetClientByUserID(ctx context.Context, userID string) (*M2MClient, error) {
+func (s *Service) GetClientByUserID(
+	ctx context.Context,
+	userID string,
+) (*M2MClient, error) {
 	return s.repo.GetActiveByUserID(ctx, userID)
 }
 

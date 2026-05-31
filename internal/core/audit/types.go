@@ -75,20 +75,23 @@ const (
 
 // System log actions — track system-level events
 const (
-	ActionM2MClientCreated            = "M2M_CLIENT_CREATED"
-	ActionM2MClientRevoked            = "M2M_CLIENT_REVOKED"
-	ActionM2MClientVerified           = "M2M_CLIENT_VERIFIED"
-	ActionM2MClientSecretRotated      = "M2M_CLIENT_SECRET_ROTATED" // nolint:gosec
-	ActionSettingChanged              = "SETTING_CHANGED"
-	ActionM2MClientCreateFailed       = "M2M_CLIENT_CREATE_FAILED"
-	ActionM2MClientRevokeFailed       = "M2M_CLIENT_REVOKE_FAILED"
-	ActionM2MClientVerifyFailed       = "M2M_CLIENT_VERIFY_FAILED"
-	ActionM2MClientSecretRotateFailed = "M2M_CLIENT_SECRET_ROTATE_FAILED" // nolint:gosec
+	ActionM2MClientCreated  = "M2M_CLIENT_CREATED"
+	ActionM2MClientRevoked  = "M2M_CLIENT_REVOKED"
+	ActionM2MClientVerified = "M2M_CLIENT_VERIFIED"
+	// nolint:gosec
+	ActionM2MClientSecretRotated = "M2M_CLIENT_SECRET_ROTATED"
+	ActionSettingChanged         = "SETTING_CHANGED"
+	ActionM2MClientCreateFailed  = "M2M_CLIENT_CREATE_FAILED"
+	ActionM2MClientRevokeFailed  = "M2M_CLIENT_REVOKE_FAILED"
+	ActionM2MClientVerifyFailed  = "M2M_CLIENT_VERIFY_FAILED"
+	// nolint:gosec
+	ActionM2MClientSecretRotateFailed = "M2M_CLIENT_SECRET_ROTATE_FAILED"
 	ActionSettingChangeFailed         = "SETTING_CHANGE_FAILED"
 	ActionEmailSendSuccess            = "EMAIL_SEND_SUCCESS"
 	ActionEmailSendFailed             = "EMAIL_SEND_FAILED"
 	ActionOCRProcessingSuccess        = "OCR_PROCESSING_SUCCESS"
 	ActionOCRProcessingFailed         = "OCR_PROCESSING_FAILED"
+	ActionOCRValidationFailed         = "OCR_VALIDATION_FAILED"
 )
 
 // Security log actions — track authentication and access events

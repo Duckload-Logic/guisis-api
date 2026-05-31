@@ -384,7 +384,8 @@ func (h *Handler) PostRemoveUserFromWhitelist(c *gin.Context) {
 	err := h.service.RemoveUserFromWhitelist(c.Request.Context(), req)
 	if err != nil {
 		fmt.Printf(
-			"[PostRemoveUserFromWhitelist] {RemoveUserFromWhitelist}: %v\n", err,
+			"[PostRemoveUserFromWhitelist] {RemoveUserFromWhitelist}: %v\n",
+			err,
 		)
 		response.SendError(
 			c,

@@ -16,13 +16,6 @@ func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) WithTransaction(
-	ctx context.Context,
-	fn func(datastore.DB) error,
-) error {
-	return datastore.RunInTransaction(ctx, r.db, fn)
-}
-
 func (r *Repository) GetStudentSignificantNotes(
 	ctx context.Context,
 	iirID string,

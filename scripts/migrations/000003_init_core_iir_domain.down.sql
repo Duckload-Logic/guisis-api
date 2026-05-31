@@ -14,7 +14,6 @@ DROP TABLE IF EXISTS student_activities;
 DROP TABLE IF EXISTS student_related_persons;
 DROP TABLE IF EXISTS related_persons;
 DROP TABLE IF EXISTS student_addresses;
-DROP TABLE IF EXISTS student_selected_reasons;
 DROP TABLE IF EXISTS student_personal_info;
 DROP TABLE IF EXISTS emergency_contacts;
 DROP TABLE IF EXISTS student_sibling_supports;

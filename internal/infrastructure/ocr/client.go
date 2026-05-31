@@ -124,8 +124,20 @@ func (o *OCRClient) upload(
 
 	if resp.StatusCode != http.StatusOK {
 		defer resp.Body.Close()
-		return nil, fmt.Errorf("AI service returned status: %s", resp.Status)
+		return nil, &HTTPError{
+			StatusCode: resp.StatusCode,
+			Status:     resp.Status,
+		}
 	}
 
 	return resp.Body, nil
+}
+
+type HTTPError struct {
+	StatusCode int
+	Status     string
+}
+
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("AI service returned status: %s", e.Status)
 }

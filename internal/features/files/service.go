@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -163,15 +164,41 @@ func (s *Service) UploadFiles(
 			if err != nil {
 				if s.logger != nil {
 					id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
-					s.logger.Record(ctx, nil, audit.LogEntry{
-						Level:    audit.LevelError,
-						Category: audit.CategorySystem,
-						Action:   audit.ActionOCRProcessingFailed,
-						Message: fmt.Sprintf(
-							"OCR COR processing failed for %s: %v",
+					logLevel := audit.LevelError
+					logAction := audit.ActionOCRProcessingFailed
+					logMsg := fmt.Sprintf(
+						"OCR COR processing failed for %s: %v",
+						fh.Filename,
+						err,
+					)
+
+					var httpErr *ocr.HTTPError
+					if errors.As(err, &httpErr) &&
+						httpErr.StatusCode >= 400 &&
+						httpErr.StatusCode < 500 {
+						logLevel = audit.LevelWarning
+						logAction = audit.ActionOCRValidationFailed
+						logMsg = fmt.Sprintf(
+							"COR validation failed for %s: %v",
 							fh.Filename,
 							err,
-						),
+						)
+					} else if strings.Contains(err.Error(), "status: 400") ||
+						strings.Contains(err.Error(), "status: 422") {
+						logLevel = audit.LevelWarning
+						logAction = audit.ActionOCRValidationFailed
+						logMsg = fmt.Sprintf(
+							"COR validation failed for %s: %v",
+							fh.Filename,
+							err,
+						)
+					}
+
+					s.logger.Record(ctx, nil, audit.LogEntry{
+						Level:    logLevel,
+						Category: audit.CategorySystem,
+						Action:   logAction,
+						Message:  logMsg,
 						UserID:    structs.StringToNullableString(id),
 						UserEmail: structs.StringToNullableString(email),
 						IPAddress: structs.StringToNullableString(ip),
@@ -179,7 +206,9 @@ func (s *Service) UploadFiles(
 						TraceID:   structs.StringToNullableString(trace),
 					})
 				}
-				return nil, fmt.Errorf("this file does not appear to be a valid COR")
+				return nil, fmt.Errorf(
+					"this file does not appear to be a valid COR",
+				)
 			}
 			if corResp == nil {
 				if s.logger != nil {

@@ -4,11 +4,11 @@ import "time"
 
 // DemographicStat represents demographic statistics for analytics.
 type DemographicStat struct {
-	Category    string `db:"category"     json:"category"`
-	MaleCount   int    `db:"male_count"   json:"maleCount"`
-	FemaleCount int    `db:"female_count" json:"femaleCount"`
-	Total       int    `db:"total"        json:"total"`
-	RankPos     int    `db:"rank_pos"     json:"rankPos"`
+	Category    string  `db:"category"     json:"category"`
+	MaleCount   int     `db:"male_count"   json:"maleCount"`
+	FemaleCount int     `db:"female_count" json:"femaleCount"`
+	Total       int     `db:"total"        json:"total"`
+	RankPos     float64 `db:"rank_pos"     json:"rankPos"`
 }
 
 // StudentPersonalInfo represents personal information data for analytics.
