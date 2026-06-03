@@ -337,7 +337,7 @@ func (r *Repository) GetCityAddressStats(
 		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE sa.address_type = "Residential" ` + filter + `
 		GROUP BY category
-		ORDER BY category ASC;`
+		ORDER BY rank_pos ASC;`
 	return r.executeStatQuery(ctx, query, args...)
 }
 
