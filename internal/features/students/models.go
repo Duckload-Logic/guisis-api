@@ -186,6 +186,7 @@ type StudentPersonalInfo struct {
 	MobileNumber          string                 `db:"mobile_number"           json:"mobileNumber"`
 	TelephoneNumber       structs.NullableString `db:"telephone_number"        json:"telephoneNumber,omitempty"`
 	EmployerContactNumber structs.NullableString `db:"employer_contact_number" json:"employerContactNumber,omitempty"`
+	OtherReligionText     structs.NullableString `db:"other_religion_text"`
 
 	StatusID       int                   `db:"status_id"       json:"statusId"`
 	GraduationYear structs.NullableInt64 `db:"graduation_year" json:"graduationYear,omitempty"`
@@ -444,6 +445,7 @@ type StudentPersonalInfoView struct {
 	MobileNumber          string                 `db:"mobile_number"`
 	TelephoneNumber       structs.NullableString `db:"telephone_number"`
 	EmployerContactNumber structs.NullableString `db:"employer_contact_number"`
+	OtherReligionText     structs.NullableString `db:"other_religion_text"`
 	StatusID              int                    `db:"status_id"`
 	StatusName            string                 `db:"status_name"`
 	GraduationYear        structs.NullableInt64  `db:"graduation_year"`

@@ -28,10 +28,11 @@ type StudentPersonalInfo struct {
 	Section         int       `db:"section"          json:"section"`
 	PlaceOfBirth    string    `db:"place_of_birth"   json:"placeOfBirth"`
 	DateOfBirth     time.Time `db:"date_of_birth"    json:"dateOfBirth"`
-	IsEmployed      bool      `db:"is_employed"      json:"isEmployed"`
-	EmployerName    *string   `db:"employer_name"    json:"employerName"`
-	EmployerAddress *string   `db:"employer_address" json:"employerAddress"`
-	MobileNumber    string    `db:"mobile_number"    json:"mobileNumber"`
+	IsEmployed        bool      `db:"is_employed"      json:"isEmployed"`
+	EmployerName      *string   `db:"employer_name"    json:"employerName"`
+	EmployerAddress   *string   `db:"employer_address" json:"employerAddress"`
+	OtherReligionText *string   `db:"other_religion_text"`
+	MobileNumber      string    `db:"mobile_number"    json:"mobileNumber"`
 	CreatedAt       time.Time `db:"created_at"       json:"createdAt"`
 	UpdatedAt       time.Time `db:"updated_at"       json:"updatedAt"`
 }

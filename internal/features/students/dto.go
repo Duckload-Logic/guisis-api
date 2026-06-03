@@ -106,6 +106,7 @@ type StudentPersonalInfoDTO struct {
 	MobileNumber          string                 `json:"mobileNumber"                    binding:"required"`
 	TelephoneNumber       structs.NullableString `json:"telephoneNumber,omitempty"`
 	EmployerContactNumber structs.NullableString `json:"employerContactNumber,omitempty"`
+	OtherReligionText     structs.NullableString `json:"otherReligionText"`
 	Status                StudentStatus          `json:"status"                          binding:"required"`
 	GraduationYear        *int                   `json:"graduationYear,omitempty"`
 	EmergencyContact      EmergencyContactDTO    `json:"emergencyContact,omitempty"`
@@ -372,6 +373,7 @@ func (view *StudentPersonalInfoView) ToDTO(
 		EmployerName:          view.EmployerName,
 		EmployerAddress:       view.EmployerAddress,
 		EmployerContactNumber: view.EmployerContactNumber,
+		OtherReligionText:     view.OtherReligionText,
 		Status:                statusDTO,
 		GraduationYear:        gradYear,
 		EmergencyContact: EmergencyContactDTO{
