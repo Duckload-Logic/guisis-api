@@ -1044,6 +1044,7 @@ func (s *Service) saveComprehensiveProfile(
 		GenderID:              req.Student.Gender.ID,
 		CivilStatusID:         req.Student.CivilStatus.ID,
 		ReligionID:            req.Student.Religion.ID,
+		OtherReligionText:     req.Student.OtherReligionText,
 		HeightM:               req.Student.HeightM,
 		WeightKg:              req.Student.WeightKg,
 		Complexion:            req.Student.Complexion,

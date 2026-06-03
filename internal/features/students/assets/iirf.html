@@ -486,7 +486,14 @@
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Religion:</span>
-                <span class="field-fill">{{.Religion.Name}}</span>
+                <span class="field-fill">
+                    {{if and (eq .Religion.Name "Others")
+                             .OtherReligionText.Valid}}
+                        Others ({{.OtherReligionText.String}})
+                    {{else}}
+                        {{.Religion.Name}}
+                    {{end}}
+                </span>
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Telephone No.:</span>
