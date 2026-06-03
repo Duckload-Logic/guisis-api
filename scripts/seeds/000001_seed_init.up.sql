@@ -72,11 +72,9 @@ INSERT INTO student_relationship_types (relationship_name) VALUES
     ('Auntie'),
     ('Brother'),
     ('Sister'),
-    ('Grandma'),
-    ('Grandpa'),
+    ('Grandmother'),
+    ('Grandfather'),
     ('Cousin'),
-    ('Legal Guardian'),
-    ('Friend'),
     ('Other relative');
 
 INSERT INTO nature_of_residence_types (residence_type_name) VALUES

@@ -584,7 +584,7 @@ func insertRelatedPerson(ctx context.Context, tx *sqlx.Tx) relatedPersonSeed {
 
 func randomEducationalAttainmentID() int64 {
 	// IDs match migration 000016_add_educational_attainments_table.up.sql
-	// 1: Elementary, 2: High School, 3: College, 4: Post Grad, 5: Vocational, etc.
+	// 1: Elementary, 2: Junior High School, 3: Senior High School, 4: College, 5: Post Grad, 6: Vocational, etc.
 	return int64(rand.Intn(7) + 1)
 }
 
@@ -718,11 +718,11 @@ func insertSchoolDetails(
 	nowYear := time.Now().Year()
 
 	levelStartAge := map[string]int{
-		"Pre-Elementary": 4,
-		"Elementary":     6,
-		"High School":    12,
-		"Vocational":     16,
-		"College":        18,
+		"Pre-Elementary":     4,
+		"Elementary":         6,
+		"Junior High School": 12,
+		"Senior High School": 16,
+		"College":            18,
 	}
 
 	levelPath := []string{"pre-elementary", "elementary", "high school"}

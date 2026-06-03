@@ -2,6 +2,7 @@ package locations
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
@@ -181,18 +182,36 @@ func (r *Repository) UpsertAddress(
 	tx datastore.DB,
 	addr *Address,
 ) (int, error) {
+	var existingID int
+	checkQuery := `
+		SELECT id FROM addresses 
+		WHERE region_code = ? 
+		  AND (province_code = ? OR (province_code IS NULL AND ? IS NULL))
+		  AND city_code = ? 
+		  AND barangay_code = ? 
+		  AND street_detail = ?
+		LIMIT 1
+	`
+	err := tx.GetContext(ctx, &existingID, checkQuery,
+		addr.RegionCode,
+		addr.ProvinceCode, addr.ProvinceCode,
+		addr.CityCode,
+		addr.BarangayCode,
+		addr.StreetDetail,
+	)
+	if err == nil {
+		return existingID, nil
+	}
+	if err != sql.ErrNoRows {
+		return 0, fmt.Errorf("failed to query existing address: %w", err)
+	}
+
 	query := `
 		INSERT INTO addresses (
 			region_code, province_code, city_code, barangay_code, street_detail
 		) VALUES (
 			:region_code, :province_code, :city_code, :barangay_code, :street_detail
-		) ON DUPLICATE KEY UPDATE
-			region_code = VALUES(region_code),
-			province_code = VALUES(province_code),
-			city_code = VALUES(city_code),
-			barangay_code = VALUES(barangay_code),
-			street_detail = VALUES(street_detail),
-			updated_at = NOW()
+		)
 	`
 	result, err := tx.NamedExecContext(ctx, query, addr)
 	if err != nil {
