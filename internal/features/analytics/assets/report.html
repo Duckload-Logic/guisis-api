@@ -7,6 +7,20 @@
 			@page {
 				size: A4;
 				margin: 15mm 15mm 30mm 15mm;
+				@bottom-center {
+					content: "This document is system generated";
+					white-space: pre-wrap;
+					font-family: "Times New Roman", serif;
+					font-size: 10pt;
+					color: rgb(163, 0, 0);
+					border-top: 0.5px solid #000;
+					padding-top: 5px;
+					/* stretches to full page-area width */
+					width: auto;
+					text-align: left;
+					/* pushes box 10mm up from page edge */
+					margin-bottom: 10mm;
+				}
 			}
 			body {
 				font-family: "Arial", Times, serif;
@@ -125,14 +139,22 @@
 		<hr width="85%" height="2px" />
 
 		<div style="text-align: center; margin: 1rem">
-			<strong>PROFILE OF FRESHMEN</strong>
+			<strong>
+				PROFILE OF FRESHMEN
+				{{if .CourseName}}
+				IN {{.CourseName}} ({{.CourseCode}})
+				{{end}}
+			</strong>
 			<br />
 			<span>{{if ne .Year 0}} S.Y. {{.Year}}-{{add .Year 1}}{{end}}</span>
 		</div>
 
 		<div class="summary">
-			&nbsp;&nbsp;&nbsp;&nbsp;The freshmen population covered by this
-			profile is made up of a total of
+			&nbsp;&nbsp;&nbsp;&nbsp;The freshmen population
+			{{if .CourseName}}
+			enrolled in {{.CourseName}} ({{.CourseCode}})
+			{{end}}
+			covered by this profile is made up of a total of
 			<strong>{{.Data.TotalStudents}}</strong>
 			enrolled {{if ne .Year 0}}this 1st semester AY
 			<strong>{{.Year}}-{{add .Year 1}}</strong>{{else}}over the analyzed
@@ -253,6 +275,22 @@
 		</div>
 
 		<!--  -->
+		{{template "statTable" (dict "Category" `Father's Life Status` "Data"
+		.Data.FatherLifeStatus)}}
+		<!--  -->
+		{{template "statTable" (dict "Category" `Mother's Life Status` "Data"
+		.Data.MotherLifeStatus)}}
+
+		<div class="summary">
+			As to the <strong>Father's Life Status</strong>, the highest
+			percentage ({{.FatherLifeTopPct}}%) falls under:
+			<strong>{{.FatherLifeTopCategories}}</strong>. With reference to the
+			<strong>Mother's Life Status</strong>, the highest recorded
+			percentage ({{.MotherLifeTopPct}}%) belongs to the category of:
+			<strong>{{.MotherLifeTopCategories}}</strong>.
+		</div>
+
+		<!--  -->
 		{{template "statTable" (dict "Category" `Parents' Marital Status` "Data"
 		.Data.ParentsMaritalStatus)}}
 
@@ -288,12 +326,12 @@
 		{{template "statTable" (dict "Category" `Do you have a quiet place to
 		study?` "Data" .Data.QuietStudyPlace)}}
 
-		<!-- <div class="summary">
+		<div class="summary">
 			Regarding the <strong>Study Environment</strong> of students at
 			home, the highest percentage of freshmen
 			({{.QuietStudyPlaceTopPct}}%) falls under the category of:
 			<strong>{{.QuietStudyPlaceTopCategories}}</strong>.
-		</div> -->
+		</div>
 
 		{{define "statTable"}}
 		<table>
@@ -321,22 +359,22 @@
 				<tr class="highlight-row">
 					<td>{{.Category}}</td>
 					<td class="num-col">{{.MaleCount}}</td>
-					<td class="pct-col">{{printf "%.1f" .MalePct}}%</td>
+					<td class="pct-col">{{printf "%.2f" .MalePct}}%</td>
 					<td class="num-col">{{.FemaleCount}}</td>
-					<td class="pct-col">{{printf "%.1f" .FemalePct}}%</td>
+					<td class="pct-col">{{printf "%.2f" .FemalePct}}%</td>
 					<td class="num-col">{{.Total}}</td>
-					<td class="pct-col">{{printf "%.1f" .TotalPct}}%</td>
+					<td class="pct-col">{{printf "%.2f" .TotalPct}}%</td>
 					<td class="rank-col">{{.Rank}}</td>
 				</tr>
 				{{else}}
 				<tr>
 					<td>{{.Category}}</td>
 					<td class="num-col">{{.MaleCount}}</td>
-					<td class="pct-col">{{printf "%.1f" .MalePct}}%</td>
+					<td class="pct-col">{{printf "%.2f" .MalePct}}%</td>
 					<td class="num-col">{{.FemaleCount}}</td>
-					<td class="pct-col">{{printf "%.1f" .FemalePct}}%</td>
+					<td class="pct-col">{{printf "%.2f" .FemalePct}}%</td>
 					<td class="num-col">{{.Total}}</td>
-					<td class="pct-col">{{printf "%.1f" .TotalPct}}%</td>
+					<td class="pct-col">{{printf "%.2f" .TotalPct}}%</td>
 					<td class="rank-col">{{.Rank}}</td>
 				</tr>
 				{{end}} {{end}}
@@ -344,21 +382,23 @@
 					<td>TOTAL</td>
 					<td class="num-col">{{sumInt .Data "MaleCount"}}</td>
 					<td class="pct-col">
-						{{printf "%.1f" (sumFloat .Data "MalePct")}}%
+						{{printf "%.2f" (sumFloat .Data "MalePct")}}%
 					</td>
 					<td class="num-col">{{sumInt .Data "FemaleCount"}}</td>
 					<td class="pct-col">
-						{{printf "%.1f" (sumFloat .Data "FemalePct")}}%
+						{{printf "%.2f" (sumFloat .Data "FemalePct")}}%
 					</td>
 					<td class="num-col">{{sumInt .Data "Total"}}</td>
 					<td class="pct-col">
-						{{printf "%.1f" (sumFloat .Data "TotalPct")}}%
+						{{printf "%.2f" (sumFloat .Data "TotalPct")}}%
 					</td>
 					<td class="rank-col"></td>
 				</tr>
 			</tbody>
 		</table>
 		{{end}}
-		<!-- <div class="footer">This is a system generated report</div> -->
+		<!-- <div class="footer">
+			<span>This document is system generated</span>
+		</div> -->
 	</body>
 </html>

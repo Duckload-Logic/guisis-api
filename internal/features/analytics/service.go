@@ -48,6 +48,8 @@ func (s *Service) GetIIRAnalyticsReport(
 		FatherEducation:      []DemographicStatDTO{},
 		MotherEducation:      []DemographicStatDTO{},
 		ParentsMaritalStatus: []DemographicStatDTO{},
+		FatherLifeStatus:     []DemographicStatDTO{},
+		MotherLifeStatus:     []DemographicStatDTO{},
 		HighSchoolGWA:        []DemographicStatDTO{},
 		Elementary:           []DemographicStatDTO{},
 		JuniorHigh:           []DemographicStatDTO{},
@@ -103,6 +105,20 @@ func (s *Service) GetIIRAnalyticsReport(
 			courseID,
 		)
 		report.ParentsMaritalStatus = s.mapToDTO(rawParentsMarital, total)
+
+		rawFatherLife, _ := s.repo.GetFatherLifeStatusStats(
+			ctx,
+			year,
+			courseID,
+		)
+		report.FatherLifeStatus = s.mapToDTO(rawFatherLife, total)
+
+		rawMotherLife, _ := s.repo.GetMotherLifeStatusStats(
+			ctx,
+			year,
+			courseID,
+		)
+		report.MotherLifeStatus = s.mapToDTO(rawMotherLife, total)
 
 		// Academic data
 		rawHSGWA, _ := s.repo.GetHSGWAStats(ctx, year, courseID)
@@ -165,6 +181,7 @@ func (s *Service) GetAdminDashboard(
 	// Count live sessions (session: prefix)
 	liveSessions := 0
 	if s.redis != nil {
+		// TODO: replace keys with scan
 		keys, err := s.redis.Keys(ctx, "session:*")
 		if err == nil {
 			liveSessions = len(keys)
@@ -258,6 +275,15 @@ func (s *Service) ExportIIRAnalyticsReport(
 		logoBase64 = base64.StdEncoding.EncodeToString(logoBytes)
 	}
 
+	courseCode := ""
+	courseName := ""
+	if courseID > 0 {
+		if code, name, err := s.repo.GetCourse(ctx, courseID); err == nil {
+			courseCode = code
+			courseName = name
+		}
+	}
+
 	ageCats, agePct := getTopCategoriesText(data.AgeDistribution)
 	civilCats, civilPct := getTopCategoriesText(data.CivilStatus)
 	cityCats, cityPct := getTopCategoriesText(data.CityAddress)
@@ -270,6 +296,12 @@ func (s *Service) ExportIIRAnalyticsReport(
 		data.ParentsMaritalStatus,
 	)
 	incomeCats, incomePct := getTopCategoriesText(data.MonthlyIncome)
+	fatherLifeCats, fatherLifePct := getTopCategoriesText(
+		data.FatherLifeStatus,
+	)
+	motherLifeCats, motherLifePct := getTopCategoriesText(
+		data.MotherLifeStatus,
+	)
 	ordinalCats, ordinalPct := getTopCategoriesText(data.OrdinalPosition)
 
 	hscaCats, hscaPct := getTopCategoriesText(data.HighSchool)
@@ -283,6 +315,8 @@ func (s *Service) ExportIIRAnalyticsReport(
 		DateToday  string
 		Year       int
 		LogoBase64 string
+		CourseCode string
+		CourseName string
 
 		AgeTopCategories            string
 		AgeTopPct                   float64
@@ -302,6 +336,10 @@ func (s *Service) ExportIIRAnalyticsReport(
 		MotherTopPct                float64
 		ParentsMaritalTopCategories string
 		ParentsMaritalTopPct        float64
+		FatherLifeTopCategories     string
+		FatherLifeTopPct            float64
+		MotherLifeTopCategories     string
+		MotherLifeTopPct            float64
 		IncomeTopCategories         string
 		IncomeTopPct                float64
 		OrdinalTopCategories        string
@@ -322,6 +360,8 @@ func (s *Service) ExportIIRAnalyticsReport(
 		DateToday:  time.Now().Format("January 02, 2006"),
 		Year:       year,
 		LogoBase64: logoBase64,
+		CourseCode: courseCode,
+		CourseName: courseName,
 
 		AgeTopCategories:            ageCats,
 		AgeTopPct:                   agePct,
@@ -341,6 +381,10 @@ func (s *Service) ExportIIRAnalyticsReport(
 		MotherTopPct:                motherPct,
 		ParentsMaritalTopCategories: parentsMaritalCats,
 		ParentsMaritalTopPct:        parentsMaritalPct,
+		FatherLifeTopCategories:     fatherLifeCats,
+		FatherLifeTopPct:            fatherLifePct,
+		MotherLifeTopCategories:     motherLifeCats,
+		MotherLifeTopPct:            motherLifePct,
 		IncomeTopCategories:         incomeCats,
 		IncomeTopPct:                incomePct,
 		OrdinalTopCategories:        ordinalCats,

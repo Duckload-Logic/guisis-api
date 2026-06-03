@@ -747,6 +747,64 @@ func (r *Repository) GetNatureOfSchoolingStats(
 	return r.executeStatQuery(ctx, query, args...)
 }
 
+func (r *Repository) GetFatherLifeStatusStats(
+	ctx context.Context, year int, courseID int,
+) ([]DemographicStat, error) {
+	filter, args := r.buildFilter(year, courseID)
+	query := `
+		SELECT
+			CASE
+				WHEN srp.is_living = 1 THEN 'Living'
+				ELSE 'Deceased'
+			END AS category,
+			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END)
+				as male_count,
+			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END)
+				as female_count,
+			COUNT(*) as total,
+			RANK() OVER (ORDER BY COUNT(*) DESC) +
+			(COUNT(*) OVER (
+				PARTITION BY COUNT(*)
+			) - 1) / 2.0 as rank_pos
+		FROM student_personal_info spi
+		JOIN student_related_persons srp ON spi.iir_id = srp.iir_id
+		JOIN student_relationship_types srt ON srp.relationship_id = srt.id
+		LEFT JOIN genders g ON spi.gender_id = g.id
+		WHERE srt.relationship_name = 'Father' ` + filter + `
+		GROUP BY category
+		ORDER BY category ASC;`
+	return r.executeStatQuery(ctx, query, args...)
+}
+
+func (r *Repository) GetMotherLifeStatusStats(
+	ctx context.Context, year int, courseID int,
+) ([]DemographicStat, error) {
+	filter, args := r.buildFilter(year, courseID)
+	query := `
+		SELECT
+			CASE
+				WHEN srp.is_living = 1 THEN 'Living'
+				ELSE 'Deceased'
+			END AS category,
+			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END)
+				as male_count,
+			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END)
+				as female_count,
+			COUNT(*) as total,
+			RANK() OVER (ORDER BY COUNT(*) DESC) +
+			(COUNT(*) OVER (
+				PARTITION BY COUNT(*)
+			) - 1) / 2.0 as rank_pos
+		FROM student_personal_info spi
+		JOIN student_related_persons srp ON spi.iir_id = srp.iir_id
+		JOIN student_relationship_types srt ON srp.relationship_id = srt.id
+		LEFT JOIN genders g ON spi.gender_id = g.id
+		WHERE srt.relationship_name = 'Mother' ` + filter + `
+		GROUP BY category
+		ORDER BY category ASC;`
+	return r.executeStatQuery(ctx, query, args...)
+}
+
 // --- HELPERS ---
 
 func (r *Repository) buildFilter(
@@ -783,4 +841,14 @@ func (r *Repository) executeStatQuery(
 		return nil, err
 	}
 	return results, nil
+}
+
+func (r *Repository) GetCourse(
+	ctx context.Context,
+	courseID int,
+) (string, string, error) {
+	var code, name string
+	query := "SELECT code, course_name FROM courses WHERE id = ?"
+	err := r.db.QueryRowContext(ctx, query, courseID).Scan(&code, &name)
+	return code, name, err
 }

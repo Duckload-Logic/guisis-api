@@ -28,6 +28,8 @@ type IIRAnalyticsReportResponse struct {
 	FatherEducation      []DemographicStatDTO `json:"fatherEducation"`
 	MotherEducation      []DemographicStatDTO `json:"motherEducation"`
 	ParentsMaritalStatus []DemographicStatDTO `json:"parentsMaritalStatus"`
+	FatherLifeStatus     []DemographicStatDTO `json:"fatherLifeStatus"`
+	MotherLifeStatus     []DemographicStatDTO `json:"motherLifeStatus"`
 
 	// Academic Background
 	HighSchoolGWA     []DemographicStatDTO `json:"highSchoolGWA"`
