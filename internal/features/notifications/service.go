@@ -2,23 +2,29 @@ package notifications
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
+	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/webpush"
 )
 
 type Service struct {
-	repo        *Repository
-	mu          sync.RWMutex
-	subscribers map[string][]chan audit.NotificationEntry
+	repo          *Repository
+	webpushClient *webpush.Client
+	mu            sync.RWMutex
+	subscribers   map[string][]chan audit.NotificationEntry
 }
 
-func NewService(repo *Repository) *Service {
+func NewService(repo *Repository, wp *webpush.Client) *Service {
 	return &Service{
-		repo:        repo,
-		subscribers: make(map[string][]chan audit.NotificationEntry),
+		repo:          repo,
+		webpushClient: wp,
+		subscribers:   make(map[string][]chan audit.NotificationEntry),
 	}
 }
 
@@ -41,6 +47,8 @@ func (s *Service) Send(
 	}
 
 	s.Broadcast(ctx, notif)
+
+	go s.sendWebPush(context.Background(), notif)
 
 	return nil
 }
@@ -143,3 +151,78 @@ func (s *Service) DeleteOldNotifications(
 ) (int64, error) {
 	return s.repo.DeleteOldNotifications(ctx, days)
 }
+
+func (s *Service) sendWebPush(
+	ctx context.Context,
+	notif audit.NotificationEntry,
+) {
+	if !notif.ReceiverID.Valid || notif.ReceiverID.String == "" {
+		return
+	}
+
+	userID := notif.ReceiverID.String
+	subs, err := s.repo.GetPushSubscriptionsByUserID(ctx, userID)
+	if err != nil {
+		fmt.Printf(
+			"[notifications.Service.sendWebPush] {GetPushSubs}: %v\n",
+			err,
+		)
+		return
+	}
+
+	if len(subs) == 0 {
+		return
+	}
+
+	payload, err := json.Marshal(map[string]string{
+		"title":    notif.Title,
+		"message":  notif.Message,
+		"type":     notif.Type,
+		"targetId": notif.TargetID.String,
+	})
+	if err != nil {
+		fmt.Printf(
+			"[notifications.Service.sendWebPush] {Marshal}: %v\n",
+			err,
+		)
+		return
+	}
+
+	for _, sub := range subs {
+		go func(sub PushSubscription) {
+			sendCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+			defer cancel()
+
+			status, sendErr := s.webpushClient.Send(
+				sendCtx,
+				sub.Endpoint,
+				sub.P256dhKey,
+				sub.AuthKey,
+				payload,
+			)
+			if sendErr != nil {
+				fmt.Printf(
+					"[notifications.Service.sendWebPush] {Send}: %v\n",
+					sendErr,
+				)
+				return
+			}
+
+			if status == http.StatusGone || status == http.StatusNotFound {
+				delErr := s.repo.DeletePushSubscription(
+					context.Background(),
+					nil,
+					sub.Endpoint,
+					userID,
+				)
+				if delErr != nil {
+					fmt.Printf(
+						"[notifications.Service.sendWebPush] {Delete}: %v\n",
+						delErr,
+					)
+				}
+			}
+		}(sub)
+	}
+}
+

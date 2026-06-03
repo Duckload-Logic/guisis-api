@@ -126,3 +126,75 @@ func (r *Repository) DeleteOldNotifications(
 
 	return rows, nil
 }
+
+func (r *Repository) SavePushSubscription(
+	ctx context.Context,
+	tx datastore.DB,
+	sub PushSubscription,
+) error {
+	if tx == nil {
+		tx = r.db
+	}
+
+	query := `
+		INSERT INTO push_subscriptions (
+			id, user_id, endpoint, p256dh_key, auth_key, created_at
+		) VALUES (
+			:id, :user_id, :endpoint, :p256dh_key, :auth_key, NOW()
+		) ON DUPLICATE KEY UPDATE
+			user_id = VALUES(user_id),
+			p256dh_key = VALUES(p256dh_key),
+			auth_key = VALUES(auth_key)
+	`
+
+	_, err := tx.NamedExecContext(ctx, query, &sub)
+	if err != nil {
+		return fmt.Errorf("failed to save push sub: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) GetPushSubscriptionsByUserID(
+	ctx context.Context,
+	userID string,
+) ([]PushSubscription, error) {
+	query := `
+		SELECT id, user_id, endpoint, p256dh_key, auth_key, created_at
+		FROM push_subscriptions
+		WHERE user_id = ?
+	`
+
+	var results []PushSubscription
+	err := r.db.SelectContext(ctx, &results, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get push subs for user %s: %w",
+			userID,
+			err,
+		)
+	}
+
+	return results, nil
+}
+
+func (r *Repository) DeletePushSubscription(
+	ctx context.Context,
+	tx datastore.DB,
+	endpoint string,
+	userID string,
+) error {
+	if tx == nil {
+		tx = r.db
+	}
+
+	query := `
+		DELETE FROM push_subscriptions
+		WHERE endpoint = ? AND user_id = ?
+	`
+	_, err := tx.ExecContext(ctx, query, endpoint, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete push sub: %w", err)
+	}
+	return nil
+}
+

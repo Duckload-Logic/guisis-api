@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
 )
 
@@ -116,3 +117,102 @@ func (h *Handler) PatchNotificationRead(c *gin.Context) {
 
 	response.SendSuccess(c, gin.H{"message": "Notification marked as read"})
 }
+
+type pushSubscribeRequest struct {
+	Endpoint  string `json:"endpoint"  binding:"required"`
+	P256dhKey string `json:"p256dhKey" binding:"required"`
+	AuthKey   string `json:"authKey"   binding:"required"`
+}
+
+func (h *Handler) PostPushSubscription(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+
+	var req pushSubscribeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Printf(
+			"[PostPushSubscription] {ShouldBindJSON}: %v\n",
+			err,
+		)
+		response.SendError(
+			c,
+			"Invalid request payload",
+			http.StatusBadRequest,
+			nil,
+		)
+		return
+	}
+
+	sub := PushSubscription{
+		ID:        uuid.New().String(),
+		UserID:    userID,
+		Endpoint:  req.Endpoint,
+		P256dhKey: req.P256dhKey,
+		AuthKey:   req.AuthKey,
+	}
+
+	err := h.service.repo.SavePushSubscription(
+		c.Request.Context(),
+		nil,
+		sub,
+	)
+	if err != nil {
+		fmt.Printf(
+			"[PostPushSubscription] {SavePushSubscription}: %v\n",
+			err,
+		)
+		response.SendError(
+			c,
+			"Failed to save push subscription",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(
+		c,
+		gin.H{"message": "Push subscription saved successfully"},
+	)
+}
+
+func (h *Handler) DeletePushSubscription(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	endpoint := c.Query("endpoint")
+
+	if endpoint == "" {
+		fmt.Println("[DeletePushSubscription] {CheckQuery}: missing endpoint")
+		response.SendError(
+			c,
+			"Endpoint query parameter is required",
+			http.StatusBadRequest,
+			nil,
+		)
+		return
+	}
+
+	err := h.service.repo.DeletePushSubscription(
+		c.Request.Context(),
+		nil,
+		endpoint,
+		userID,
+	)
+	if err != nil {
+		fmt.Printf(
+			"[DeletePushSubscription] {DeletePushSubscription}: %v\n",
+			err,
+		)
+		response.SendError(
+			c,
+			"Failed to delete push subscription",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(
+		c,
+		gin.H{"message": "Push subscription deleted successfully"},
+	)
+}
+
