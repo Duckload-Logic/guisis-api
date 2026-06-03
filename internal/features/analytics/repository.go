@@ -288,7 +288,13 @@ func (r *Repository) GetReligionStats(
 	filter, args := r.buildFilter(year, courseID)
 	query := `
 		SELECT
-			COALESCE(religion_name, 'Not Indicated') AS category,
+			CASE
+				WHEN rel.religion_name = 'Others'
+					AND spi.other_religion_text IS NOT NULL
+					AND spi.other_religion_text != ''
+					THEN 'Others (' || spi.other_religion_text || ')'
+				ELSE COALESCE(rel.religion_name, 'Not Indicated')
+			END AS category,
 			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
 			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
