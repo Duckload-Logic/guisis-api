@@ -23,6 +23,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/gotenberg"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/ocr"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/storage"
+	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/webpush"
 )
 
 type Services struct {
@@ -49,7 +50,15 @@ func getServices(
 	redis *datastore.RedisClient,
 	emailer audit.Emailer,
 ) *Services {
-	notificationsService := notifications.NewService(repos.NotificationRepo)
+	webpushClient := webpush.NewClient(
+		cfg.VAPIDPublicKey,
+		cfg.VAPIDPrivateKey,
+		cfg.VAPIDEmail,
+	)
+	notificationsService := notifications.NewService(
+		repos.NotificationRepo,
+		webpushClient,
+	)
 	sessionService := sessions.NewService(redis)
 	gotenbergClient := gotenberg.NewClient(cfg.GotenbergURL)
 	pdfService := pdf.NewService(gotenbergClient)

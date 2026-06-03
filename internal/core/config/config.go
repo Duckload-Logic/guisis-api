@@ -47,6 +47,10 @@ type Config struct {
 
 	AIBaseUrl string
 	AiAPIKey  string
+
+	VAPIDPublicKey  string
+	VAPIDPrivateKey string
+	VAPIDEmail      string
 }
 
 func LoadConfig() *Config {
@@ -113,6 +117,10 @@ func LoadConfig() *Config {
 
 		AIBaseUrl: os.Getenv("AI_BASE_URL"),
 		AiAPIKey:  os.Getenv("AI_API_KEY"),
+
+		VAPIDPublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
+		VAPIDPrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
+		VAPIDEmail:      os.Getenv("VAPID_EMAIL"),
 	}
 
 	validateConfig(config)
@@ -157,6 +165,15 @@ func validateCoreConfig(config *Config) {
 	}
 	if config.RedisPort == "" {
 		panic("REDIS_PORT is required")
+	}
+	if config.VAPIDPublicKey == "" {
+		panic("VAPID_PUBLIC_KEY is required")
+	}
+	if config.VAPIDPrivateKey == "" {
+		panic("VAPID_PRIVATE_KEY is required")
+	}
+	if config.VAPIDEmail == "" {
+		panic("VAPID_EMAIL is required")
 	}
 }
 
