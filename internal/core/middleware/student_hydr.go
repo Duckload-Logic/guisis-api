@@ -15,6 +15,13 @@ import (
 // Day One students (no IIR record) can still proceed.
 func HydrateStudentIIRContext(db *sqlx.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if val, exists := c.Get("iirID"); exists {
+			if _, ok := val.(string); ok && val != "" {
+				c.Next()
+				return
+			}
+		}
+
 		userID, isStudent := extractStudentContext(c)
 		if !isStudent {
 			c.Next()
@@ -53,6 +60,13 @@ func HydrateStudentIIRContext(db *sqlx.DB) gin.HandlerFunc {
 
 func HydrateStudentCORContext(db *sqlx.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if val, exists := c.Get("corID"); exists {
+			if _, ok := val.(string); ok && val != "" {
+				c.Next()
+				return
+			}
+		}
+
 		userID, isStudent := extractStudentContext(c)
 		if !isStudent {
 			c.Next()

@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -65,27 +65,33 @@ func validateSession(
 	claims *tokens.Claims,
 ) bool {
 	jti := sessions.NewJTI(claims.ID)
+
+	// Check if token JTI is individually blacklisted
 	val, err := redis.Get(c.Request.Context(), jti.ToSessionKey())
-	if err != nil {
+	if err == nil && val == "revoked" {
 		c.AbortWithStatusJSON(
 			http.StatusUnauthorized,
-			gin.H{"error": "Session has been revoked or expired"},
+			gin.H{"error": "Session has been revoked or logged out"},
 		)
 		return false
 	}
 
-	var sessionData map[string]string
-	if err := json.Unmarshal([]byte(val), &sessionData); err == nil {
-		if idpToken, ok := sessionData["idpAccessToken"]; ok {
-			c.Set("idpAccessToken", idpToken)
-		}
-		if isVerified, ok := sessionData["isVerified"]; ok {
-			c.Set("isVerified", isVerified == "true")
-		}
-		if clientName, ok := sessionData["clientName"]; ok {
-			c.Set("clientName", clientName)
+	// 2. Check if user sessions were globally revoked
+	userRevKey := fmt.Sprintf("revoked:user:%s", claims.UserID)
+	revTimeStr, err := redis.Get(c.Request.Context(), userRevKey)
+	if err == nil && revTimeStr != "" {
+		var revTime int64
+		if _, err := fmt.Sscanf(revTimeStr, "%d", &revTime); err == nil {
+			if claims.IssuedAt != nil && claims.IssuedAt.Time.Unix() < revTime {
+				c.AbortWithStatusJSON(
+					http.StatusUnauthorized,
+					gin.H{"error": "Session has been revoked or logged out"},
+				)
+				return false
+			}
 		}
 	}
+
 	return true
 }
 
@@ -126,13 +132,27 @@ func setContextInfo(c *gin.Context, claims *tokens.Claims) {
 	if claims.M2MClientID != "" {
 		c.Set("m2mClientID", claims.M2MClientID)
 		c.Set("isM2M", true)
+		c.Set("hasPersonalInfoAccess", claims.HasPersonalInfoAccess)
 	} else {
 		c.Set("userID", claims.UserID)
 		c.Set("userEmail", claims.UserEmail)
 		c.Set("roleIDs", claims.RoleIDs)
+		if claims.IIRID != "" {
+			c.Set("iirID", claims.IIRID)
+		}
+		if claims.CORID != "" {
+			c.Set("corID", claims.CORID)
+		}
 	}
 	c.Set("tokenType", claims.TokenType)
 	if claims.IDPUserID != "" {
 		c.Set("idpUserID", claims.IDPUserID)
+	}
+	if claims.IDPAccessToken != "" {
+		c.Set("idpAccessToken", claims.IDPAccessToken)
+	}
+	c.Set("isVerified", claims.IsVerified)
+	if claims.ClientName != "" {
+		c.Set("clientName", claims.ClientName)
 	}
 }

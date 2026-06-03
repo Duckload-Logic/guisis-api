@@ -11,9 +11,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
-	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
-	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
 )
 
 type Handler struct {
@@ -154,10 +152,11 @@ func (h *Handler) PostVerify(c *gin.Context) {
 // GetLogout handles user logout.
 func (h *Handler) GetLogout(c *gin.Context) {
 	token, _ := c.Cookie(constants.AccessTokenCookieName)
+	refreshToken, _ := c.Cookie(constants.RefreshTokenCookieName)
 	tokenType := c.GetString("tokenType")
 
 	logoutURL, _ := h.service.Logout(
-		c.Request.Context(), token, tokenType, h.cfg,
+		c.Request.Context(), token, refreshToken, tokenType, h.cfg,
 	)
 
 	var uIDStr, uEmailStr string
@@ -243,7 +242,8 @@ func (h *Handler) isAllowedOrigin(origin string) bool {
 
 // PostRefreshToken handles session refreshing using the refresh token.
 func (h *Handler) PostRefreshToken(c *gin.Context) {
-	if _, err := c.Cookie(constants.RefreshTokenCookieName); err != nil {
+	refreshToken, err := c.Cookie(constants.RefreshTokenCookieName)
+	if err != nil {
 		response.SendError(
 			c,
 			"Refresh token missing",
@@ -253,37 +253,12 @@ func (h *Handler) PostRefreshToken(c *gin.Context) {
 		return
 	}
 
-	// Manual extraction of JTI from the (possibly expired) access token cookie.
-	// We need this to identify the session in Redis.
-	tokenString, err := c.Cookie(constants.AccessTokenCookieName)
-	if err != nil {
-		response.SendError(
-			c,
-			"Access token missing",
-			http.StatusUnauthorized,
-			nil,
-		)
-		return
-	}
-
-	claims, err := tokens.NewService().ParseTokenUnverified(tokenString)
-	if err != nil {
-		response.SendError(
-			c,
-			"Invalid access token",
-			http.StatusUnauthorized,
-			nil,
-		)
-		return
-	}
-
-	accessTokenJTI := sessions.NewJTI(claims.ID)
 	ipAddress := c.ClientIP()
 	userAgent := c.Request.UserAgent()
 
 	newAccessToken, newRefreshToken, err := h.service.RefreshToken(
 		c.Request.Context(),
-		accessTokenJTI,
+		refreshToken,
 		h.cfg,
 		ipAddress,
 		userAgent,
