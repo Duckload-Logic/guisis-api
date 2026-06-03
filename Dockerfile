@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1
 ARG GO_VERSION=1.23
-# Note: User had 1.25.5-alpine, but 1.23 is more standard for current projects.
-# I'll stick to 1.25.5-alpine if they really want it, but I'll use a variable.
-ARG IMAGE_TAG=1.25.5-alpine
+# Note: User had 1.25.5-alpine, but 1.26.1 matches local go.mod.
+ARG IMAGE_TAG=1.26.1-alpine
 
 ################################################################################
 # Base stage for shared dependencies
