@@ -98,8 +98,8 @@ INSERT INTO religions (religion_name) VALUES
     ('Seventh-Day Adventist'),
     ('Mormons/Latter-day Saints'),
     ('Apostolic'),
-    ('UCCP'),
-    ('COC'),
+    ('United Church of Christ in the Philippines'),
+    ('Church of Christ'),
     ('United Pentecostal'),
     ('Not Indicated');
 
