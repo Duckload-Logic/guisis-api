@@ -75,6 +75,8 @@ INSERT INTO student_relationship_types (relationship_name) VALUES
     ('Grandmother'),
     ('Grandfather'),
     ('Cousin'),
+    ('Legal Guardian'),
+    ('Friend'),
     ('Other relative');
 
 INSERT INTO nature_of_residence_types (residence_type_name) VALUES
@@ -101,6 +103,7 @@ INSERT INTO religions (religion_name) VALUES
     ('United Church of Christ in the Philippines'),
     ('Church of Christ'),
     ('United Pentecostal'),
+    ('Others'),
     ('Not Indicated');
 
 INSERT INTO sibling_support_types (`name`) VALUES
