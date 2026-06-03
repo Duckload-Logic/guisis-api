@@ -76,6 +76,7 @@ func (s *Service) CreateClient(
 		ClientID:          clientID,
 		ClientSecret:      hashedSecret,
 		IsActive:          true,
+		HasPersonalInfoAccess: req.HasPersonalInfoAccess,
 		CreatedAt:         time.Now(),
 		UpdatedAt:         time.Now(),
 	}
@@ -169,6 +170,7 @@ func (s *Service) CreateClient(
 			ClientID:   clientID,
 			ClientName: req.ClientName,
 			IsActive:   true,
+			HasPersonalInfoAccess: client.HasPersonalInfoAccess,
 			CreatedAt:  client.CreatedAt,
 		},
 		ClientSecret: rawSecret,
@@ -234,6 +236,7 @@ func (s *Service) issueTokens(
 		[]int{int(constants.DeveloperRoleID)},
 		"m2m",
 		client.ClientID,
+		client.HasPersonalInfoAccess,
 		constants.M2MAccessTokenMaxAge,
 	)
 	if err != nil {
@@ -268,6 +271,7 @@ func (s *Service) issueTokens(
 		[]int{int(constants.DeveloperRoleID)},
 		"m2m_refresh",
 		client.ClientID,
+		client.HasPersonalInfoAccess,
 		constants.M2MRefreshTokenMaxAge,
 	)
 	if err != nil {
@@ -355,8 +359,12 @@ func (s *Service) Deactivate(
 	return s.repo.DeactivateByID(ctx, id)
 }
 
-func (s *Service) Verify(ctx context.Context, id string) error {
-	err := s.repo.VerifyByID(ctx, id)
+func (s *Service) Verify(
+	ctx context.Context,
+	id string,
+	hasPersonalInfoAccess bool,
+) error {
+	err := s.repo.VerifyByID(ctx, id, hasPersonalInfoAccess)
 	if err != nil {
 		return err
 	}

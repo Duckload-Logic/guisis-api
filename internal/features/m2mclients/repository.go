@@ -128,8 +128,16 @@ func (r *Repository) UpdateSecret(
 	return err
 }
 
-func (r *Repository) VerifyByID(ctx context.Context, id string) error {
-	query := `UPDATE m2m_clients SET is_verified = 1 WHERE id = ?`
-	_, err := r.db.ExecContext(ctx, query, id)
+func (r *Repository) VerifyByID(
+	ctx context.Context,
+	id string,
+	hasPersonalInfoAccess bool,
+) error {
+	query := `
+		UPDATE m2m_clients
+		SET is_verified = 1, has_personal_info_access = ?
+		WHERE id = ?
+	`
+	_, err := r.db.ExecContext(ctx, query, hasPersonalInfoAccess, id)
 	return err
 }

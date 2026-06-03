@@ -187,7 +187,17 @@ func (h *Handler) DeleteM2MClient(c *gin.Context) {
 
 func (h *Handler) PatchM2MClientVerify(c *gin.Context) {
 	id := c.Param("id")
-	err := h.service.Verify(c.Request.Context(), id)
+
+	var req struct {
+		HasPersonalInfoAccess bool `json:"hasPersonalInfoAccess"`
+	}
+	_ = c.ShouldBindJSON(&req)
+
+	err := h.service.Verify(
+		c.Request.Context(),
+		id,
+		req.HasPersonalInfoAccess,
+	)
 	if err != nil {
 		log.Printf(
 			"[PatchM2MClientVerify] {Verify M2M Client}: %v",
