@@ -74,8 +74,23 @@ func main() {
 	// seed random generator
 	gofakeit.Seed(time.Now().UnixNano())
 
+	appointmentsDataset := make([]map[string]string, 0)
+	if *appointmentsCSV != "" {
+		appointmentsDataset, err = parseAppointmentsDatasetFromCSV(
+			*appointmentsCSV,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	rand.Shuffle(len(appointmentsDataset), func(i, j int) {
+		appointmentsDataset[i], appointmentsDataset[j] =
+			appointmentsDataset[j], appointmentsDataset[i]
+	})
+
 	if *backfillIIR {
-		runBackfill(passwordHash)
+		runBackfill(passwordHash, appointmentsDataset)
 		fmt.Println("Backfill completed successfully.")
 		log.Println("Time taken:", time.Since(startTime))
 		return
@@ -156,19 +171,7 @@ func main() {
 		numStudents = len(studentsFromCSV)
 	}
 
-	appointmentsDataset := make([]map[string]string, 0)
-	if *appointmentsCSV != "" {
-		appointmentsDataset, err = parseAppointmentsDatasetFromCSV(
-			(*appointmentsCSV),
-		)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
 
-	rand.Shuffle(len(appointmentsDataset), func(i, j int) {
-		appointmentsDataset[i], appointmentsDataset[j] = appointmentsDataset[j], appointmentsDataset[i]
-	})
 
 	jobs := make(chan int, numStudents)
 	var wg sync.WaitGroup
@@ -272,7 +275,10 @@ func clearStudentData() {
 	db.Exec("SET FOREIGN_KEY_CHECKS = 1")
 }
 
-func runBackfill(passwordHash string) {
+func runBackfill(
+	passwordHash string,
+	appointmentsDataset []map[string]string,
+) {
 	ctx := context.Background()
 	fmt.Println("Checking for students missing IIR records...")
 
@@ -316,7 +322,7 @@ func runBackfill(passwordHash string) {
 			birthYear,
 			yearLevel,
 			i,
-			nil,
+			appointmentsDataset,
 		)
 
 		if err := tx.Commit(); err != nil {
