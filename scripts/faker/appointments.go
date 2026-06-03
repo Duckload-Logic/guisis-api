@@ -268,60 +268,66 @@ func insertAppointment(
 
 	now := time.Now().Truncate(24 * time.Hour)
 	whenDateStr, timeSlotID, whenDate := reserveAppointmentSlot(now)
-	statusID := chooseAppointmentStatusID(whenDate, now)
-	concernCategoryID := func() string {
-		for _, category := range appointmentCategories {
-			if strings.EqualFold(category["name"], selectedAppt["category"]) {
-				return category["id"]
+	if whenDateStr != "" {
+		statusID := chooseAppointmentStatusID(whenDate, now)
+		concernCategoryID := func() string {
+			for _, category := range appointmentCategories {
+				if strings.EqualFold(category["name"], selectedAppt["category"]) {
+					return category["id"]
+				}
+			}
+
+			return "0"
+		}()
+
+		concernCategoryIDInt, _ := strconv.Atoi(concernCategoryID)
+
+		// Determine admin_notes value
+		var adminNotes structs.NullableString
+		statusName := ""
+		for name, id := range appointmentStatusByName {
+			if id == statusID {
+				statusName = strings.ToLower(name)
+				break
 			}
 		}
-
-		return "0"
-	}()
-
-	concernCategoryIDInt, _ := strconv.Atoi(concernCategoryID)
-
-	// Determine admin_notes value
-	var adminNotes structs.NullableString
-	statusName := ""
-	for name, id := range appointmentStatusByName {
-		if id == statusID {
-			statusName = strings.ToLower(name)
-			break
+		if statusName == "cancelled" || statusName == "rejected" ||
+			strings.Contains(statusName, "show") || statusName == "completed" {
+			adminNotes = structs.NullableString{
+				String: gofakeit.Sentence(rand.Intn(5) + 5),
+				Valid:  true,
+			}
+		} else {
+			adminNotes = structs.NullableString{Valid: false}
 		}
-	}
-	if statusName == "cancelled" || statusName == "rejected" ||
-		strings.Contains(statusName, "show") || statusName == "completed" {
-		adminNotes = structs.NullableString{
-			String: gofakeit.Sentence(rand.Intn(5) + 5),
-			Valid:  true,
+
+		appointmentID := uuid.New().String()
+
+		appt := &appointments.Appointment{
+			ID:    appointmentID,
+			IIRID: iirID,
+			Reason: structs.StringToNullableString(
+				selectedAppt["text"],
+			),
+			AdminNotes:            adminNotes,
+			WhenDate:              whenDateStr,
+			TimeSlotID:            timeSlotID,
+			UrgencyLevel:          selectedAppt["urgency_level"],
+			UrgencyScore:          0.95,
+			CategoryID:            concernCategoryIDInt,
+			StatusID:              statusID,
 		}
-	} else {
-		adminNotes = structs.NullableString{Valid: false}
+
+		_, err := appointmentsRepo.CreateAppointment(ctx, tx, appt)
+		if err != nil {
+			log.Printf("[Seeder] {Insert Appointment}: %v", err)
+			return ""
+		}
+
+		return appointmentID
 	}
 
-	appointmentID := uuid.New().String()
-
-	appt := &appointments.Appointment{
-		ID:                    appointmentID,
-		IIRID:                 iirID,
-		Reason:                structs.StringToNullableString(selectedAppt["text"]),
-		AdminNotes:            adminNotes,
-		WhenDate:              whenDateStr,
-		TimeSlotID:            timeSlotID,
-		UrgencyLevel:          selectedAppt["urgency_level"],
-		UrgencyScore:          0.95,
-		AppointmentCategoryID: concernCategoryIDInt,
-		StatusID:              statusID,
-	}
-
-	err := appointmentsRepo.CreateAppointment(ctx, tx, appt)
-	if err != nil {
-		log.Printf("[Seeder] {Insert Appointment}: %v", err)
-		return ""
-	}
-
-	return appointmentID
+	return ""
 }
 
 func reserveAppointmentSlot(now time.Time) (string, int, time.Time) {
@@ -358,7 +364,7 @@ func reserveAppointmentSlot(now time.Time) (string, int, time.Time) {
 		appointmentSlotMu.Unlock()
 	}
 
-	log.Fatal("unable to reserve unique appointment slot")
+	log.Printf("unable to reserve unique appointment slot")
 	return "", 0, time.Time{}
 }
 

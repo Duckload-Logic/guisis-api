@@ -91,7 +91,6 @@ CREATE UNIQUE INDEX unique_idx_admission_slip_category_name ON admission_slip_ca
 CREATE TABLE statuses (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
-    color_key ENUM('warning', 'danger', 'success', 'info', 'stale', 'notice') NOT NULL,
     status_type ENUM('appointment', 'slip', 'both') NOT NULL DEFAULT 'both'
 ) ENGINE = InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
@@ -145,13 +144,6 @@ CREATE TABLE student_relationship_types (
 ) ENGINE = InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
 
 CREATE UNIQUE INDEX unique_idx_relationship_name ON student_relationship_types(relationship_name ASC);
-
-CREATE TABLE enrollment_reasons (
-    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    reason_text VARCHAR(100) NOT NULL UNIQUE
-) ENGINE = InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-CREATE UNIQUE INDEX unique_idx_reason_text ON enrollment_reasons(reason_text ASC);
 
 CREATE TABLE nature_of_residence_types (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,

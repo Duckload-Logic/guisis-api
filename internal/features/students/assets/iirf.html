@@ -7,15 +7,28 @@
     <style>
         @page {
             size: A4;
-            margin: 0;
+            margin: 0 15mm 15mm 15mm;   /* top 0, right/left 15mm, bottom 15mm */
+            @bottom-center {
+                content: "This document contains personal-identifiable information that is subject to Data Privacy \a \0000a0\0000a0\0000a0\0000a0\0000a0\0000a0\0000a0\0000a0 Please keep this document protected and in a safe place.";
+                white-space: pre-wrap;
+                font-family: 'Times New Roman', serif;
+                font-size: 10pt;
+                color: rgb(163, 0, 0);
+                border-top: 0.5px solid #000;
+                padding-top: 5px;
+                width: auto;                /* stretches to the full page‑area width */
+                text-align: left;
+                margin-bottom: 10mm;        /* pushes the whole box 10mm up from the page edge */
+            }
         }
 
         body {
-            font-family: 'Times New Roman', Arial, 'Helvetica Neue', Helvetica, sans-serif;
+            font-family: 'Times New Roman', Arial, sans-serif;
             font-size: 11pt;
             line-height: 1.1;
             margin: 0;
             padding: 0;
+            padding-bottom: 45px;
             background-color: white;
             color: black;
         }
@@ -26,12 +39,17 @@
 
         .page {
             width: 100%;
-            min-height: 100%;
-            padding: 10mm 15mm 30mm 15mm;
+            height: 282mm;
+            padding: 10mm 15mm 0 15mm;
             margin: 0 auto;
             position: relative;
             box-sizing: border-box;
             page-break-after: always;
+
+        }
+
+        .page:last-of-type {
+            page-break-after: auto;
         }
 
         .header {
@@ -40,15 +58,35 @@
         }
 
         .footer {
-            position: absolute;
-            bottom: 10mm;
-            left: 15mm;
-            right: 15mm;
+            /* screen: fixed at the bottom of the viewport */
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 999;
+            background: white;
             font-size: 12pt;
             text-align: left;
             color: rgb(163, 0, 0);
             border-top: 0.5px solid #000;
-            padding-top: 5px;
+            padding: 6px 15mm 8px 15mm;
+            box-sizing: border-box;
+        }
+
+        /* print: repeat on every physical page */
+        @media print {
+            .footer {
+                position: fixed;
+                bottom: 10mm;
+                left: 15mm;
+                right: 15mm;
+                padding: 5px 0 0 0;
+                background: transparent;
+                z-index: 999;
+            }
+            body {
+                padding-bottom: 0;
+            }
         }
 
         .form-id {
@@ -163,7 +201,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 5px;
-            font-size: 8pt;
+            font-size: 10pt;
             border: 1px solid black;
         }
 
@@ -328,7 +366,7 @@
         <div class="student-no text-right">Student No. <span
                 class="field-fill w-200 text-center">{{.StudentNumber}}</span></div>
 
-        <div class="header mt-10" style="margin-top: 30px;">
+        <div class="header mt-10" style="margin-top: 15px;">
             <h2>Polytechnic University of the Philippines</h2>
             <h1>GUIDANCE, COUNSELING AND TESTING SERVICES</h1>
             <p>Taguig Campus</p>
@@ -448,7 +486,14 @@
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Religion:</span>
-                <span class="field-fill">{{.Religion.Name}}</span>
+                <span class="field-fill">
+                    {{if and (eq .Religion.Name "Others")
+                             .OtherReligionText.Valid}}
+                        Others ({{.OtherReligionText.String}})
+                    {{else}}
+                        {{.Religion.Name}}
+                    {{end}}
+                </span>
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Telephone No.:</span>
@@ -559,7 +604,7 @@
         <div class="flex-row">
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Educational Attainment:</span>
-                <span class="field-fill">{{if $father}}{{$father.EducationalLevel}}{{end}}</span>
+                <span class="field-fill">{{if $father}}{{$father.EducationalAttainment.Name}}{{end}}</span>
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Occupation:</span>
@@ -600,7 +645,7 @@
         <div class="flex-row">
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Educational Attainment:</span>
-                <span class="field-fill">{{if $mother}}{{$mother.EducationalLevel}}{{end}}</span>
+                <span class="field-fill">{{if $mother}}{{$mother.EducationalAttainment.Name}}{{end}}</span>
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Occupation:</span>
@@ -637,7 +682,7 @@
         <div class="flex-row">
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Educational Attainment:</span>
-                <span class="field-fill">{{if $guardian}}{{$guardian.EducationalLevel}}{{end}}</span>
+                <span class="field-fill">{{if $guardian}}{{$guardian.EducationalAttainment.Name}}{{end}}</span>
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Occupation:</span>
@@ -751,15 +796,6 @@
                 <div class="checkbox-box">{{if hasFinancialSupport .Finance.FinancialSupportTypes
                     "Self-supporting"}}✓{{end}}</div> Self-supporting/working student
             </div>
-        </div>
-        <div class="footer">
-            <span>
-                This document contains personal-identifiable information that is subject to Data Privacy
-            </span>
-            <br>
-            <span class="">
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Please keep this document protected and in a safe place.
-            </span>
         </div>
         {{end}} {{/* end with .Family */}}
         {{end}} {{/* end with .Profile */}}
@@ -882,15 +918,12 @@
                 <div class="checkbox-group">
                     <div class="checkbox-box">{{if eq $residence "Rented apartment"}}✓{{end}}</div> rented apartment
                 </div>
-                <div class="checkbox-group">
-                    <div class="checkbox-box">{{if eq $residence "Dorm (including board & lodging)"}}✓{{end}}</div> dorm
-                    (including board & lodging)
-                </div>
             </div>
+
             <div class="row align-end">
                 <div class="checkbox-group">
                     <div class="checkbox-box">{{if eq $residence "Shares apartment with friends/relatives"}}✓{{end}}
-                    </div> shares apartment with friends/relatives (<u>Please Underline</u>)
+                    </div> shares apartment with friends/relatives
                 </div>
             </div>
         </div>
@@ -980,9 +1013,21 @@
                 <div class="checkbox-box">{{if hasActivity .Activities "Science Club"}}✓{{end}}</div> Science Club
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box">{{if hasActivity .Activities "Others"}}✓{{end}}</div> Others, please specify
-                <span class="field-fill w-150">{{range .Activities}}{{if eq .ActivityOption.Name
-                    "Others"}}{{.OtherSpecification.String}}{{end}}{{end}}</span>
+                <div class="checkbox-box">
+                    {{if hasActivityCategory
+                        .Activities "Others" "academic"}}
+                        ✓
+                    {{end}}
+                </div>
+                Others, please specify
+                <span class="field-fill w-150">
+                    {{range .Activities}}
+                        {{if and (eq .ActivityOption.Name "Others")
+                            (eq .ActivityOption.Category "academic")}}
+                            {{.OtherSpecification.String}}
+                        {{end}}
+                    {{end}}
+                </span>
             </div>
         </div>
         <div class="row">
@@ -1015,43 +1060,110 @@
             <div class="flex-1">4. <span class="field-fill w-full inline-block">{{indexHobby .Hobbies 3}}</span></div>
         </div>
 
-        <div class="row mt-5">Which of the following organizations have you participated in and which interest you most?
-            (Please specify)</div>
+        {{$hasOfficer := false}}
+        {{$hasMember := false}}
+        {{$hasOtherRole := false}}
+        {{$otherRoleSpec := ""}}
+        {{range .Activities}}
+            {{if not (eq .ActivityOption.Category "academic")}}
+                {{if eq .Role "Officer"}}
+                    {{$hasOfficer = true}}
+                {{end}}
+                {{if eq .Role "Member"}}
+                    {{$hasMember = true}}
+                {{end}}
+                {{if eq .Role "Other"}}
+                    {{$hasOtherRole = true}}
+                    {{$otherRoleSpec = .RoleSpecification.String}}
+                {{end}}
+            {{end}}
+        {{end}}
+        <div class="row mt-5">
+            Which of the following organizations have you participated in and
+            which interest you most? (Please specify)
+        </div>
         <div class="row">
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Athletics
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities "Athletics"}}✓{{end}}
+                </div>
+                Athletics
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Religious organization
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities
+                        "Religious Organizations"}}✓{{end}}
+                </div>
+                Religious organization
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Glee Club
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities "Glee Club"}}✓{{end}}
+                </div>
+                Glee Club
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Others, please specify <span class="field-fill w-100"></span>
+                <div class="checkbox-box">
+                    {{if hasActivityCategory
+                        .Activities "Others" "extra_curricular"}}
+                        ✓
+                    {{end}}
+                </div>
+                Others, please specify
+                <span class="field-fill w-100">
+                    {{range .Activities}}
+                        {{if and (eq .ActivityOption.Name "Others")
+                            (eq .ActivityOption.Category "extra_curricular")}}
+                            {{.OtherSpecification.String}}
+                        {{end}}
+                    {{end}}
+                </span>
             </div>
         </div>
         <div class="row">
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Dramatics
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities "Dramatics"}}✓{{end}}
+                </div>
+                Dramatics
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Chess Club
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities "Chess Club"}}✓{{end}}
+                </div>
+                Chess Club
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Scouting
+                <div class="checkbox-box">
+                    {{if hasActivity .Activities "Scouting"}}✓{{end}}
+                </div>
+                Scouting
             </div>
         </div>
         <div class="row align-end">
-            <span class="field-label">Occupational position in the organization:</span>
+            <span class="field-label">
+                Occupational position in the organization:
+            </span>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Officer
+                <div class="checkbox-box">
+                    {{if $hasOfficer}}✓{{end}}
+                </div>
+                Officer
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Member
+                <div class="checkbox-box">
+                    {{if $hasMember}}✓{{end}}
+                </div>
+                Member
             </div>
             <div class="checkbox-group">
-                <div class="checkbox-box"></div> Others, please specify <span class="field-fill w-100"></span>
+                <div class="checkbox-box">
+                    {{if $hasOtherRole}}✓{{end}}
+                </div>
+                Others, please specify
+                <span class="field-fill w-100">
+                    {{$otherRoleSpec}}
+                </span>
             </div>
         </div>
         {{end}} {{/* end with .Interests */}}
@@ -1103,18 +1215,41 @@
             <div class="signature-line w-250"></div><br>
             <span style="padding-right: 50px;">(Student's Signature)</span>
         </div>
-
-        <div class="footer">
-            <span>
-                This document contains personal-identifiable information that is subject to Data Privacy
-            </span>
-            <br>
-            <span class="">
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Please keep this document protected and in a safe place.
-            </span>
-        </div>
         {{end}} {{/* end with .Profile */}}
     </div>
+
+    {{if and .ShowSignificantNotes .SignificantNotes}}
+    <div class="page">
+        <div class="section-header">
+            VII. SIGNIFICANT NOTES (For Guidance Counselors only)
+        </div>
+        <table>
+            <tr>
+                <th style="width: 15%;">DATE</th>
+                <th style="width: 50%;">INCIDENT</th>
+                <th>REMARKS</th>
+            </tr>
+            {{range .SignificantNotes}}
+            <tr>
+                <td>{{.CreatedAt.Format "January 02, 2006"}}</td>
+                <td>{{.Note}}</td>
+                <td>{{.Remarks}}</td>
+            </tr>
+            {{end}}
+        </table>
+    </div>
+    {{end}}
+    <!-- <div class="footer">
+        <span>
+            This document contains personal-identifiable information that
+            is subject to Data Privacy
+        </span>
+        <br>
+        <span>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            Please keep this document protected and in a safe place.
+        </span>
+    </div> -->
 
 </body>
 

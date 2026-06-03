@@ -12,7 +12,9 @@ func RoleMiddleware(allowedRoles ...constants.RoleID) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		roleIDsVal, exists := c.Get("roleIDs")
 		if !exists {
-			fmt.Printf("[RoleMiddleware] {Error}: roleIDs not found in context\n")
+			fmt.Printf(
+				"[RoleMiddleware] {Error}: roleIDs not found in context\n",
+			)
 			c.AbortWithStatusJSON(
 				http.StatusForbidden,
 				gin.H{"error": "Roles not found"},

@@ -83,7 +83,9 @@ func NewRouter(
 	g.Use(cors.New(corsConfig))
 
 	// Security & DoS Protection
-	g.Use(middleware.BodySizeLimitMiddleware(2 << 20)) // 2MB limit for JSON payloads
+	g.Use(
+		middleware.BodySizeLimitMiddleware(2 << 20),
+	) // 2MB limit for JSON payloads
 	g.Use(middleware.SecurityHeadersMiddleware())
 
 	g.Use(func(c *gin.Context) {

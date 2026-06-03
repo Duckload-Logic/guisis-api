@@ -92,18 +92,14 @@ func (s *Service) StoreUserToken(
 	return nil
 }
 
-// DeleteUserToken removes a session and its link to the user.
+// DeleteUserToken marks a session token as revoked in Redis (denylist).
 func (s *Service) DeleteUserToken(
 	ctx context.Context,
 	userID string,
 	jti JTIDTO,
 ) error {
-	// Unlink from user
-	userKey := ToUserSessionsKey(userID)
-	s.redis.SRem(ctx, userKey, jti.Value)
-
-	// Delete session data
-	return s.DeleteToken(ctx, jti)
+	key := jti.ToSessionKey()
+	return s.redis.Set(ctx, key, "revoked", 24*time.Hour)
 }
 
 // ListUserSessions returns all active session data for a user.
@@ -134,20 +130,13 @@ func (s *Service) ListUserSessions(
 	return sessions, nil
 }
 
-// RevokeAllUserSessions invalidates all active sessions for a user.
+// RevokeAllUserSessions invalidates all active sessions for a user by setting
+// a user-level revocation timestamp in Redis.
 func (s *Service) RevokeAllUserSessions(
 	ctx context.Context,
 	userID string,
 ) error {
-	userKey := ToUserSessionsKey(userID)
-	jtis, err := s.redis.SMembers(ctx, userKey)
-	if err != nil {
-		return fmt.Errorf("failed to get user sessions: %w", err)
-	}
-
-	for _, jtiVal := range jtis {
-		_ = s.DeleteToken(ctx, NewJTI(jtiVal))
-	}
-
-	return s.redis.Del(ctx, userKey)
+	key := fmt.Sprintf("revoked:user:%s", userID)
+	now := time.Now().Unix()
+	return s.redis.Set(ctx, key, fmt.Sprintf("%d", now), 24*time.Hour)
 }

@@ -31,7 +31,10 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 		c.Header("X-Robots-Tag", "noindex, nofollow")
 
 		// Enforce HTTPS
-		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		c.Header(
+			"Strict-Transport-Security",
+			"max-age=31536000; includeSubDomains",
+		)
 
 		c.Next()
 	}
@@ -47,8 +50,15 @@ func BodySizeLimitMiddleware(limit int64) gin.HandlerFunc {
 
 			// For multipart forms, Gin handles this differently via MaxMultipartMemory,
 			// but for JSON payloads, we need MaxBytesReader.
-			if !strings.HasPrefix(c.GetHeader("Content-Type"), "multipart/form-data") {
-				c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, limit)
+			if !strings.HasPrefix(
+				c.GetHeader("Content-Type"),
+				"multipart/form-data",
+			) {
+				c.Request.Body = http.MaxBytesReader(
+					c.Writer,
+					c.Request.Body,
+					limit,
+				)
 			}
 		}
 		c.Next()

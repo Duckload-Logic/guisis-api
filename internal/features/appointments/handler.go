@@ -96,7 +96,10 @@ func (h *Handler) GetAppointmentDailyStats(c *gin.Context) {
 		return
 	}
 
-	dsc, err := h.service.GetDailyStatusCount(c.Request.Context(), req.StartDate)
+	dsc, err := h.service.GetDailyStatusCount(
+		c.Request.Context(),
+		req.StartDate,
+	)
 	if err != nil {
 		fmt.Printf("[GetAppointmentDailyStats] {Fetch Daily Stats}: %v\n", err)
 		response.SendError(
@@ -149,10 +152,7 @@ func (h *Handler) PostAppointment(c *gin.Context) {
 		return
 	}
 
-	response.SendSuccess(c, gin.H{
-		"message": "Appointment created successfully",
-		"id":      appt.ID,
-	}, http.StatusCreated)
+	response.SendSuccess(c, appt, http.StatusCreated)
 }
 
 // GetAppointmentByID godoc
@@ -298,7 +298,7 @@ func (h *Handler) GetAppointmentStatuses(c *gin.Context) {
 // @Failure      403  {object} map[string]string
 // @Failure      500  {object} map[string]string
 // @Router       /appointments/me [get]
-func (h *Handler) GetAppointmentMe(c *gin.Context) {
+func (h *Handler) GetAppointmentsMe(c *gin.Context) {
 	iirID, ok := getIIRIDFromContext(c)
 	if !ok {
 		return
@@ -314,7 +314,7 @@ func (h *Handler) GetAppointmentMe(c *gin.Context) {
 		c.Request.Context(), iirID, req,
 	)
 	if err != nil {
-		fmt.Printf("[GetAppointmentMe] {Fetch Appointments}: %v\n", err)
+		fmt.Printf("[GetAppointmentsMe] {Fetch Appointments}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve appointments",
@@ -429,12 +429,19 @@ type CancelAppointmentRequest struct {
 	Reason string `json:"reason"`
 }
 
-func (h *Handler) PostAppointmentCancel(c *gin.Context) {
+func (h *Handler) PostAppointmentCancellation(c *gin.Context) {
 	id := c.Param("appointmentID")
 	userID := audit.ExtractUserID(c.Request.Context())
 
-	ownerID, err := h.service.GetUserIDByAppointmentID(c.Request.Context(), id)
+	ownerID, err := h.service.GetUserIDByAppointmentID(
+		c.Request.Context(),
+		id,
+	)
 	if err != nil {
+		fmt.Printf(
+			"[PostAppointmentCancellation] {Verify Ownership}: %v\n",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to verify ownership",
@@ -444,17 +451,33 @@ func (h *Handler) PostAppointmentCancel(c *gin.Context) {
 		return
 	}
 	if ownerID != userID {
-		response.SendFail(c, gin.H{"error": "Access denied"}, http.StatusForbidden)
+		response.SendFail(
+			c,
+			gin.H{"error": "Access denied"},
+			http.StatusForbidden,
+		)
 		return
 	}
 
 	appt, err := h.service.GetAppointmentByID(c.Request.Context(), id)
 	if err != nil {
+		fmt.Printf(
+			"[PostAppointmentCancellation] {Fetch Appointment}: %v\n",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to fetch appointment",
 			http.StatusInternalServerError,
 			nil,
+		)
+		return
+	}
+	if appt == nil {
+		response.SendFail(
+			c,
+			gin.H{"error": "Appointment not found"},
+			http.StatusNotFound,
 		)
 		return
 	}
@@ -502,7 +525,10 @@ func (h *Handler) PostAppointmentCancel(c *gin.Context) {
 	var req CancelAppointmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		if err.Error() != "EOF" {
-			fmt.Printf("[PostAppointmentCancel] {Bind Request}: %v\n", err)
+			fmt.Printf(
+				"[PostAppointmentCancellation] {Bind Request}: %v\n",
+				err,
+			)
 		}
 	}
 
@@ -521,7 +547,7 @@ func (h *Handler) PostAppointmentCancel(c *gin.Context) {
 	if err := h.service.UpdateAppointment(
 		c.Request.Context(), id, updateReq,
 	); err != nil {
-		fmt.Printf("[PostAppointmentCancel] {Update}: %v\n", err)
+		fmt.Printf("[PostAppointmentCancellation] {Update}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to cancel appointment",

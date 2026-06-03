@@ -109,7 +109,7 @@ CREATE TABLE student_personal_info (
     gender_id INT NOT NULL,
     civil_status_id INT NOT NULL,
     religion_id INT NOT NULL,
-    height_ft DECIMAL(5,2) NOT NULL,
+    height_m DECIMAL(5,2) NOT NULL,
     weight_kg DECIMAL(5,2) NOT NULL,
     complexion VARCHAR(50) NOT NULL,
     high_school_gwa DECIMAL(4,2) NOT NULL,
@@ -139,18 +139,6 @@ CREATE INDEX idx_student_personal_info_gender_id ON student_personal_info(gender
 CREATE INDEX idx_student_personal_info_civil_status_id ON student_personal_info(civil_status_id ASC);
 CREATE INDEX idx_student_personal_info_religion_id ON student_personal_info(religion_id ASC);
 CREATE INDEX idx_student_personal_info_course_id ON student_personal_info(course_id ASC);
-
-CREATE TABLE student_selected_reasons (
-    iir_id CHAR(36) NOT NULL,
-    reason_id INT NOT NULL,
-    other_reason_text VARCHAR(255) DEFAULT NULL,
-    PRIMARY KEY (iir_id, reason_id),
-    CONSTRAINT student_selected_reasons_ibfk_1 FOREIGN KEY (iir_id) REFERENCES iir_records(id) ON DELETE CASCADE,
-    CONSTRAINT student_selected_reasons_ibfk_2 FOREIGN KEY (reason_id) REFERENCES enrollment_reasons(id) ON DELETE CASCADE
-) ENGINE = InnoDB DEFAULT CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci;
-
-CREATE INDEX idx_student_selected_reasons_iir_id ON student_selected_reasons(iir_id ASC);
-CREATE INDEX idx_student_selected_reasons_reason_id ON student_selected_reasons(reason_id ASC);
 
 CREATE TABLE student_addresses (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,

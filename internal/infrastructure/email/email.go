@@ -1,8 +1,12 @@
 package email
 
-import "context"
+import (
+	"context"
+
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
+)
 
 type Emailer interface {
-	SendEmail(ctx context.Context, to, subject, body string) (bool, error)
-	SendOTP(ctx context.Context, to, otp string) (bool, error)
+	Send(ctx context.Context, email audit.EmailEntry) error
+	SendOTP(ctx context.Context, to, otp string) error
 }

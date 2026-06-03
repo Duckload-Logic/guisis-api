@@ -53,8 +53,27 @@ func (s *Service) Record(
 
 	var metaStr string
 	if entry.Metadata != nil {
-		s.sanitizeMetadata(entry.Metadata)
-		b, _ := json.Marshal(entry.Metadata)
+		status := "Success"
+		if level == audit.LevelError ||
+			level == audit.LevelCritical ||
+			entry.Metadata.Error != "" {
+			status = "Failed"
+		}
+
+		secureMeta := map[string]interface{}{
+			"status": status,
+		}
+		if entry.Metadata.EntityType != "" {
+			secureMeta["entityType"] = entry.Metadata.EntityType
+		}
+		if entry.Metadata.EntityID != "" {
+			secureMeta["entityId"] = entry.Metadata.EntityID
+		}
+		if entry.Metadata.Error != "" {
+			secureMeta["error"] = entry.Metadata.Error
+		}
+
+		b, _ := json.Marshal(secureMeta)
 		metaStr = string(b)
 	}
 
@@ -79,17 +98,13 @@ func (s *Service) Record(
 		return
 	}
 
-	if level == audit.LevelError && func(action string) bool {
-		excluded := map[string]bool{
-			audit.ActionLoginFailed:           true,
-			audit.ActionInvalidToken:          true,
-			audit.ActionAccessDenied:          true,
-			audit.ActionRateLimitExceeded:     true,
-			audit.ActionM2MAuthFailed:         true,
-			audit.ActionM2MClientVerifyFailed: true,
-		}
-		return !excluded[action]
-	}(entry.Action) {
+	// Only notify superadmins for specific critical actions or system errors.
+	shouldNotify := (level == audit.LevelError &&
+		entry.Action == audit.ActionRateLimitExceeded) ||
+		entry.Action == audit.ActionM2MClientCreated ||
+		level == audit.LevelCritical
+
+	if shouldNotify {
 		s.notifySuperadmins(ctx, entry)
 	}
 }
@@ -130,11 +145,10 @@ func (s *Service) notifySuperadmins(ctx context.Context, entry audit.LogEntry) {
 
 func (s *Service) RecordSecurity(
 	ctx context.Context,
-	tx datastore.DB,
 	action, message string,
 	userEmail, userID, ipAddress, userAgent structs.NullableString,
 ) {
-	s.Record(ctx, tx, audit.LogEntry{
+	s.Record(ctx, nil, audit.LogEntry{
 		Category:  audit.CategorySecurity,
 		Action:    action,
 		Message:   message,
@@ -143,6 +157,15 @@ func (s *Service) RecordSecurity(
 		IPAddress: ipAddress,
 		UserAgent: userAgent,
 	})
+}
+
+// RecordEntry records an audit.LogEntry directly. It satisfies the
+// middleware.SecurityLogger interface without requiring a transaction.
+func (s *Service) RecordEntry(
+	ctx context.Context,
+	entry audit.LogEntry,
+) {
+	s.Record(ctx, nil, entry)
 }
 
 func (s *Service) ListLogs(
@@ -198,16 +221,19 @@ func (s *Service) mapLogsToDTOs(logs []SystemLog) []audit.SystemLogDTO {
 
 	for _, l := range logs {
 		dto := audit.SystemLogDTO{
-			ID:        l.ID,
-			Category:  l.Category,
-			Action:    l.Action,
-			Message:   l.Message,
-			UserID:    l.UserID,
-			UserEmail: l.UserEmail,
-			IPAddress: l.IPAddress,
-			UserAgent: l.UserAgent,
-			TraceID:   l.TraceID,
-			CreatedAt: l.CreatedAt,
+			ID:          l.ID,
+			Level:       l.Level,
+			Category:    l.Category,
+			Action:      l.Action,
+			Message:     l.Message,
+			UserID:      l.UserID,
+			UserEmail:   l.UserEmail,
+			TargetID:    l.TargetID,
+			TargetEmail: l.TargetEmail,
+			IPAddress:   l.IPAddress,
+			UserAgent:   l.UserAgent,
+			TraceID:     l.TraceID,
+			CreatedAt:   l.CreatedAt,
 		}
 
 		if l.Metadata.Valid {
@@ -218,6 +244,35 @@ func (s *Service) mapLogsToDTOs(logs []SystemLog) []audit.SystemLogDTO {
 	}
 
 	return dtos
+}
+
+func (s *Service) GetLogByID(
+	ctx context.Context,
+	id int64,
+) (*audit.SystemLogDTO, error) {
+	result, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get log: %w", err)
+	}
+
+	dto := s.mapLogsToDTOs([]SystemLog{*result})
+	if len(dto) == 0 {
+		return nil, fmt.Errorf("failed to map log to dto")
+	}
+
+	return &dto[0], nil
+}
+
+func (s *Service) GetTraceTracks(
+	ctx context.Context,
+	traceID string,
+) ([]audit.SystemLogDTO, error) {
+	results, err := s.repo.GetByTraceID(ctx, traceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get trace tracks: %w", err)
+	}
+
+	return s.mapLogsToDTOs(results), nil
 }
 
 func (s *Service) DeleteLogsOlderThan(

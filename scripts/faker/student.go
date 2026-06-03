@@ -35,10 +35,8 @@ func createStudent(
 	defer tx.Rollback()
 
 	// generate core data needed later
-	dob := gofakeit.DateRange(
-		time.Date(1995, 1, 1, 0, 0, 0, 0, time.UTC),
-		time.Now().AddDate(-18, 0, 0))
-	birthYear := dob.Year()
+	yearLevel := rand.Intn(4) + 1
+	dob, birthYear := generateRealisticDOB(yearLevel)
 
 	var user users.User
 	if userFromCSV != nil {
@@ -78,6 +76,7 @@ func createStudent(
 		user.ID,
 		dob,
 		birthYear,
+		yearLevel,
 		index,
 		appointmentsDataset,
 	)
@@ -91,6 +90,7 @@ func generateFullStudentIIR(
 	userID string,
 	dob time.Time,
 	birthYear int,
+	yearLevel int,
 	index int,
 	appointmentsDataset []map[string]string,
 ) {
@@ -104,9 +104,6 @@ func generateFullStudentIIR(
 	if err != nil {
 		log.Fatalf("[Seeder] {Upsert IIRRecord}: %v", err)
 	}
-
-	// selected reasons
-	insertSelectedReasons(ctx, tx, iirID)
 
 	// addresses (residential & provincial)
 	resAddr1 := insertAddress(ctx, tx, true)
@@ -150,8 +147,15 @@ func generateFullStudentIIR(
 		guardianScenario, resAddr1, resAddr2)
 	emergencyContactID := insertEmergencyContact(ctx, tx, iirID,
 		emergency)
-	insertPersonalInfo(ctx, tx, iirID, dob, index,
-		emergencyContactID)
+	insertPersonalInfo(
+		ctx,
+		tx,
+		iirID,
+		dob,
+		yearLevel,
+		index,
+		emergencyContactID,
+	)
 
 	// family background
 	familyBgID := insertFamilyBackground(ctx, tx, iirID)
@@ -218,7 +222,7 @@ func generateFullStudentIIR(
 	insertSignificantNotes(ctx, tx, iirID, appointmentIDs,
 		admissionSlipIDs)
 
-	fmt.Printf("[Seeder] Created student %d | iirID: %s\n", index+1, iirID)
+	fmt.Printf("Created student %d %s\n", index+1, iirID)
 }
 
 func linkFamilyMembers(
@@ -252,7 +256,7 @@ func linkFamilyMembers(
 			true, false, true)
 		if guardian != nil {
 			linkRelatedPerson(ctx, tx, iirID, guardian.ID,
-				"Guardian", false, true, true)
+				"Legal Guardian", false, true, true)
 		}
 	}
 }
@@ -308,7 +312,7 @@ func deriveEmergencyContact(
 			MiddleName:     guardian.MiddleName,
 			LastName:       guardian.LastName,
 			Number:         validContact(guardian.ContactNumber),
-			RelationshipID: relationshipID("Guardian"),
+			RelationshipID: relationshipID("Legal Guardian"),
 			AddressID: safeAddressID(
 				guardian.AddressID,
 				provincialAddressID,
@@ -385,12 +389,12 @@ func insertPersonalInfo(
 	tx *sqlx.Tx,
 	iirID string,
 	dob time.Time,
+	yearLevel int,
 	studentIndex int,
 	emergencyContactID int,
 ) {
 	statusID := studentStatusByName["active"]
 	isEmployed := studentIndex%2 == 0
-	yearLevel := rand.Intn(4) + 1
 	enrollmentYear := time.Now().Year() - yearLevel
 
 	studentNumber := fmt.Sprintf(
@@ -419,6 +423,13 @@ func insertPersonalInfo(
 	civilStatusID := chooseCivilStatusID()
 	genderID := randomChoice(genderIDs).(int)
 
+	var hsGwa float64
+	if yearLevel == 1 {
+		hsGwa = gofakeit.Float64Range(82, 98)
+	} else {
+		hsGwa = gofakeit.Float64Range(75, 98)
+	}
+
 	info := &students.StudentPersonalInfo{
 		IIRID:           iirID,
 		StudentNumber:   studentNumber,
@@ -428,7 +439,7 @@ func insertPersonalInfo(
 		HeightM:         gofakeit.Float64Range(1.37, 1.98),
 		WeightKg:        gofakeit.Float64Range(40, 100),
 		Complexion:      gofakeit.Color(),
-		HighSchoolGWA:   gofakeit.Float64Range(75, 98),
+		HighSchoolGWA:   hsGwa,
 		CourseID:        randomChoice(courseIDs).(int),
 		YearLevel:       yearLevel,
 		Section:         rand.Intn(5) + 1,
@@ -445,26 +456,6 @@ func insertPersonalInfo(
 	err := studentsRepo.UpsertStudentPersonalInfo(ctx, tx, info)
 	if err != nil {
 		log.Fatalf("[Seeder] {Upsert PersonalInfo}: %v", err)
-	}
-}
-
-func insertSelectedReasons(ctx context.Context, tx *sqlx.Tx, iirID string) {
-	// pick 1-3 random reasons
-	num := rand.Intn(3) + 1
-	selected := make(map[int]bool)
-	for len(selected) < num {
-		rid := randomChoice(enrollmentReasonIDs).(int)
-		selected[rid] = true
-	}
-	for rid := range selected {
-		ssr := &students.StudentSelectedReason{
-			IIRID:    iirID,
-			ReasonID: rid,
-		}
-		err := studentsRepo.CreateStudentSelectedReason(ctx, tx, ssr)
-		if err != nil {
-			log.Fatalf("[Seeder] {Create StudentSelectedReason}: %v", err)
-		}
 	}
 }
 
@@ -561,7 +552,7 @@ func insertRelatedPerson(ctx context.Context, tx *sqlx.Tx) relatedPersonSeed {
 		time.Date(1950, 1, 1, 0, 0, 0, 0, time.UTC),
 		time.Now().AddDate(-30, 0, 0),
 	)
-	educ := randomEducationalAttainment()
+	educID := randomEducationalAttainmentID()
 	occupation := structs.NullableString{
 		String: gofakeit.JobTitle(),
 		Valid:  gofakeit.Bool(),
@@ -580,14 +571,14 @@ func insertRelatedPerson(ctx context.Context, tx *sqlx.Tx) relatedPersonSeed {
 	}
 
 	rp := &students.RelatedPerson{
-		EducationalLevel: educ,
-		DateOfBirth:      dob.Format("2006-01-02"),
-		LastName:         lname,
-		FirstName:        fname,
-		MiddleName:       mname,
-		Occupation:       occupation,
-		EmployerName:     employer,
-		EmployerAddress:  employerAddr,
+		EducationalAttainmentID: structs.Int64ToNullableInt64(educID),
+		DateOfBirth:             dob.Format("2006-01-02"),
+		LastName:                lname,
+		FirstName:               fname,
+		MiddleName:              mname,
+		Occupation:              occupation,
+		EmployerName:            employer,
+		EmployerAddress:         employerAddr,
 	}
 
 	id, err := studentsRepo.UpsertRelatedPerson(ctx, tx, rp)
@@ -605,15 +596,10 @@ func insertRelatedPerson(ctx context.Context, tx *sqlx.Tx) relatedPersonSeed {
 	}
 }
 
-func randomEducationalAttainment() string {
-	levels := []string{
-		"Elementary",
-		"High School",
-		"Vocational",
-		"College",
-		"Post Graduate",
-	}
-	return levels[rand.Intn(len(levels))]
+func randomEducationalAttainmentID() int64 {
+	// IDs match migration 000016_add_educational_attainments_table.up.sql
+	// 1: Elementary, 2: Junior High School, 3: Senior High School, 4: College, 5: Post Grad, 6: Vocational, etc.
+	return int64(rand.Intn(7) + 1)
 }
 
 func linkRelatedPerson(
@@ -651,7 +637,10 @@ func insertFamilyBackground(
 	parentalID := randomChoice(parentalStatusIDs).(int)
 	var details structs.NullableString
 	if parentalID == 5 { // "Other"
-		details = structs.NullableString{String: gofakeit.Sentence(3), Valid: true}
+		details = structs.NullableString{
+			String: gofakeit.Sentence(3),
+			Valid:  true,
+		}
 	}
 	quiet := gofakeit.Bool()
 	sharing := gofakeit.Bool()
@@ -743,11 +732,11 @@ func insertSchoolDetails(
 	nowYear := time.Now().Year()
 
 	levelStartAge := map[string]int{
-		"Pre-Elementary": 4,
-		"Elementary":     6,
-		"High School":    12,
-		"Vocational":     16,
-		"College":        18,
+		"Pre-Elementary":     4,
+		"Elementary":         6,
+		"Junior High School": 12,
+		"Senior High School": 16,
+		"College":            18,
 	}
 
 	levelPath := []string{"pre-elementary", "elementary", "high school"}
@@ -1025,7 +1014,10 @@ func insertActivities(ctx context.Context, tx *sqlx.Tx, iirID string) {
 		role := randomChoice([]string{"Officer", "Member", "Other"}).(string)
 		var roleSpec structs.NullableString
 		if role == "Other" {
-			roleSpec = structs.NullableString{String: gofakeit.Word(), Valid: true}
+			roleSpec = structs.NullableString{
+				String: gofakeit.Word(),
+				Valid:  true,
+			}
 		}
 
 		sa := &students.StudentActivity{
@@ -1142,4 +1134,35 @@ func insertNotifications(ctx context.Context, tx *sqlx.Tx, userID string) {
 			)
 		}
 	}
+}
+
+func generateRealisticDOB(yearLevel int) (time.Time, int) {
+	var ageAtEnrollment int
+	r := rand.Float64()
+	if r < 0.45 {
+		ageAtEnrollment = 17
+	} else if r < 0.90 {
+		ageAtEnrollment = 18
+	} else if r < 0.96 {
+		ageAtEnrollment = 19
+	} else if r < 0.99 {
+		ageAtEnrollment = 20
+	} else {
+		// 21 to 24
+		ageAtEnrollment = rand.Intn(4) + 21
+	}
+
+	enrollmentYear := time.Now().Year() - yearLevel
+	birthYear := enrollmentYear - ageAtEnrollment
+
+	month := rand.Intn(12) + 1
+	day := rand.Intn(28) + 1
+	dob := time.Date(
+		birthYear,
+		time.Month(month),
+		day,
+		0, 0, 0, 0,
+		time.UTC,
+	)
+	return dob, birthYear
 }

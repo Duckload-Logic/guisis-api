@@ -7,23 +7,29 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
-	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
-	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 )
 
 type Handler struct {
 	service *Service
 	cfg     *config.Config
+	logger  audit.Logger
 }
 
 // NewHandler creates a new authentication handler.
-func NewHandler(service *Service, cfg *config.Config) *Handler {
+func NewHandler(
+	service *Service,
+	cfg *config.Config,
+	logger audit.Logger,
+) *Handler {
 	return &Handler{
 		service: service,
 		cfg:     cfg,
+		logger:  logger,
 	}
 }
 
@@ -146,11 +152,31 @@ func (h *Handler) PostVerify(c *gin.Context) {
 // GetLogout handles user logout.
 func (h *Handler) GetLogout(c *gin.Context) {
 	token, _ := c.Cookie(constants.AccessTokenCookieName)
+	refreshToken, _ := c.Cookie(constants.RefreshTokenCookieName)
 	tokenType := c.GetString("tokenType")
 
 	logoutURL, _ := h.service.Logout(
-		c.Request.Context(), token, tokenType, h.cfg,
+		c.Request.Context(), token, refreshToken, tokenType, h.cfg,
 	)
+
+	var uIDStr, uEmailStr string
+	if id, ok := c.Get("userID"); ok {
+		uIDStr, _ = id.(string)
+	}
+	if email, ok := c.Get("userEmail"); ok {
+		uEmailStr, _ = email.(string)
+	}
+
+	h.logger.Record(c.Request.Context(), nil, audit.LogEntry{
+		Level:     audit.LevelInfo,
+		Category:  audit.CategorySecurity,
+		Action:    audit.ActionLogout,
+		Message:   fmt.Sprintf("User %s logged out", uEmailStr),
+		UserID:    structs.StringToNullableString(uIDStr),
+		UserEmail: structs.StringToNullableString(uEmailStr),
+		IPAddress: structs.StringToNullableString(c.ClientIP()),
+		UserAgent: structs.StringToNullableString(c.Request.UserAgent()),
+	})
 
 	// Clear cookies
 	c.SetSameSite(http.SameSiteLaxMode)
@@ -216,32 +242,23 @@ func (h *Handler) isAllowedOrigin(origin string) bool {
 
 // PostRefreshToken handles session refreshing using the refresh token.
 func (h *Handler) PostRefreshToken(c *gin.Context) {
-	if _, err := c.Cookie(constants.RefreshTokenCookieName); err != nil {
-		response.SendError(c, "Refresh token missing", http.StatusUnauthorized, nil)
-		return
-	}
-
-	// Manual extraction of JTI from the (possibly expired) access token cookie.
-	// We need this to identify the session in Redis.
-	tokenString, err := c.Cookie(constants.AccessTokenCookieName)
+	refreshToken, err := c.Cookie(constants.RefreshTokenCookieName)
 	if err != nil {
-		response.SendError(c, "Access token missing", http.StatusUnauthorized, nil)
+		response.SendError(
+			c,
+			"Refresh token missing",
+			http.StatusUnauthorized,
+			nil,
+		)
 		return
 	}
 
-	claims, err := tokens.NewService().ParseTokenUnverified(tokenString)
-	if err != nil {
-		response.SendError(c, "Invalid access token", http.StatusUnauthorized, nil)
-		return
-	}
-
-	accessTokenJTI := sessions.NewJTI(claims.ID)
 	ipAddress := c.ClientIP()
 	userAgent := c.Request.UserAgent()
 
 	newAccessToken, newRefreshToken, err := h.service.RefreshToken(
 		c.Request.Context(),
-		accessTokenJTI,
+		refreshToken,
 		h.cfg,
 		ipAddress,
 		userAgent,
@@ -369,34 +386,4 @@ func (h *Handler) GetMe(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, user)
-}
-
-func (h *Handler) PostBlockUser(c *gin.Context) {
-	userID := c.Param("id")
-	err := h.service.BlockUser(c.Request.Context(), userID)
-	if err != nil {
-		response.SendError(
-			c,
-			"Failed to block user",
-			http.StatusInternalServerError,
-			nil,
-		)
-		return
-	}
-	response.SendSuccess(c, gin.H{"message": "User blocked"})
-}
-
-func (h *Handler) PostUnblockUser(c *gin.Context) {
-	userID := c.Param("id")
-	err := h.service.UnblockUser(c.Request.Context(), userID)
-	if err != nil {
-		response.SendError(
-			c,
-			"Failed to unblock user",
-			http.StatusInternalServerError,
-			nil,
-		)
-		return
-	}
-	response.SendSuccess(c, gin.H{"message": "User unblocked"})
 }

@@ -8,7 +8,6 @@ DROP TABLE IF EXISTS income_ranges;
 DROP TABLE IF EXISTS courses;
 DROP TABLE IF EXISTS parental_status_types;
 DROP TABLE IF EXISTS nature_of_residence_types;
-DROP TABLE IF EXISTS enrollment_reasons;
 DROP TABLE IF EXISTS student_relationship_types;
 DROP TABLE IF EXISTS educational_levels;
 DROP TABLE IF EXISTS religions;

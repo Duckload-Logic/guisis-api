@@ -13,17 +13,20 @@ type Service struct {
 	repo         *Repository
 	logService   audit.Logger
 	notifService audit.Notifier
+	emailService audit.Emailer
 }
 
 func NewService(
 	repo *Repository,
 	logService audit.Logger,
 	notifService audit.Notifier,
+	emailService audit.Emailer,
 ) *Service {
 	return &Service{
 		repo:         repo,
 		logService:   logService,
 		notifService: notifService,
+		emailService: emailService,
 	}
 }
 
@@ -42,12 +45,13 @@ func (s *Service) GetStudentSignificantNotes(
 	noteDTOs := make([]SignificantNoteDTO, 0, len(notes))
 	for _, n := range notes {
 		noteDTOs = append(noteDTOs, SignificantNoteDTO{
-			ID:            n.ID,
-			AppointmentID: n.AppointmentID.String,
-			Note:          n.Note,
-			Remarks:       n.Remarks,
-			CreatedAt:     n.CreatedAt,
-			UpdatedAt:     n.UpdatedAt,
+			ID:              n.ID,
+			AppointmentID:   n.AppointmentID.String,
+			AdmissionSlipID: n.AdmissionSlipID.String,
+			Note:            n.Note,
+			Remarks:         n.Remarks,
+			CreatedAt:       n.CreatedAt,
+			UpdatedAt:       n.UpdatedAt,
 		})
 	}
 
@@ -65,50 +69,63 @@ func (s *Service) CreateSignificantNote(
 		AppointmentID: structs.StringToNullableString(
 			noteReq.AppointmentID,
 		),
+		AdmissionSlipID: structs.StringToNullableString(
+			noteReq.AdmissionSlipID,
+		),
 		Note:    noteReq.Note,
 		Remarks: noteReq.Remarks,
 	}
 
 	_, err := s.repo.CreateSignificantNote(ctx, note)
 	if err != nil {
-		audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
-			Log: &audit.LogParams{
-				Level:    audit.LevelError,
-				Category: audit.CategoryAudit,
-				Action:   audit.ActionNoteCreateFailed,
-				Message: fmt.Sprintf(
-					"Failed to create significant note for IIR #%s",
-					iirID,
-				),
-				Metadata: &audit.LogMetadata{
-					EntityType: "Note",
-					NewValues:  note,
-					Error:      err.Error(),
+		audit.Dispatch(
+			ctx,
+			s.logService,
+			s.notifService,
+			s.emailService,
+			audit.DispatchParams{
+				Log: &audit.LogParams{
+					Level:    audit.LevelError,
+					Category: audit.CategoryAudit,
+					Action:   audit.ActionNoteCreateFailed,
+					Message: fmt.Sprintf(
+						"Failed to create significant note for IIR #%s",
+						iirID,
+					),
+					Metadata: &audit.LogMetadata{
+						EntityType: "Note",
+						Error:      err.Error(),
+					},
 				},
 			},
-		})
+		)
 		return fmt.Errorf(
 			"failed to create significant note: %w",
 			err,
 		)
 	}
 
-	audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
-		Log: &audit.LogParams{
-			Level:    audit.LevelInfo,
-			Category: audit.CategoryAudit,
-			Action:   audit.ActionNoteCreated,
-			Message: fmt.Sprintf(
-				"Significant note created for IIR #%s",
-				iirID,
-			),
-			Metadata: &audit.LogMetadata{
-				EntityType: "Note",
-				EntityID:   note.ID,
-				NewValues:  note,
+	audit.Dispatch(
+		ctx,
+		s.logService,
+		s.notifService,
+		s.emailService,
+		audit.DispatchParams{
+			Log: &audit.LogParams{
+				Level:    audit.LevelInfo,
+				Category: audit.CategoryAudit,
+				Action:   audit.ActionNoteCreated,
+				Message: fmt.Sprintf(
+					"Significant note created for IIR #%s",
+					iirID,
+				),
+				Metadata: &audit.LogMetadata{
+					EntityType: "Note",
+					EntityID:   note.ID,
+				},
 			},
 		},
-	})
+	)
 
 	return nil
 }

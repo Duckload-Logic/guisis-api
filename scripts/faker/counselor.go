@@ -76,5 +76,5 @@ func createCounselor(index int, password string, userFromCSV *users.User) {
 		log.Fatalf("[Seeder] {Create Counselor User}: %v", err)
 	}
 
-	fmt.Printf("Created counselor: %s %s\n", user.FirstName, user.LastName)
+	fmt.Printf("Created counselor: %s %s %s\n", user.FirstName, user.LastName, user.Email)
 }

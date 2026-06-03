@@ -118,14 +118,26 @@ func (r *Repository) DeactivateByID(ctx context.Context, id string) error {
 	return err
 }
 
-func (r *Repository) UpdateSecret(ctx context.Context, id string, hashedSecret string) error {
+func (r *Repository) UpdateSecret(
+	ctx context.Context,
+	id string,
+	hashedSecret string,
+) error {
 	query := `UPDATE m2m_clients SET client_secret_hash = ? WHERE id = ?`
 	_, err := r.db.ExecContext(ctx, query, hashedSecret, id)
 	return err
 }
 
-func (r *Repository) VerifyByID(ctx context.Context, id string) error {
-	query := `UPDATE m2m_clients SET is_verified = 1 WHERE id = ?`
-	_, err := r.db.ExecContext(ctx, query, id)
+func (r *Repository) VerifyByID(
+	ctx context.Context,
+	id string,
+	hasPersonalInfoAccess bool,
+) error {
+	query := `
+		UPDATE m2m_clients
+		SET is_verified = 1, has_personal_info_access = ?
+		WHERE id = ?
+	`
+	_, err := r.db.ExecContext(ctx, query, hasPersonalInfoAccess, id)
 	return err
 }

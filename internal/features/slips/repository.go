@@ -35,9 +35,11 @@ const (
 		slp.admin_notes AS admin_notes,
 		c.id AS category_id,
 		c.name AS category_name,
-		s.id AS status_id,
+		slp.status_id AS status_id,
 		s.name AS status_name,
-		s.color_key AS status_color_key,
+		t.ticket_code AS ticket_code,
+		t.is_verified AS is_verified,
+		t.verified_at AS verified_at,
 		slp.created_at AS created_at,
 		slp.updated_at AS updated_at
 	FROM admission_slips slp
@@ -46,8 +48,9 @@ const (
 	JOIN users u ON ir.user_id = u.id
 	JOIN admission_slip_categories c ON slp.category_id = c.id
 	JOIN statuses s ON slp.status_id = s.id
+	LEFT JOIN admission_tickets t ON slp.id = t.admission_slip_id
 `
-	orderSlipsCreatedDesc = " ORDER BY slp.created_at DESC LIMIT ? OFFSET ?"
+	orderSlipsCreatedDesc = " ORDER BY slp.date_needed ASC LIMIT ? OFFSET ?"
 )
 
 func (r *Repository) GetDB() *sqlx.DB {
@@ -61,15 +64,11 @@ func (r *Repository) WithTransaction(
 	return datastore.RunInTransaction(ctx, r.db, fn)
 }
 
-func (r *Repository) BeginTx(ctx context.Context) (datastore.DB, error) {
-	return r.db.BeginTxx(ctx, nil)
-}
-
 func (r *Repository) CreateSlip(
 	ctx context.Context,
 	tx datastore.DB,
 	slip *Slip,
-) (*string, error) {
+) (*SlipWithDetailsView, error) {
 	query := `
 		INSERT INTO admission_slips (
 			id, iir_id, reason, date_of_absence, date_needed,
@@ -85,7 +84,7 @@ func (r *Repository) CreateSlip(
 		return nil, fmt.Errorf("failed to insert excuse slip: %w", err)
 	}
 
-	return &slip.ID, nil
+	return r.GetSlipByIDWithDetails(ctx, tx, slip.ID)
 }
 
 func (r *Repository) SaveSlipAttachment(
@@ -152,26 +151,11 @@ func (r *Repository) DeleteSlipAttachments(
 	return nil
 }
 
-func (r *Repository) CheckStudentExistence(
-	ctx context.Context,
-	studentID int,
-) (bool, error) {
-	query := `SELECT count(*) FROM student_records WHERE student_record_id = ?`
-
-	var count int
-	err := r.db.QueryRowContext(ctx, query, studentID).Scan(&count)
-	if err != nil {
-		return false, fmt.Errorf("database error checking student: %w", err)
-	}
-
-	return count > 0, nil
-}
-
 func (r *Repository) GetSlipStatuses(
 	ctx context.Context,
 ) ([]SlipStatus, error) {
 	var statuses []SlipStatus
-	query := `SELECT id, name, color_key FROM statuses WHERE status_type IN ('slip', 'both')`
+	query := `SELECT id, name FROM statuses WHERE status_type IN ('slip', 'both')`
 	err := r.db.SelectContext(ctx, &statuses, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get slip statuses: %w", err)
@@ -205,13 +189,12 @@ func (r *Repository) GetSlipStats(
 		SELECT
 			s.id AS id,
 			s.name AS name,
-			s.color_key AS color_key,
 			COUNT(slp.id) AS count
 		FROM statuses s
 		LEFT JOIN admission_slips slp
 			ON s.id = slp.status_id AND %s
 		WHERE s.status_type IN ('slip', 'both')
-		GROUP BY s.id, s.name, s.color_key
+		GROUP BY s.id, s.name
 	`, filterConditions)
 	err := r.db.SelectContext(ctx, &counts, query, args...)
 	if err != nil {
@@ -237,12 +220,12 @@ func (r *Repository) applyFilters(
 	}
 
 	if req.StartDate != "" {
-		query += " AND slp.created_at >= ?"
+		query += " AND slp.date_needed >= ?"
 		args = append(args, req.StartDate)
 	}
 
 	if req.EndDate != "" {
-		query += " AND slp.created_at <= ?"
+		query += " AND slp.date_needed <= ?"
 		args = append(args, req.EndDate)
 	}
 
@@ -268,6 +251,7 @@ func (r *Repository) applyFilters(
 func (r *Repository) GetTotalSlipsCount(
 	ctx context.Context,
 	req *ListSlipsRequest,
+	iirID *string,
 ) (int, error) {
 	query, args := r.applyFilters(
 		`SELECT COUNT(*) FROM admission_slips slp
@@ -276,7 +260,7 @@ func (r *Repository) GetTotalSlipsCount(
 		 WHERE 1=1`,
 		nil,
 		req,
-		nil,
+		iirID,
 	)
 
 	var count int
@@ -384,30 +368,6 @@ func (r *Repository) GetAll(
 	return slips, nil
 }
 
-func (r *Repository) GetByUserID(
-	ctx context.Context,
-	userID string,
-	req *ListSlipsRequest,
-) ([]SlipWithDetailsView, error) {
-	query, args := r.applyFilters(
-		slipsBaseQuery+" WHERE u.id = ?",
-		[]interface{}{userID},
-		req,
-		nil,
-	)
-
-	query += orderSlipsCreatedDesc
-	args = append(args, req.PageSize, req.GetOffset())
-
-	var slips []SlipWithDetailsView
-	err := r.db.SelectContext(ctx, &slips, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get slips for user: %w", err)
-	}
-
-	return slips, nil
-}
-
 func (r *Repository) GetByIIRID(
 	ctx context.Context,
 	iirID string,
@@ -450,11 +410,12 @@ func (r *Repository) GetSlipByID(
 
 func (r *Repository) GetSlipByIDWithDetails(
 	ctx context.Context,
+	db datastore.DB,
 	id string,
 ) (*SlipWithDetailsView, error) {
 	var slip SlipWithDetailsView
 	query := slipsBaseQuery + " WHERE slp.id = ?"
-	err := r.db.GetContext(ctx, &slip, query, id)
+	err := db.GetContext(ctx, &slip, query, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -572,22 +533,111 @@ func (r *Repository) UpdateStatus(
 	return nil
 }
 
-func (r *Repository) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM excuse_slips WHERE excuse_slip_id = ?`
-
-	result, err := r.db.ExecContext(ctx, query, id)
+func (r *Repository) CreateTicket(
+	ctx context.Context,
+	tx datastore.DB,
+	ticket *AdmissionTicket,
+) error {
+	query := `
+		INSERT INTO admission_tickets (
+			id, admission_slip_id, ticket_code
+		) VALUES (
+			:id, :admission_slip_id, :ticket_code
+		)
+	`
+	_, err := tx.NamedExecContext(ctx, query, ticket)
 	if err != nil {
-		return fmt.Errorf("failed to delete excuse slip: %w", err)
+		return fmt.Errorf("failed to insert ticket: %w", err)
 	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-
-	if rows == 0 {
-		return sql.ErrNoRows
-	}
-
 	return nil
+}
+
+func (r *Repository) GetTicketByCode(
+	ctx context.Context,
+	code string,
+) (*AdmissionTicket, error) {
+	var ticket AdmissionTicket
+	query := `SELECT id, admission_slip_id, ticket_code, is_verified,
+			  verified_at, verified_by, created_at, updated_at
+			  FROM admission_tickets WHERE ticket_code = ?`
+	err := r.db.GetContext(ctx, &ticket, query, code)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get ticket: %w", err)
+	}
+	return &ticket, nil
+}
+
+func (r *Repository) UpdateTicketVerification(
+	ctx context.Context,
+	tx datastore.DB,
+	ticketID string,
+	verifiedBy string,
+) error {
+	query := `
+		UPDATE admission_tickets
+		SET is_verified = TRUE, verified_at = NOW(), verified_by = ?
+		WHERE id = ?
+	`
+	_, err := tx.ExecContext(ctx, query, verifiedBy, ticketID)
+	if err != nil {
+		return fmt.Errorf("failed to verify ticket: %w", err)
+	}
+	return nil
+}
+
+func (r *Repository) GetTicketBySlipID(
+	ctx context.Context,
+	slipID string,
+) (*AdmissionTicket, error) {
+	var ticket AdmissionTicket
+	query := `SELECT id, admission_slip_id, ticket_code, is_verified,
+			  verified_at, verified_by, created_at, updated_at
+			  FROM admission_tickets WHERE admission_slip_id = ?`
+	err := r.db.GetContext(ctx, &ticket, query, slipID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get ticket by slip id: %w", err)
+	}
+	return &ticket, nil
+}
+
+func (r *Repository) GetSlipByTicketCode(
+	ctx context.Context,
+	code string,
+) (*SlipWithDetailsView, error) {
+	var slip SlipWithDetailsView
+	query := slipsBaseQuery + ` WHERE t.ticket_code = ?`
+	err := r.db.GetContext(ctx, &slip, query, code)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get slip by ticket code: %w", err)
+	}
+	return &slip, nil
+}
+
+func (r *Repository) HasNoteForAdmissionSlip(
+	ctx context.Context,
+	admissionSlipID string,
+) (bool, error) {
+	var count int
+	query := `
+		SELECT COUNT(*)
+		FROM significant_notes
+		WHERE admission_slip_id = ?
+	`
+	err := r.db.GetContext(ctx, &count, query, admissionSlipID)
+	if err != nil {
+		return false, fmt.Errorf(
+			"failed to check for existing note: %w",
+			err,
+		)
+	}
+	return count > 0, nil
 }

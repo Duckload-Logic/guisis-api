@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime/multipart"
 
+	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
@@ -63,6 +64,23 @@ func (s *Service) GetUserByID(
 	return s.mapToResponse(user), nil
 }
 
+func (s *Service) GetUsersByRole(
+	ctx context.Context,
+	roleID int,
+) ([]UserResponse, error) {
+	users, err := s.repo.GetUsersByRole(ctx, roleID)
+	if err != nil {
+		return nil, err
+	}
+
+	userDTOs := make([]UserResponse, len(users))
+	for i, user := range users {
+		userDTOs[i] = *s.mapToResponse(&user)
+	}
+
+	return userDTOs, nil
+}
+
 // GetUserByEmail retrieves a user by their email and auth type.
 func (s *Service) GetUserByEmail(
 	ctx context.Context,
@@ -82,6 +100,13 @@ func (s *Service) GetUserIDsByRole(
 	roleID int,
 ) ([]string, error) {
 	return s.repo.GetUserIDsByRole(ctx, roleID)
+}
+
+func (s *Service) GetEmailsByRole(
+	ctx context.Context,
+	roleID int,
+) ([]string, error) {
+	return s.repo.GetEmailsByRole(ctx, roleID)
 }
 
 func (s *Service) GetRoleDistribution(
@@ -175,6 +200,40 @@ func (s *Service) UpdateUserRoles(
 	req UpdateRolesRequest,
 	adminID string,
 ) error {
+	if req.UserID == adminID {
+		return fmt.Errorf("cannot modify your own roles")
+	}
+
+	hasCounselor := false
+	hasStudent := false
+	hasSuperAdmin := false
+	hasDeveloper := false
+
+	for _, roleID := range req.RoleIDs {
+		switch constants.RoleID(roleID) {
+		case constants.AdminRoleID:
+			hasCounselor = true
+		case constants.StudentRoleID:
+			hasStudent = true
+		case constants.SuperAdminRoleID:
+			hasSuperAdmin = true
+		case constants.DeveloperRoleID:
+			hasDeveloper = true
+		}
+	}
+
+	if hasCounselor {
+		if hasStudent {
+			return fmt.Errorf("user cannot be both Student and Counselor")
+		}
+		if hasSuperAdmin {
+			return fmt.Errorf("user cannot be both Counselor and SuperAdmin")
+		}
+		if hasDeveloper {
+			return fmt.Errorf("user cannot be both Counselor and Developer")
+		}
+	}
+
 	return s.repo.WithTransaction(ctx, func(tx datastore.DB) error {
 		// Remove current roles
 		if err := s.repo.RemoveRoles(ctx, tx, req.UserID); err != nil {
@@ -203,7 +262,46 @@ func (s *Service) AddUserToWhitelist(
 	ctx context.Context,
 	req AddUserToWhitelistRequest,
 ) error {
+	hasCounselor := false
+	hasStudent := false
+	hasSuperAdmin := false
+	hasDeveloper := false
+
+	for _, roleID := range req.RoleIDs {
+		switch constants.RoleID(roleID) {
+		case constants.AdminRoleID:
+			hasCounselor = true
+		case constants.StudentRoleID:
+			hasStudent = true
+		case constants.SuperAdminRoleID:
+			hasSuperAdmin = true
+		case constants.DeveloperRoleID:
+			hasDeveloper = true
+		}
+	}
+
+	if hasCounselor {
+		if hasStudent {
+			return fmt.Errorf(
+				"user cannot be whitelisted as both Student and Counselor",
+			)
+		}
+		if hasSuperAdmin {
+			return fmt.Errorf(
+				"user cannot be whitelisted as both Counselor and SuperAdmin",
+			)
+		}
+		if hasDeveloper {
+			return fmt.Errorf(
+				"user cannot be whitelisted as both Counselor and Developer",
+			)
+		}
+	}
+
 	return s.repo.WithTransaction(ctx, func(tx datastore.DB) error {
+		if err := s.repo.RemoveUserFromWhitelist(ctx, tx, req.Email); err != nil {
+			return fmt.Errorf("failed to clear existing whitelist: %w", err)
+		}
 		for _, roleID := range req.RoleIDs {
 			if err := s.repo.AddUserToWhitelist(
 				ctx, tx, req.Email, roleID,
@@ -228,6 +326,41 @@ func (s *Service) RemoveUserFromWhitelist(
 		return nil
 	})
 }
+
+func (s *Service) ListWhitelist(
+	ctx context.Context,
+) ([]WhitelistResponse, error) {
+	entries, err := s.repo.ListWhitelist(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list whitelist: %w", err)
+	}
+
+	grouped := make(map[string]*WhitelistResponse)
+	var order []string
+
+	for _, entry := range entries {
+		if _, exists := grouped[entry.Email]; !exists {
+			grouped[entry.Email] = &WhitelistResponse{
+				Email:     entry.Email,
+				Roles:     []Role{},
+				CreatedAt: entry.CreatedAt,
+			}
+			order = append(order, entry.Email)
+		}
+		grouped[entry.Email].Roles = append(grouped[entry.Email].Roles, Role{
+			ID:   entry.RoleID,
+			Name: entry.RoleName,
+		})
+	}
+
+	responses := make([]WhitelistResponse, len(order))
+	for i, email := range order {
+		responses[i] = *grouped[email]
+	}
+
+	return responses, nil
+}
+
 func (s *Service) mapToResponse(user *User) *UserResponse {
 	return &UserResponse{
 		ID:             user.ID,

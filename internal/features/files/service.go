@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -13,7 +14,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/hash"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/ocr"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/storage"
@@ -23,6 +26,7 @@ type Service struct {
 	repo      *Repository
 	storage   storage.FileStorage
 	ocrClient *ocr.OCRClient
+	logger    audit.Logger
 }
 
 func NewService(
@@ -35,6 +39,10 @@ func NewService(
 		storage:   storage,
 		ocrClient: ocrClient,
 	}
+}
+
+func (s *Service) SetLogger(logger audit.Logger) {
+	s.logger = logger
 }
 
 func (s *Service) GetFileByID(ctx context.Context, id string) (*File, error) {
@@ -154,10 +162,93 @@ func (s *Service) UploadFiles(
 				bytes.NewReader(data),
 			)
 			if err != nil {
-				return nil, fmt.Errorf("this file does not appear to be a valid COR: %w", err)
+				if s.logger != nil {
+					id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+					logLevel := audit.LevelError
+					logAction := audit.ActionOCRProcessingFailed
+					logMsg := fmt.Sprintf(
+						"OCR COR processing failed for %s: %v",
+						fh.Filename,
+						err,
+					)
+
+					var httpErr *ocr.HTTPError
+					if errors.As(err, &httpErr) &&
+						httpErr.StatusCode >= 400 &&
+						httpErr.StatusCode < 500 {
+						logLevel = audit.LevelWarning
+						logAction = audit.ActionOCRValidationFailed
+						logMsg = fmt.Sprintf(
+							"COR validation failed for %s: %v",
+							fh.Filename,
+							err,
+						)
+					} else if strings.Contains(err.Error(), "status: 400") ||
+						strings.Contains(err.Error(), "status: 422") {
+						logLevel = audit.LevelWarning
+						logAction = audit.ActionOCRValidationFailed
+						logMsg = fmt.Sprintf(
+							"COR validation failed for %s: %v",
+							fh.Filename,
+							err,
+						)
+					}
+
+					s.logger.Record(ctx, nil, audit.LogEntry{
+						Level:    logLevel,
+						Category: audit.CategorySystem,
+						Action:   logAction,
+						Message:  logMsg,
+						UserID:    structs.StringToNullableString(id),
+						UserEmail: structs.StringToNullableString(email),
+						IPAddress: structs.StringToNullableString(ip),
+						UserAgent: structs.StringToNullableString(ua),
+						TraceID:   structs.StringToNullableString(trace),
+					})
+				}
+				return nil, fmt.Errorf(
+					"this file does not appear to be a valid COR",
+				)
 			}
 			if corResp == nil {
-				return nil, fmt.Errorf("AI service returned empty response for COR")
+				if s.logger != nil {
+					id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+					s.logger.Record(ctx, nil, audit.LogEntry{
+						Level:    audit.LevelError,
+						Category: audit.CategorySystem,
+						Action:   audit.ActionOCRProcessingFailed,
+						Message: fmt.Sprintf(
+							"AI service returned empty response for COR: %s",
+							fh.Filename,
+						),
+						UserID:    structs.StringToNullableString(id),
+						UserEmail: structs.StringToNullableString(email),
+						IPAddress: structs.StringToNullableString(ip),
+						UserAgent: structs.StringToNullableString(ua),
+						TraceID:   structs.StringToNullableString(trace),
+					})
+				}
+				return nil, fmt.Errorf(
+					"AI service returned empty response for COR",
+				)
+			}
+
+			if s.logger != nil {
+				id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+				s.logger.Record(ctx, nil, audit.LogEntry{
+					Level:    audit.LevelInfo,
+					Category: audit.CategorySystem,
+					Action:   audit.ActionOCRProcessingSuccess,
+					Message: fmt.Sprintf(
+						"Successfully processed COR document using OCR: %s",
+						fh.Filename,
+					),
+					UserID:    structs.StringToNullableString(id),
+					UserEmail: structs.StringToNullableString(email),
+					IPAddress: structs.StringToNullableString(ip),
+					UserAgent: structs.StringToNullableString(ua),
+					TraceID:   structs.StringToNullableString(trace),
+				})
 			}
 
 			marshaled, _ := json.Marshal(corResp)

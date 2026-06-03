@@ -39,7 +39,7 @@ func parseUsersFromCSV(filePath string) ([]users.User, error) {
 			return nil, fmt.Errorf("failed to read CSV record: %w", err)
 		}
 
-	// map record to User struct
+		// map record to User struct
 		// id
 		// email
 		// first_name

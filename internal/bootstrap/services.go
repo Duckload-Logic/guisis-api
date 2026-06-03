@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/pdf"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
@@ -19,10 +20,10 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students/integrations"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
-	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/email"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/gotenberg"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/ocr"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/storage"
+	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/webpush"
 )
 
 type Services struct {
@@ -47,14 +48,22 @@ func getServices(
 	fileStorage storage.FileStorage,
 	cfg *config.Config,
 	redis *datastore.RedisClient,
-	emailer email.Emailer,
+	emailer audit.Emailer,
 ) *Services {
-	notificationsService := notifications.NewService(repos.NotificationRepo)
+	webpushClient := webpush.NewClient(
+		cfg.VAPIDPublicKey,
+		cfg.VAPIDPrivateKey,
+		cfg.VAPIDEmail,
+	)
+	notificationsService := notifications.NewService(
+		repos.NotificationRepo,
+		webpushClient,
+	)
 	sessionService := sessions.NewService(redis)
 	gotenbergClient := gotenberg.NewClient(cfg.GotenbergURL)
 	pdfService := pdf.NewService(gotenbergClient)
 
-	ocrClient := ocr.NewClient(cfg.AIBaseUrl, "") // Assuming no API key for now
+	ocrClient := ocr.NewClient(cfg.AIBaseUrl, cfg.AiAPIKey)
 
 	fileService := files.NewService(
 		repos.FileRepo,
@@ -68,6 +77,7 @@ func getServices(
 		notificationsService,
 		userService,
 	)
+	fileService.SetLogger(systemLogService)
 
 	tokenService := tokens.NewService()
 
@@ -75,14 +85,18 @@ func getServices(
 		repos.M2MClientRepo,
 		systemLogService,
 		notificationsService,
+		emailer,
+		userService,
 		tokenService,
 		sessionService,
+		cfg,
 	)
 	authService := auth.NewService(
 		repos.UserRepo,
 		redis,
 		sessionService,
 		emailer,
+		systemLogService,
 	)
 
 	locationsService := locations.NewService(repos.LocationsRepo)
@@ -101,6 +115,7 @@ func getServices(
 		repos.NoteRepo,
 		systemLogService,
 		notificationsService,
+		emailer,
 	)
 	integrationStudentService := integrations.NewService(
 		repos.IntegrationStudentRepo,
@@ -109,6 +124,7 @@ func getServices(
 		repos.AppointmentRepo,
 		notificationsService,
 		systemLogService,
+		emailer,
 		userService,
 		noteService,
 		studentService,
@@ -118,12 +134,19 @@ func getServices(
 		repos.SlipRepo,
 		systemLogService,
 		notificationsService,
+		emailer,
 		fileStorage,
 		userService,
 		studentService,
 		fileService,
+		ocrClient,
+		cfg,
 	)
-	analyticsService := analytics.NewService(repos.AnalyticsRepo, redis)
+	analyticsService := analytics.NewService(
+		repos.AnalyticsRepo,
+		redis,
+		pdfService,
+	)
 
 	return &Services{
 		AuthService:               authService,

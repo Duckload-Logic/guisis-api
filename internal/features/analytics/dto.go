@@ -8,10 +8,11 @@ type DemographicStatDTO struct {
 	FemalePct   float64 `json:"femalePct"`
 	Total       int     `json:"total"`
 	TotalPct    float64 `json:"totalPct"`
-	Rank        int     `json:"rank,omitempty"`
+	Rank        float64 `json:"rank,omitempty"`
+	IsTop       bool    `json:"isTop"`
 }
 
-type DashboardResponse struct {
+type IIRAnalyticsReportResponse struct {
 	TotalStudents      int                  `json:"totalStudents"`
 	GenderDistribution []DemographicStatDTO `json:"genderDistribution"`
 
@@ -27,12 +28,17 @@ type DashboardResponse struct {
 	FatherEducation      []DemographicStatDTO `json:"fatherEducation"`
 	MotherEducation      []DemographicStatDTO `json:"motherEducation"`
 	ParentsMaritalStatus []DemographicStatDTO `json:"parentsMaritalStatus"`
+	FatherLifeStatus     []DemographicStatDTO `json:"fatherLifeStatus"`
+	MotherLifeStatus     []DemographicStatDTO `json:"motherLifeStatus"`
 
 	// Academic Background
 	HighSchoolGWA     []DemographicStatDTO `json:"highSchoolGWA"`
 	Elementary        []DemographicStatDTO `json:"elementary"`
+	HighSchool        []DemographicStatDTO `json:"highSchool"`
 	JuniorHigh        []DemographicStatDTO `json:"juniorHigh"`
 	SeniorHigh        []DemographicStatDTO `json:"seniorHigh"`
+	Vocational        []DemographicStatDTO `json:"vocational"`
+	College           []DemographicStatDTO `json:"college"`
 	NatureOfSchooling []DemographicStatDTO `json:"natureOfSchooling"`
 
 	// Study Environment

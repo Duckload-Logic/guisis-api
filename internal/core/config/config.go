@@ -16,6 +16,8 @@ type Config struct {
 
 	JWTSecret string
 
+	BaseURL string
+
 	WebsitesPort string
 
 	LocalUploadDIR               string
@@ -35,12 +37,20 @@ type Config struct {
 
 	GotenbergURL string
 
-	SendGridAPIKey string
+	SMTPHost string
+	SMTPPort int
+	SMTPUser string
+	SMTPPass string
 
 	MailPitHost string
 	MailPitPort int
 
 	AIBaseUrl string
+	AiAPIKey  string
+
+	VAPIDPublicKey  string
+	VAPIDPrivateKey string
+	VAPIDEmail      string
 }
 
 func LoadConfig() *Config {
@@ -54,6 +64,8 @@ func LoadConfig() *Config {
 		DBTLSCA: os.Getenv("DB_TLS_CA"),
 
 		JWTSecret: os.Getenv("JWT_SECRET"),
+
+		BaseURL: os.Getenv("BASE_URL"),
 
 		WebsitesPort: os.Getenv("WEBSITES_PORT"),
 
@@ -82,7 +94,16 @@ func LoadConfig() *Config {
 
 		GotenbergURL: os.Getenv("GOTENBERG_URL"),
 
-		SendGridAPIKey: os.Getenv("SENDGRID_API_KEY"),
+		SMTPHost: os.Getenv("SMTP_HOST"),
+		SMTPPort: func() int {
+			port, err := strconv.Atoi(os.Getenv("SMTP_PORT"))
+			if err != nil {
+				return 0
+			}
+			return port
+		}(),
+		SMTPUser: os.Getenv("SMTP_USER"),
+		SMTPPass: os.Getenv("SMTP_PASS"),
 
 		MailPitHost: os.Getenv("MAILPIT_HOST"),
 		MailPitPort: func() int {
@@ -95,19 +116,16 @@ func LoadConfig() *Config {
 		}(),
 
 		AIBaseUrl: os.Getenv("AI_BASE_URL"),
+		AiAPIKey:  os.Getenv("AI_API_KEY"),
+
+		VAPIDPublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
+		VAPIDPrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
+		VAPIDEmail:      os.Getenv("VAPID_EMAIL"),
 	}
 
 	validateConfig(config)
 
 	return config
-}
-
-// NewTestConfig creates a configuration for testing without validation.
-func NewTestConfig() *Config {
-	return &Config{
-		JWTSecret: "test_secret",
-		AIBaseUrl: "http://test-ai",
-	}
 }
 
 func validateConfig(config *Config) {
@@ -148,13 +166,23 @@ func validateCoreConfig(config *Config) {
 	if config.RedisPort == "" {
 		panic("REDIS_PORT is required")
 	}
+	if config.VAPIDPublicKey == "" {
+		panic("VAPID_PUBLIC_KEY is required")
+	}
+	if config.VAPIDPrivateKey == "" {
+		panic("VAPID_PRIVATE_KEY is required")
+	}
+	if config.VAPIDEmail == "" {
+		panic("VAPID_EMAIL is required")
+	}
 }
 
 func validateStorageConfig(config *Config) {
 	if config.IsProduction {
 		if config.AzureStorageConnectionString == "" {
 			panic(
-				"AZURE_STORAGE_CONNECTION_STRING is required for Azure Blob Storage",
+				"AZURE_STORAGE_CONNECTION_STRING is required for " +
+					"Azure Blob Storage",
 			)
 		}
 		if config.AzureContainerName == "" {
@@ -169,8 +197,17 @@ func validateStorageConfig(config *Config) {
 
 func validateProviderConfig(config *Config) {
 	if config.IsProduction {
-		if config.SendGridAPIKey == "" {
-			panic("SENDGRID_API_KEY is required for production")
+		if config.SMTPHost == "" {
+			panic("SMTP_HOST is required for production")
+		}
+		if config.SMTPPort == 0 {
+			panic("SMTP_PORT is required for production")
+		}
+		if config.SMTPUser == "" {
+			panic("SMTP_USER is required for production")
+		}
+		if config.SMTPPass == "" {
+			panic("SMTP_PASS is required for production")
 		}
 	} else {
 		if config.MailPitHost == "" {

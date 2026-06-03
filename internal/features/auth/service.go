@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
@@ -19,7 +20,6 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
-	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/email"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/identity/idp"
 	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
@@ -30,14 +30,16 @@ type Service struct {
 	idpClient      idp.IDPClientInterface
 	redis          *datastore.RedisClient
 	sessionService *sessions.Service
-	emailer        email.Emailer
+	emailer        audit.Emailer
+	logger         audit.Logger
 }
 
 func NewService(
 	repo *users.Repository,
 	redis *datastore.RedisClient,
 	sessionService *sessions.Service,
-	emailer email.Emailer,
+	emailer audit.Emailer,
+	logger audit.Logger,
 ) *Service {
 	return &Service{
 		repo:           repo,
@@ -45,6 +47,7 @@ func NewService(
 		redis:          redis,
 		sessionService: sessionService,
 		emailer:        emailer,
+		logger:         logger,
 	}
 }
 
@@ -272,11 +275,8 @@ func (s *Service) sendVerificationEmail(
 	ctx context.Context,
 	verificationOTP, receiverEmail string,
 ) error {
-	isSent, err := s.emailer.SendOTP(ctx, receiverEmail, verificationOTP)
+	err := s.emailer.SendOTP(ctx, receiverEmail, verificationOTP)
 	if err != nil {
-		return fmt.Errorf("failed to send verification email: %v", err)
-	}
-	if !isSent {
 		return fmt.Errorf("failed to send verification email: %v", err)
 	}
 
@@ -373,15 +373,45 @@ func (s *Service) AuthenticateUser(
 		string(constants.AuthTypeNative),
 	)
 	if err != nil {
+		s.logger.Record(ctx, nil, audit.LogEntry{
+			Level:     audit.LevelWarning,
+			Category:  audit.CategorySecurity,
+			Action:    audit.ActionLoginFailed,
+			Message:   fmt.Sprintf("Failed login attempt: %s", email),
+			UserEmail: structs.StringToNullableString(email),
+			IPAddress: structs.StringToNullableString(ipAddress),
+			UserAgent: structs.StringToNullableString(userAgent),
+		})
 		return "", "", "", fmt.Errorf("invalid credentials")
 	}
 
 	if !user.IsActive {
+		s.logger.Record(ctx, nil, audit.LogEntry{
+			Level:    audit.LevelWarning,
+			Category: audit.CategorySecurity,
+			Action:   audit.ActionLoginFailed,
+			Message: fmt.Sprintf(
+				"Failed login attempt (Inactive): %s",
+				email,
+			),
+			UserEmail: structs.StringToNullableString(email),
+			IPAddress: structs.StringToNullableString(ipAddress),
+			UserAgent: structs.StringToNullableString(userAgent),
+		})
 		return "", "", "", fmt.Errorf("invalid credentials")
 	}
 
 	// Compare hashed password
 	if !user.PasswordHash.Valid {
+		s.logger.Record(ctx, nil, audit.LogEntry{
+			Level:     audit.LevelWarning,
+			Category:  audit.CategorySecurity,
+			Action:    audit.ActionLoginFailed,
+			Message:   fmt.Sprintf("Failed login attempt (No hash): %s", email),
+			UserEmail: structs.StringToNullableString(email),
+			IPAddress: structs.StringToNullableString(ipAddress),
+			UserAgent: structs.StringToNullableString(userAgent),
+		})
 		return "", "", "", fmt.Errorf("invalid credentials")
 	}
 
@@ -414,6 +444,19 @@ func (s *Service) AuthenticateUser(
 				)
 			}
 
+			s.logger.Record(ctx, nil, audit.LogEntry{
+				Level:    audit.LevelCritical,
+				Category: audit.CategorySecurity,
+				Action:   audit.ActionLoginFailed,
+				Message: fmt.Sprintf(
+					"Account locked due to too many failed attempts: %s",
+					email,
+				),
+				UserEmail: structs.StringToNullableString(email),
+				IPAddress: structs.StringToNullableString(ipAddress),
+				UserAgent: structs.StringToNullableString(userAgent),
+			})
+
 			return "", "", "", fmt.Errorf(
 				"account locked due to too many failed attempts. " +
 					"please try again in 15 minutes",
@@ -430,6 +473,16 @@ func (s *Service) AuthenticateUser(
 			return "", "", "", fmt.Errorf("[REDIS:SET-FAILURES]:%v", err)
 		}
 
+		s.logger.Record(ctx, nil, audit.LogEntry{
+			Level:     audit.LevelWarning,
+			Category:  audit.CategorySecurity,
+			Action:    audit.ActionLoginFailed,
+			Message:   fmt.Sprintf("Failed login attempt: %s", email),
+			UserEmail: structs.StringToNullableString(email),
+			IPAddress: structs.StringToNullableString(ipAddress),
+			UserAgent: structs.StringToNullableString(userAgent),
+		})
+
 		return "", "", "", fmt.Errorf("invalid credentials")
 	}
 
@@ -443,30 +496,54 @@ func (s *Service) AuthenticateUser(
 		return "", "", "", fmt.Errorf("[REDIS:DEL-LOCKOUT]:%v", err)
 	}
 
+	// Look up student IDs if they have Student role
+	var iirID, corID string
+	for _, r := range user.Roles {
+		if r.ID == int(constants.StudentRoleID) {
+			_ = s.repo.GetDB().QueryRow(`
+				SELECT id FROM iir_records WHERE user_id = ?
+			`, user.ID).Scan(&iirID)
+			_ = s.repo.GetDB().QueryRow(`
+				SELECT file_id FROM student_cors WHERE student_id = ?
+			`, user.ID).Scan(&corID)
+			break
+		}
+	}
+
 	// Generate the token
 	roleIDs := make([]int, len(user.Roles))
 	for i, r := range user.Roles {
 		roleIDs[i] = r.ID
 	}
 
-	token, claims, err := tokens.NewService().GenerateToken(
+	token, _, err := tokens.NewService().GenerateSessionToken(
 		user.Email,
 		user.ID,
 		roleIDs,
 		string(constants.AuthTypeNative),
 		constants.AccessTokenMaxAge,
+		func(c *tokens.Claims) {
+			c.IsVerified = user.IsActive
+			c.IIRID = iirID
+			c.CORID = corID
+		},
 	)
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to generate session: %v", err)
 	}
 
 	// Generate refresh token
-	refreshToken, _, err := tokens.NewService().GenerateToken(
+	refreshToken, _, err := tokens.NewService().GenerateSessionToken(
 		user.Email,
 		user.ID,
 		roleIDs,
 		string(constants.AuthTypeNative),
 		constants.RefreshTokenMaxAge,
+		func(c *tokens.Claims) {
+			c.IsVerified = user.IsActive
+			c.IIRID = iirID
+			c.CORID = corID
+		},
 	)
 	if err != nil {
 		return "", "", "", fmt.Errorf(
@@ -474,24 +551,17 @@ func (s *Service) AuthenticateUser(
 		)
 	}
 
-	// Store in Redis using the Token ID (jti)
-	val := map[string]string{
-		"userID":          user.ID,
-		"tokenType":       string(constants.AuthTypeNative),
-		"appRefreshToken": refreshToken,
-		"ipAddress":       ipAddress,
-		"userAgent":       userAgent,
-	}
-	err = s.sessionService.StoreUserToken(
-		ctx,
-		user.ID,
-		sessions.NewJTI(claims.ID),
-		val,
-		constants.RefreshTokenMaxAge,
-	)
-	if err != nil {
-		return "", "", "", fmt.Errorf("failed to store token in redis: %v", err)
-	}
+	// Log successful login
+	s.logger.Record(ctx, nil, audit.LogEntry{
+		Level:     audit.LevelInfo,
+		Category:  audit.CategorySecurity,
+		Action:    audit.ActionLoginSuccess,
+		Message:   fmt.Sprintf("User %s successfully logged in", user.Email),
+		UserID:    structs.StringToNullableString(user.ID),
+		UserEmail: structs.StringToNullableString(user.Email),
+		IPAddress: structs.StringToNullableString(ipAddress),
+		UserAgent: structs.StringToNullableString(userAgent),
+	})
 
 	return user.ID, token, refreshToken, nil
 }
@@ -499,30 +569,46 @@ func (s *Service) AuthenticateUser(
 // RefreshToken generates a new access token using a valid session handle.
 func (s *Service) RefreshToken(
 	ctx context.Context,
-	accessTokenJTI sessions.JTIDTO,
+	refreshToken string,
 	cfg *config.Config,
 	ipAddress, userAgent string,
 ) (string, string, error) {
-	// Get session from Redis
-	session, err := s.sessionService.GetToken(ctx, accessTokenJTI)
-	if err != nil {
-		return "", "", fmt.Errorf("session expired or invalid: %v", err)
-	}
-
-	refreshToken := session["appRefreshToken"]
-	if refreshToken == "" {
-		return "", "", fmt.Errorf("refresh token missing from session: %v", err)
-	}
-
-	// Validate App Refresh Token
+	// 1. Validate the App Refresh Token
 	claims, err := tokens.NewService().ValidateToken(refreshToken)
 	if err != nil {
 		return "", "", fmt.Errorf("invalid refresh token: %v", err)
 	}
 
+	// 2. Check if the refresh token JTI is blacklisted
+	refreshJTI := sessions.NewJTI(claims.ID)
+	val, err := s.redis.Get(ctx, refreshJTI.ToSessionKey())
+	if err == nil && val == "revoked" {
+		return "", "", fmt.Errorf("refresh token has been revoked")
+	}
+
+	// 3. Check if user sessions were globally revoked
+	userRevKey := fmt.Sprintf("revoked:user:%s", claims.UserID)
+	revTimeStr, err := s.redis.Get(ctx, userRevKey)
+	if err == nil && revTimeStr != "" {
+		var revTime int64
+		if _, err := fmt.Sscanf(revTimeStr, "%d", &revTime); err == nil {
+			if claims.IssuedAt != nil && claims.IssuedAt.Time.Unix() < revTime {
+				return "", "", fmt.Errorf("user sessions have been revoked")
+			}
+		}
+	}
+
+	var iirID, corID string
+	_ = s.repo.GetDB().QueryRowContext(ctx, `
+		SELECT id FROM iir_records WHERE user_id = ?
+	`, claims.UserID).Scan(&iirID)
+	_ = s.repo.GetDB().QueryRowContext(ctx, `
+		SELECT file_id FROM student_cors WHERE student_id = ?
+	`, claims.UserID).Scan(&corID)
+
 	// Check token type
 	if claims.TokenType == string(constants.AuthTypeIDP) {
-		// Get IDP refresh token from Redis
+		// Get IDP refresh token from Redis using the OLD refresh token's ID
 		idpRefreshKey := sessions.NewJTI(claims.ID).ToIDPRefreshKey()
 		idpRefreshToken, err := s.redis.Get(ctx, idpRefreshKey)
 		if err != nil {
@@ -538,43 +624,38 @@ func (s *Service) RefreshToken(
 		}
 
 		// Generate NEW App Tokens
-		newAppAccessToken, accessClaims, err := tokens.NewService().
-			GenerateToken(
+		newAppAccessToken, _, err := tokens.NewService().
+			GenerateSessionToken(
 				claims.UserEmail,
 				claims.UserID,
 				claims.RoleIDs,
 				string(constants.AuthTypeIDP),
 				constants.AccessTokenMaxAge,
+				func(c *tokens.Claims) {
+					c.IsVerified = true
+					c.IDPAccessToken = tokenResp.AccessToken
+					c.IIRID = iirID
+					c.CORID = corID
+				},
 			)
 		if err != nil {
 			return "", "", err
 		}
 
 		newAppRefreshToken, refreshClaims, err := tokens.NewService().
-			GenerateToken(
+			GenerateSessionToken(
 				claims.UserEmail,
 				claims.UserID,
 				claims.RoleIDs,
 				string(constants.AuthTypeIDP),
 				constants.RefreshTokenMaxAge,
+				func(c *tokens.Claims) {
+					c.IsVerified = true
+					c.IDPAccessToken = tokenResp.AccessToken
+					c.IIRID = iirID
+					c.CORID = corID
+				},
 			)
-		if err != nil {
-			return "", "", err
-		}
-
-		// Update Redis: App Access session
-		val := map[string]string{
-			"userID":          claims.UserID,
-			"tokenType":       string(constants.AuthTypeIDP),
-			"appRefreshToken": newAppRefreshToken,
-			"idpAccessToken":  tokenResp.AccessToken,
-		}
-		err = s.sessionService.StoreToken(
-			ctx,
-			sessions.NewJTI(accessClaims.ID),
-			val,
-			constants.RefreshTokenMaxAge,
-		)
 		if err != nil {
 			return "", "", err
 		}
@@ -595,72 +676,51 @@ func (s *Service) RefreshToken(
 			return "", "", err
 		}
 
-		// Clean up OLD session and IDP refresh keys
-		_ = s.sessionService.DeleteUserToken(ctx, claims.UserID, accessTokenJTI)
+		// Clean up OLD keys: blacklist the old refresh token, delete old IDP refresh key
+		_ = s.sessionService.DeleteToken(ctx, refreshJTI)
 		_ = s.redis.Del(ctx, idpRefreshKey)
 
 		return newAppAccessToken, newAppRefreshToken, nil
 	}
 
 	// Native flow
-	newToken, newClaims, err := tokens.NewService().GenerateToken(
+	newToken, _, err := tokens.NewService().GenerateSessionToken(
 		claims.UserEmail,
 		claims.UserID,
 		claims.RoleIDs,
 		string(constants.AuthTypeNative),
 		constants.AccessTokenMaxAge,
+		func(c *tokens.Claims) {
+			c.IsVerified = true
+			c.IIRID = iirID
+			c.CORID = corID
+		},
 	)
 	if err != nil {
 		return "", "", err
 	}
 
-	newRefreshToken, _, err := tokens.NewService().GenerateToken(
-		claims.UserEmail,
-		claims.UserID,
-		claims.RoleIDs,
-		string(constants.AuthTypeNative),
-		constants.RefreshTokenMaxAge,
-	)
+	newRefreshToken, _, err := tokens.NewService().
+		GenerateSessionToken(
+			claims.UserEmail,
+			claims.UserID,
+			claims.RoleIDs,
+			string(constants.AuthTypeNative),
+			constants.RefreshTokenMaxAge,
+			func(c *tokens.Claims) {
+				c.IsVerified = true
+				c.IIRID = iirID
+				c.CORID = corID
+			},
+		)
 	if err != nil {
 		return "", "", err
 	}
 
-	// Update Redis using new jti
-	val := map[string]string{
-		"userID":          claims.UserID,
-		"tokenType":       string(constants.AuthTypeNative),
-		"appRefreshToken": newRefreshToken,
-		"ipAddress":       ipAddress,
-		"userAgent":       userAgent,
-	}
-	err = s.sessionService.StoreUserToken(
-		ctx,
-		claims.UserID,
-		sessions.NewJTI(newClaims.ID),
-		val,
-		constants.RefreshTokenMaxAge,
-	)
-	if err != nil {
-		return "", "", err
-	}
-
-	// Clean up OLD session key
-	_ = s.sessionService.DeleteUserToken(ctx, claims.UserID, accessTokenJTI)
+	// Clean up OLD refresh token (blacklist it)
+	_ = s.sessionService.DeleteToken(ctx, refreshJTI)
 
 	return newToken, newRefreshToken, nil
-}
-
-// RefreshIDPToken handles token refresh for IDP-authenticated sessions.
-func (s *Service) RefreshIDPToken(
-	ctx context.Context, refreshToken string, cfg *config.Config,
-) (string, string, error) {
-	// Call IDP refresh endpoint
-	tokenResp, err := s.idpClient.RefreshToken(ctx, refreshToken, cfg)
-	if err != nil {
-		return "", "", fmt.Errorf("[AuthService] {IDP Refresh}: %w", err)
-	}
-
-	return tokenResp.AccessToken, tokenResp.RefreshToken, nil
 }
 
 // GetMe retrieves the currently authenticated user's profile information.
@@ -699,6 +759,12 @@ func (s *Service) GetMe(
 			corURL, err := s.repo.GetStudentCORURLByUserID(ctx, userID)
 			if err == nil {
 				resp.StudentCORURL = corURL
+				valid, err := s.repo.CheckStudentCORValidByUserID(ctx, userID)
+				if err == nil {
+					resp.IsStudentCORValid = valid
+				} else {
+					log.Printf("[GetMe] {Student COR Validity Fetch}: %v", err)
+				}
 			} else if err != sql.ErrNoRows {
 				log.Printf("[GetMe] {Student COR Fetch}: %v", err)
 			}
@@ -713,53 +779,35 @@ func (s *Service) GetMe(
 func (s *Service) Logout(
 	ctx context.Context,
 	token string,
+	refreshToken string,
 	tokenType string,
 	cfg *config.Config,
 ) (string, error) {
+	var idpToken string
+
 	// Identify the session using the Access Token JTI
 	claims, err := tokens.NewService().ParseTokenUnverified(token)
-	if err != nil {
-		log.Printf("[AuthService:Logout] {Parse Error}: %v", err)
-		return "", nil // Move on since we can't identify the session
-	}
-	accessJTI := claims.ID
-
-	// Fetch the session data to find linked refresh tokens
-	sessionData, _ := s.sessionService.GetToken(ctx, sessions.NewJTI(accessJTI))
-	var idpToken string
-	if sessionData != nil {
-		idpToken = sessionData["idpAccessToken"]
-	}
-
-	// Delete any linked IDP refresh tokens
-	if sessionData != nil {
-		if appRefreshToken := sessionData["appRefreshToken"]; appRefreshToken != "" {
-			// Get refresh token claims to identify IDP refresh key
-			rClaims, err := tokens.NewService().
-				ParseTokenUnverified(appRefreshToken)
-			if err == nil {
-				idpKey := sessions.NewJTI(rClaims.ID).ToIDPRefreshKey()
-				_ = s.redis.Del(ctx, idpKey)
-			}
-		}
-	}
-
-	// Delete the primary session key
-	if userID := claims.UserID; userID != "" {
-		if err := s.sessionService.DeleteUserToken(
+	if err == nil && claims.ID != "" {
+		_ = s.sessionService.DeleteUserToken(
 			ctx,
-			userID,
-			sessions.NewJTI(accessJTI),
-		); err != nil {
-			log.Printf("[AuthService:Logout] {Redis Error}: %v", err)
-		}
-	} else {
-		// Fallback for M2M or cases where userID missing
-		if err := s.sessionService.DeleteToken(
+			claims.UserID,
+			sessions.NewJTI(claims.ID),
+		)
+		idpToken = claims.IDPAccessToken
+	}
+
+	// Identify and blacklist the Refresh Token JTI
+	rClaims, err := tokens.NewService().ParseTokenUnverified(refreshToken)
+	if err == nil && rClaims.ID != "" {
+		_ = s.sessionService.DeleteUserToken(
 			ctx,
-			sessions.NewJTI(accessJTI),
-		); err != nil {
-			log.Printf("[AuthService:Logout] {Redis Error}: %v", err)
+			rClaims.UserID,
+			sessions.NewJTI(rClaims.ID),
+		)
+		idpKey := sessions.NewJTI(rClaims.ID).ToIDPRefreshKey()
+		_ = s.redis.Del(ctx, idpKey)
+		if idpToken == "" {
+			idpToken = rClaims.IDPAccessToken
 		}
 	}
 
@@ -828,8 +876,6 @@ func (s *Service) PostIDPTokenExchange(
 		ctx,
 		userInfo.Email,
 	)
-	log.Printf("whitelistRoleIDs: %v", whitelistRoleIDs)
-	log.Printf("whitelistErr: %v", whitelistErr)
 
 	// User Existence Check
 	localUser, err := s.repo.GetUserByEmail(
@@ -877,7 +923,17 @@ func (s *Service) PostIDPTokenExchange(
 		err = s.repo.WithTransaction(
 			ctx,
 			func(tx datastore.DB) error {
-				return s.repo.CreateUser(ctx, tx, *localUser)
+				if err := s.repo.CreateUser(ctx, tx, *localUser); err != nil {
+					return err
+				}
+				if len(whitelistRoleIDs) > 0 {
+					return s.repo.RemoveUserFromWhitelist(
+						ctx,
+						tx,
+						userInfo.Email,
+					)
+				}
+				return nil
 			},
 		)
 		if err != nil {
@@ -887,40 +943,55 @@ func (s *Service) PostIDPTokenExchange(
 			)
 		}
 	case nil:
-		// User exists. Sync roles if they changed in the whitelist
-		if len(targetRoleIDs) > 0 {
+		// User exists. Sync roles and consume whitelist if present
+		if len(whitelistRoleIDs) > 0 && len(targetRoleIDs) > 0 {
 			addedAny := false
-			for _, targetID := range targetRoleIDs {
-				hasRole := false
-				for _, r := range localUser.Roles {
-					if r.ID == targetID {
-						hasRole = true
-						break
-					}
-				}
+			err = s.repo.WithTransaction(
+				ctx,
+				func(tx datastore.DB) error {
+					for _, targetID := range targetRoleIDs {
+						hasRole := false
+						for _, r := range localUser.Roles {
+							if r.ID == targetID {
+								hasRole = true
+								break
+							}
+						}
 
-				if !hasRole {
-					addedAny = true
-					// Promotion or sync from whitelist
-					err = s.repo.WithTransaction(ctx, func(tx datastore.DB) error {
-						return s.repo.AssignRole(ctx, tx, users.RoleAssignment{
-							UserID: localUser.ID,
-							RoleID: targetID,
-							Reason: structs.StringToNullableString(
-								"Whitelist synchronization",
-							),
-							AssignedBy: structs.StringToNullableString(
-								constants.SystemEntityType,
-							),
-						})
-					})
-					if err != nil {
-						return "", "", "", "", "", fmt.Errorf(
-							"[AuthService] {Update IDP User Role}: %w",
-							err,
-						)
+						if !hasRole {
+							addedAny = true
+							// Promotion or sync from whitelist
+							err = s.repo.AssignRole(
+								ctx,
+								tx,
+								users.RoleAssignment{
+									UserID: localUser.ID,
+									RoleID: targetID,
+									Reason: structs.StringToNullableString(
+										"Whitelist synchronization",
+									),
+									AssignedBy: structs.StringToNullableString(
+										constants.SystemEntityType,
+									),
+								},
+							)
+							if err != nil {
+								return err
+							}
+						}
 					}
-				}
+					return s.repo.RemoveUserFromWhitelist(
+						ctx,
+						tx,
+						userInfo.Email,
+					)
+				},
+			)
+			if err != nil {
+				return "", "", "", "", "", fmt.Errorf(
+					"[AuthService] {Sync Roles & Clear Whitelist}: %w",
+					err,
+				)
 			}
 
 			if addedAny {
@@ -948,43 +1019,53 @@ func (s *Service) PostIDPTokenExchange(
 		roleIDs[i] = r.ID
 	}
 
-	appAccessToken, accessClaims, err := tokens.NewService().GenerateToken(
-		userInfo.Email,
-		appUserID,
-		roleIDs,
-		string(constants.AuthTypeIDP),
-		constants.AccessTokenMaxAge,
-	)
+	// Look up student IDs if they have Student role
+	var iirID, corID string
+	for _, r := range localUser.Roles {
+		if r.ID == int(constants.StudentRoleID) {
+			_ = s.repo.GetDB().QueryRow(`
+				SELECT id FROM iir_records WHERE user_id = ?
+			`, localUser.ID).Scan(&iirID)
+			_ = s.repo.GetDB().QueryRow(`
+				SELECT file_id FROM student_cors WHERE student_id = ?
+			`, localUser.ID).Scan(&corID)
+			break
+		}
+	}
+
+	appAccessToken, _, err := tokens.NewService().
+		GenerateSessionToken(
+			userInfo.Email,
+			appUserID,
+			roleIDs,
+			string(constants.AuthTypeIDP),
+			constants.AccessTokenMaxAge,
+			func(c *tokens.Claims) {
+				c.IsVerified = localUser.IsActive
+				c.IDPAccessToken = idpAccessToken
+				c.IIRID = iirID
+				c.CORID = corID
+			},
+		)
 	if err != nil {
 		return "", "", "", "", "", err
 	}
 
-	appRefreshToken, refreshClaims, err := tokens.NewService().GenerateToken(
-		userInfo.Email,
-		appUserID,
-		roleIDs,
-		string(constants.AuthTypeIDP),
-		constants.RefreshTokenMaxAge,
-	)
+	appRefreshToken, refreshClaims, err := tokens.NewService().
+		GenerateSessionToken(
+			userInfo.Email,
+			appUserID,
+			roleIDs,
+			string(constants.AuthTypeIDP),
+			constants.RefreshTokenMaxAge,
+			func(c *tokens.Claims) {
+				c.IsVerified = localUser.IsActive
+				c.IDPAccessToken = idpAccessToken
+				c.IIRID = iirID
+				c.CORID = corID
+			},
+		)
 	if err != nil {
-		return "", "", "", "", "", err
-	}
-
-	val := map[string]string{
-		"userID":          appUserID,
-		"tokenType":       string(constants.AuthTypeIDP),
-		"appRefreshToken": appRefreshToken,
-		"idpAccessToken":  idpAccessToken,
-		"ipAddress":       ipAddress,
-		"userAgent":       userAgent,
-	}
-	if err := s.sessionService.StoreUserToken(
-		ctx,
-		appUserID,
-		sessions.NewJTI(accessClaims.ID),
-		val,
-		constants.RefreshTokenMaxAge,
-	); err != nil {
 		return "", "", "", "", "", err
 	}
 
@@ -998,6 +1079,21 @@ func (s *Service) PostIDPTokenExchange(
 	if err != nil {
 		return "", "", "", "", "", err
 	}
+
+	// Log successful login
+	s.logger.Record(ctx, nil, audit.LogEntry{
+		Level:    audit.LevelInfo,
+		Category: audit.CategorySecurity,
+		Action:   audit.ActionLoginSuccess,
+		Message: fmt.Sprintf(
+			"User %s successfully logged in via IDP",
+			userInfo.Email,
+		),
+		UserID:    structs.StringToNullableString(appUserID),
+		UserEmail: structs.StringToNullableString(userInfo.Email),
+		IPAddress: structs.StringToNullableString(ipAddress),
+		UserAgent: structs.StringToNullableString(userAgent),
+	})
 
 	return appAccessToken, appRefreshToken, appUserID, userInfo.Email,
 		roleName, nil
@@ -1017,22 +1113,4 @@ func (s *Service) GetIDPUserInfo(
 		)
 	}
 	return userInfo, nil
-}
-
-func (s *Service) BlockUser(ctx context.Context, userID string) error {
-	return s.repo.WithTransaction(
-		ctx,
-		func(tx datastore.DB) error {
-			return s.repo.BlockUser(ctx, tx, userID)
-		},
-	)
-}
-
-func (s *Service) UnblockUser(ctx context.Context, userID string) error {
-	return s.repo.WithTransaction(
-		ctx,
-		func(tx datastore.DB) error {
-			return s.repo.UnblockUser(ctx, tx, userID)
-		},
-	)
 }

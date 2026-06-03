@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -38,7 +39,7 @@ func main() {
 		"",
 		"Path to appointments CSV file",
 	)
-	// backfillIIR := flag.Bool("backfill-iir", false, "Backfill missing IIR records for existing students")
+	backfillIIR := flag.Bool("backfill-iir", false, "Backfill missing IIR records for existing students")
 	flag.Parse()
 
 	// ---------- CONFIGURATION ----------
@@ -46,7 +47,7 @@ func main() {
 	numCounselors := 5 // number of counselors (admins)
 	numSuperAdmin := 4 // number of super admins
 	numWorkers := 100  // number of concurrent student workers
-	numDevelopers := 2 // number of developers
+	numDevelopers := 2 // number of developers1
 	passwordHash := fakePasswordHash()
 	_ = godotenv.Load()
 	dsn := buildDSNFromEnv()
@@ -73,12 +74,27 @@ func main() {
 	// seed random generator
 	gofakeit.Seed(time.Now().UnixNano())
 
-	// if *backfillIIR {
-	// 	runBackfill(passwordHash)
-	// 	fmt.Println("Backfill completed successfully.")
-	// 	log.Println("Time taken:", time.Since(startTime))
-	// 	return
-	// }
+	appointmentsDataset := make([]map[string]string, 0)
+	if *appointmentsCSV != "" {
+		appointmentsDataset, err = parseAppointmentsDatasetFromCSV(
+			*appointmentsCSV,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	rand.Shuffle(len(appointmentsDataset), func(i, j int) {
+		appointmentsDataset[i], appointmentsDataset[j] =
+			appointmentsDataset[j], appointmentsDataset[i]
+	})
+
+	if *backfillIIR {
+		runBackfill(passwordHash, appointmentsDataset)
+		fmt.Println("Backfill completed successfully.")
+		log.Println("Time taken:", time.Since(startTime))
+		return
+	}
 
 	// clear existing student data (optional but keeps the run idempotent)
 	clearStudentData()
@@ -155,19 +171,7 @@ func main() {
 		numStudents = len(studentsFromCSV)
 	}
 
-	appointmentsDataset := make([]map[string]string, 0)
-	if *appointmentsCSV != "" {
-		appointmentsDataset, err = parseAppointmentsDatasetFromCSV(
-			(*appointmentsCSV),
-		)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
 
-	rand.Shuffle(len(appointmentsDataset), func(i, j int) {
-		appointmentsDataset[i], appointmentsDataset[j] = appointmentsDataset[j], appointmentsDataset[i]
-	})
 
 	jobs := make(chan int, numStudents)
 	var wg sync.WaitGroup
@@ -251,7 +255,6 @@ func clearStudentData() {
 		"related_persons",
 		"student_addresses",
 		"addresses",
-		"student_selected_reasons",
 		"emergency_contacts",
 		"student_personal_info",
 		"iir_records",
@@ -272,51 +275,59 @@ func clearStudentData() {
 	db.Exec("SET FOREIGN_KEY_CHECKS = 1")
 }
 
-// func runBackfill(passwordHash string) {
-// 	ctx := context.Background()
-// 	fmt.Println("Checking for students missing IIR records...")
+func runBackfill(
+	passwordHash string,
+	appointmentsDataset []map[string]string,
+) {
+	ctx := context.Background()
+	fmt.Println("Checking for students missing IIR records...")
 
-// 	// Find students (role_id=1) who DON'T have a record in iir_records
-// 	query := `
-// 		SELECT u.* FROM users u
-// 		LEFT JOIN iir_records iir ON u.id = iir.user_id
-// 		WHERE u.role_id = 1 AND iir.id IS NULL
-// 	`
+	// Find students (role_id=1) who DON'T have a record in iir_records
+	query := `
+		SELECT u.* FROM users u
+		LEFT JOIN iir_records iir ON u.id = iir.user_id
+		WHERE u.role_id = 1 AND iir.id IS NULL
+	`
 
-// 	var missingStudents []users.User
-// 	err := db.SelectContext(ctx, &missingStudents, query)
-// 	if err != nil {
-// 		log.Fatalf("[Backfill] Failed to query missing students: %v", err)
-// 	}
+	var missingStudents []users.User
+	err := db.SelectContext(ctx, &missingStudents, query)
+	if err != nil {
+		log.Fatalf("[Backfill] Failed to query missing students: %v", err)
+	}
 
-// 	count := len(missingStudents)
-// 	if count == 0 {
-// 		fmt.Println("No students missing IIR records. Everything is in sync!")
-// 		return
-// 	}
+	count := len(missingStudents)
+	if count == 0 {
+		fmt.Println("No students missing IIR records. Everything is in sync!")
+		return
+	}
 
-// 	fmt.Printf("Found %d students missing IIRs. Starting backfill...\n", count)
+	fmt.Printf("Found %d students missing IIRs. Starting backfill...\n", count)
 
-// 	for i, u := range missingStudents {
-// 		// generate core data needed for IIR seeder
-// 		dob := gofakeit.DateRange(
-// 			time.Date(1995, 1, 1, 0, 0, 0, 0, time.UTC),
-// 			time.Now().AddDate(-18, 0, 0),
-// 		)
-// 		birthYear := dob.Year()
+	for i, u := range missingStudents {
+		yearLevel := rand.Intn(4) + 1
+		dob, birthYear := generateRealisticDOB(yearLevel)
 
-// 		tx, err := db.BeginTxx(ctx, nil)
-// 		if err != nil {
-// 			log.Fatalf("[Backfill] Failed to start transaction: %v", err)
-// 		}
+		tx, err := db.BeginTxx(ctx, nil)
+		if err != nil {
+			log.Fatalf("[Backfill] Failed to start transaction: %v", err)
+		}
 
-// 		// Ensure we don't double notify or something, but generateFullStudentIIR
-// 		// handles the rest.
-// 		generateFullStudentIIR(ctx, tx, u.ID, dob, birthYear, i)
+		// Ensure we don't double notify or something, but generateFullStudentIIR
+		// handles the rest.
+		generateFullStudentIIR(
+			ctx,
+			tx,
+			u.ID,
+			dob,
+			birthYear,
+			yearLevel,
+			i,
+			appointmentsDataset,
+		)
 
-// 		if err := tx.Commit(); err != nil {
-// 			tx.Rollback()
-// 			log.Fatalf("[Backfill] Failed to commit student %s: %v", u.ID, err)
-// 		}
-// 	}
-// }
+		if err := tx.Commit(); err != nil {
+			tx.Rollback()
+			log.Fatalf("[Backfill] Failed to commit student %s: %v", u.ID, err)
+		}
+	}
+}

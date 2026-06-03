@@ -40,13 +40,13 @@ func RegisterRoutes(
 		constants.DeveloperRoleID,
 	))
 	{
-		studentOnly.GET("/me", h.GetAppointmentMe)
+		studentOnly.GET("/me", h.GetAppointmentsMe)
 		studentOnly.POST("", middleware.RequireCOR(), h.PostAppointment)
 		studentOnly.POST(
 			"/id/:appointmentID/cancel",
 			appointmentLookup,
 			middleware.RequireCOR(),
-			h.PostAppointmentCancel,
+			h.PostAppointmentCancellation,
 		)
 	}
 
@@ -58,7 +58,11 @@ func RegisterRoutes(
 		constants.DeveloperRoleID,
 	))
 	{
-		sharedRoutes.GET("/id/:appointmentID", appointmentLookup, h.GetAppointmentByID)
+		sharedRoutes.GET(
+			"/id/:appointmentID",
+			appointmentLookup,
+			h.GetAppointmentByID,
+		)
 		sharedRoutes.GET("/stats", h.GetAppointmentStats)
 		sharedRoutes.GET("/lookups/categories", h.GetAppointmentCategories)
 		sharedRoutes.GET("/lookups/slots", h.GetAppointmentSlots)

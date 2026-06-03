@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Appointment Information</title>
+		<style>
+			body {
+				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+				background-color: #f4f4f9;
+				margin: 0;
+				padding: 0;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				height: 100vh;
+			}
+			.container {
+				position: relative;
+				background-color: #ffffff;
+				padding: 40px;
+				border-radius: 12px;
+				box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+				max-width: 400px;
+				width: 100%;
+				text-align: center;
+				overflow: hidden;
+			}
+			.logo {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 10px;
+				font-size: 28px;
+				font-weight: 700;
+				color: #2c3e50;
+				margin-bottom: 20px;
+			}
+			.title {
+				font-size: 24px;
+				font-weight: 600;
+				color: #2c3e50;
+				margin-bottom: 10px;
+			}
+			.subtitle {
+				color: #6c757d;
+				margin-bottom: 30px;
+				font-size: 14px;
+			}
+			.info-box {
+				background-color: #e9ecef;
+				padding: 20px;
+				border-radius: 8px;
+				margin: 20px 0;
+				text-align: left;
+			}
+			.info-item {
+				margin: 10px 0;
+				font-size: 14px;
+			}
+			.info-label {
+				font-weight: 600;
+				color: #2c3e50;
+				min-width: 120px;
+				display: inline-block;
+			}
+			.info-value {
+				color: #6c757d;
+			}
+			.footer {
+				margin-top: 30px;
+				padding-top: 20px;
+				border-top: 1px solid #e9ecef;
+				color: #95a5a6;
+				font-size: 12px;
+			}
+			.footer a {
+				color: #3498db;
+				text-decoration: none;
+				font-weight: 500;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div
+				style="
+					position: absolute;
+					top: 0;
+					left: 0;
+					width: 100%;
+					height: 8px;
+					background-color: #630b0b;
+				"
+			></div>
+			<div class="header">
+				<div class="logo">
+					<img
+						src="https://guisis.dllbsit2027.com/logo.svg"
+						width="50"
+						height="50"
+					/>
+					PUPT-GuiSIS
+				</div>
+			</div>
+			<div class="title">Appointment {{.Status}}</div>
+			<div class="subtitle">Here are the details of your appointment</div>
+
+			<div class="info-box">
+				<div class="info-item">
+					<span class="info-label">Student Name:</span>
+					<span class="info-value">{{.StudentName}}</span>
+				</div>
+				<div class="info-item">
+					<span class="info-label">Date:</span>
+					<span class="info-value">{{.Date}}</span>
+				</div>
+				<div class="info-item">
+					<span class="info-label">Time:</span>
+					<span class="info-value">{{.Time}}</span>
+				</div>
+				<div class="info-item">
+					<span class="info-label">Appointment Category:</span>
+					<span class="info-value">{{.Category}}</span>
+				</div>
+				<div class="info-item">
+					<span class="info-label">Status:</span>
+					<span class="info-value">{{.Status}}</span>
+				</div>
+				{{if .AdminNotes}}
+				<div class="info-item">
+					<span class="info-label">Counselor Notes:</span>
+					<span class="info-value">{{.AdminNotes}}</span>
+				</div>
+				{{end}}
+			</div>
+
+			<div class="footer">
+				For any changes or cancellations, please contact the counseling
+				office at least 24 hours in advance.
+				<br />
+				If you did not schedule this appointment, please ignore this
+				email.
+			</div>
+		</div>
+	</body>
+</html>

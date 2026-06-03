@@ -28,10 +28,17 @@ func (h *Handler) GetFile(c *gin.Context) {
 	// Reconstruct the full file URL as stored in the DB
 	fileURL := "/uploads" + path
 
-	mimeType, err := h.service.DownloadFile(c.Request.Context(), fileURL, c.Writer)
+	mimeType, err := h.service.DownloadFile(
+		c.Request.Context(),
+		fileURL,
+		c.Writer,
+	)
 	if err != nil {
 		log.Printf("[GetFile] {Service Call}: %v", err)
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found or inaccessible"})
+		c.JSON(
+			http.StatusNotFound,
+			gin.H{"error": "File not found or inaccessible"},
+		)
 		return
 	}
 

@@ -20,3 +20,13 @@ type Notification struct {
 	CreatedAt  time.Time              `db:"created_at"  json:"createdAt"`
 	UpdatedAt  time.Time              `db:"updated_at"  json:"updatedAt"`
 }
+
+// PushSubscription represents a browser push notification subscription.
+type PushSubscription struct {
+	ID        string    `db:"id"          json:"id"`
+	UserID    string    `db:"user_id"     json:"userId"`
+	Endpoint  string    `db:"endpoint"    json:"endpoint"`
+	P256dhKey string    `db:"p256dh_key"  json:"p256dhKey"`
+	AuthKey   string    `db:"auth_key"    json:"authKey"`
+	CreatedAt time.Time `db:"created_at"  json:"createdAt"`
+}

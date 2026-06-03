@@ -75,34 +75,43 @@ const (
 
 // System log actions — track system-level events
 const (
-	ActionM2MClientCreated            = "M2M_CLIENT_CREATED"
-	ActionM2MClientRevoked            = "M2M_CLIENT_REVOKED"
-	ActionM2MClientVerified           = "M2M_CLIENT_VERIFIED"
-	ActionM2MClientSecretRotated      = "M2M_CLIENT_SECRET_ROTATED" // nolint:gosec
-	ActionSettingChanged              = "SETTING_CHANGED"
-	ActionM2MClientCreateFailed       = "M2M_CLIENT_CREATE_FAILED"
-	ActionM2MClientRevokeFailed       = "M2M_CLIENT_REVOKE_FAILED"
-	ActionM2MClientVerifyFailed       = "M2M_CLIENT_VERIFY_FAILED"
-	ActionM2MClientSecretRotateFailed = "M2M_CLIENT_SECRET_ROTATE_FAILED" // nolint:gosec
+	ActionM2MClientCreated  = "M2M_CLIENT_CREATED"
+	ActionM2MClientRevoked  = "M2M_CLIENT_REVOKED"
+	ActionM2MClientVerified = "M2M_CLIENT_VERIFIED"
+	// nolint:gosec
+	ActionM2MClientSecretRotated = "M2M_CLIENT_SECRET_ROTATED"
+	ActionSettingChanged         = "SETTING_CHANGED"
+	ActionM2MClientCreateFailed  = "M2M_CLIENT_CREATE_FAILED"
+	ActionM2MClientRevokeFailed  = "M2M_CLIENT_REVOKE_FAILED"
+	ActionM2MClientVerifyFailed  = "M2M_CLIENT_VERIFY_FAILED"
+	// nolint:gosec
+	ActionM2MClientSecretRotateFailed = "M2M_CLIENT_SECRET_ROTATE_FAILED"
 	ActionSettingChangeFailed         = "SETTING_CHANGE_FAILED"
+	ActionEmailSendSuccess            = "EMAIL_SEND_SUCCESS"
+	ActionEmailSendFailed             = "EMAIL_SEND_FAILED"
+	ActionOCRProcessingSuccess        = "OCR_PROCESSING_SUCCESS"
+	ActionOCRProcessingFailed         = "OCR_PROCESSING_FAILED"
+	ActionOCRValidationFailed         = "OCR_VALIDATION_FAILED"
 )
 
 // Security log actions — track authentication and access events
 const (
-	ActionLoginSuccess       = "LOGIN_SUCCESS"
-	ActionLoginFailed        = "LOGIN_FAILED"
-	ActionLogout             = "LOGOUT"
-	ActionTokenRefreshed     = "TOKEN_REFRESHED"
-	ActionAccessDenied       = "ACCESS_DENIED"
-	ActionRateLimitExceeded  = "RATE_LIMIT_EXCEEDED"
-	ActionInvalidToken       = "INVALID_TOKEN"
-	ActionM2MClientUsed      = "M2M_CLIENT_USED"
-	ActionM2MClientInvalid   = "M2M_CLIENT_INVALID"
-	ActionM2MAuthSuccess     = "M2M_AUTH_SUCCESS"
-	ActionM2MAuthFailed      = "M2M_AUTH_FAILED"
-	ActionM2MTokenRefreshed  = "M2M_TOKEN_REFRESHED" // nolint:gosec
-	ActionElevateRoles       = "ELEVATE_ROLES"
-	ActionElevateRolesFailed = "ELEVATE_ROLES_FAILED"
+	ActionLoginSuccess        = "LOGIN_SUCCESS"
+	ActionLoginFailed         = "LOGIN_FAILED"
+	ActionLogout              = "LOGOUT"
+	ActionTokenRefreshed      = "TOKEN_REFRESHED"
+	ActionAccessDenied        = "ACCESS_DENIED"
+	ActionRateLimitExceeded   = "RATE_LIMIT_EXCEEDED"
+	ActionInvalidToken        = "INVALID_TOKEN"
+	ActionM2MClientUsed       = "M2M_CLIENT_USED"
+	ActionM2MClientInvalid    = "M2M_CLIENT_INVALID"
+	ActionM2MAuthSuccess      = "M2M_AUTH_SUCCESS"
+	ActionM2MAuthFailed       = "M2M_AUTH_FAILED"
+	ActionM2MTokenRefreshed   = "M2M_TOKEN_REFRESHED" // nolint:gosec
+	ActionElevateRoles        = "ELEVATE_ROLES"
+	ActionElevateRolesFailed  = "ELEVATE_ROLES_FAILED"
+	ActionM2MDataAccess       = "M2M_DATA_ACCESS"
+	ActionM2MDataAccessDenied = "M2M_DATA_ACCESS_DENIED"
 )
 
 // LogEntry is the input struct used by other services to record a log.
@@ -142,6 +151,14 @@ type NotificationEntry struct {
 	Type       string                 `json:"type"`
 	IsRead     bool                   `json:"isRead"`
 	CreatedAt  time.Time              `json:"createdAt"`
+}
+
+type EmailEntry struct {
+	To           []string
+	Subject      string
+	Body         string // Pre-rendered HTML or plain text
+	TemplatePath string
+	TemplateData interface{}
 }
 
 // LogMetadata defines a structured format for audit log metadata.

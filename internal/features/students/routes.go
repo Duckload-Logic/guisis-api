@@ -28,6 +28,7 @@ func RegisterRoutes(
 	lookupRoutes := routes.Group("/lookups")
 	{
 		lookupRoutes.GET("/genders", h.GetGenders)
+		lookupRoutes.GET("/enrollment-years", h.GetEnrollmentYears)
 		lookupRoutes.GET("/religions", h.GetReligions)
 		lookupRoutes.GET("/parental-status-types", h.GetParentalStatusTypes)
 		lookupRoutes.GET("/income-ranges", h.GetIncomeRanges)
@@ -45,6 +46,11 @@ func RegisterRoutes(
 			h.GetStudentRelationshipTypes,
 		)
 		lookupRoutes.GET("/student-statuses", h.GetStudentStatuses)
+		lookupRoutes.GET("/educational-levels", h.GetEducationalLevels)
+		lookupRoutes.GET(
+			"/educational-attainments",
+			h.GetEducationalAttainments,
+		)
 	}
 
 	inventoryRoutes := routes.Group("/inventory")
@@ -55,7 +61,6 @@ func RegisterRoutes(
 	))
 	{
 		counselorRoutes.GET("/records", h.GetStudentList)
-		counselorRoutes.PATCH("/records/bulk-status", h.PatchStudentStatusBulk)
 	}
 
 	userRoutes := inventoryRoutes.Group("/")
@@ -73,6 +78,11 @@ func RegisterRoutes(
 			"/records/iir/:iirID",
 			iirResourceLookup,
 			h.GetStudentIIRByIIRID,
+		)
+		userRoutes.PATCH(
+			"/records/iir/:iirID",
+			iirResourceLookup,
+			h.PatchStudentIIR,
 		)
 		userRoutes.GET(
 			"/records/iir/:iirID/profile",
@@ -174,4 +184,16 @@ func RegisterRoutes(
 
 	// Counselor view of CORs
 	counselorRoutes.GET("/cors/user/:userID/current", h.GetStudentCORByUserID)
+
+	// Academic settings — GET is open to all authenticated roles;
+	// PUT is restricted to SuperAdmin only.
+	routes.GET("/settings/academic", h.GetAcademicSetting)
+
+	counselorSettingsRoutes := routes.Group("/settings")
+	counselorSettingsRoutes.Use(
+		middleware.RoleMiddleware(constants.AdminRoleID),
+	)
+	{
+		counselorSettingsRoutes.PUT("/academic", h.PutAcademicSetting)
+	}
 }

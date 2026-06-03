@@ -63,7 +63,32 @@ func GetOnDuplicateKeyUpdateStatement(
 	}
 
 	if hasID {
-		updates = append(updates, "id = LAST_INSERT_ID(id)")
+		t := reflect.TypeOf(s)
+		if t.Kind() == reflect.Ptr {
+			t = t.Elem()
+		}
+		isIntegerID := false
+		if t.Kind() == reflect.Struct {
+			for i := 0; i < t.NumField(); i++ {
+				field := t.Field(i)
+				tag := field.Tag.Get("db")
+				if tag == "id" ||
+					(tag == "" && strings.ToLower(field.Name) == "id") {
+					k := field.Type.Kind()
+					switch k {
+					case reflect.Int, reflect.Int8, reflect.Int16,
+						reflect.Int32, reflect.Int64, reflect.Uint,
+						reflect.Uint8, reflect.Uint16, reflect.Uint32,
+						reflect.Uint64:
+						isIntegerID = true
+					}
+					break
+				}
+			}
+		}
+		if isIntegerID {
+			updates = append(updates, "id = LAST_INSERT_ID(id)")
+		}
 	}
 
 	return strings.Join(updates, ", ")

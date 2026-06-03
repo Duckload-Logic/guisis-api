@@ -2,6 +2,7 @@ package locations
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
@@ -14,17 +15,6 @@ type Repository struct {
 
 func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
-}
-
-func (r *Repository) GetDB() *sqlx.DB {
-	return r.db
-}
-
-func (r *Repository) WithTransaction(
-	ctx context.Context,
-	fn func(datastore.DB) error,
-) error {
-	return datastore.RunInTransaction(ctx, r.db, fn)
 }
 
 func (r *Repository) GetRegions(ctx context.Context) ([]Region, error) {
@@ -46,7 +36,7 @@ func (r *Repository) GetProvincesByRegion(
 		SELECT id, code, name, region_code
 		FROM provinces
 		WHERE region_code = ?
-		ORDER BY name
+		ORDER BY name ASC
 	`
 	var provinces []Province
 	err := r.db.SelectContext(ctx, &provinces, query, regionCode)
@@ -64,8 +54,8 @@ func (r *Repository) GetCitiesByProvince(
 	query := `
 		SELECT id, code, name, province_code, type, zip_code, district, region_code
 		FROM cities
-		WHERE province_code = ?
-		ORDER BY name
+		WHERE province_code = ? AND type IN ('City', 'Mun', 'SubMun')
+		ORDER BY name ASC
 	`
 	var cities []City
 	err := r.db.SelectContext(ctx, &cities, query, provinceCode)
@@ -83,8 +73,8 @@ func (r *Repository) GetCitiesByRegion(
 	query := `
 		SELECT id, code, name, province_code, type, zip_code, district, region_code
 		FROM cities
-		WHERE region_code = ?
-		ORDER BY name
+		WHERE region_code = ? AND type IN ('City', 'Mun', 'SubMun')
+		ORDER BY name ASC
 	`
 	var cities []City
 	err := r.db.SelectContext(ctx, &cities, query, regionCode)
@@ -103,7 +93,7 @@ func (r *Repository) GetBarangaysByCity(
 		SELECT id, code, name, city_code
 		FROM barangays
 		WHERE city_code = ?
-		ORDER BY name
+		ORDER BY name ASC
 	`
 	var barangays []Barangay
 	err := r.db.SelectContext(ctx, &barangays, query, cityCode)
@@ -192,18 +182,36 @@ func (r *Repository) UpsertAddress(
 	tx datastore.DB,
 	addr *Address,
 ) (int, error) {
+	var existingID int
+	checkQuery := `
+		SELECT id FROM addresses 
+		WHERE region_code = ? 
+		  AND (province_code = ? OR (province_code IS NULL AND ? IS NULL))
+		  AND city_code = ? 
+		  AND barangay_code = ? 
+		  AND street_detail = ?
+		LIMIT 1
+	`
+	err := tx.GetContext(ctx, &existingID, checkQuery,
+		addr.RegionCode,
+		addr.ProvinceCode, addr.ProvinceCode,
+		addr.CityCode,
+		addr.BarangayCode,
+		addr.StreetDetail,
+	)
+	if err == nil {
+		return existingID, nil
+	}
+	if err != sql.ErrNoRows {
+		return 0, fmt.Errorf("failed to query existing address: %w", err)
+	}
+
 	query := `
 		INSERT INTO addresses (
 			region_code, province_code, city_code, barangay_code, street_detail
 		) VALUES (
 			:region_code, :province_code, :city_code, :barangay_code, :street_detail
-		) ON DUPLICATE KEY UPDATE
-			region_code = VALUES(region_code),
-			province_code = VALUES(province_code),
-			city_code = VALUES(city_code),
-			barangay_code = VALUES(barangay_code),
-			street_detail = VALUES(street_detail),
-			updated_at = NOW()
+		)
 	`
 	result, err := tx.NamedExecContext(ctx, query, addr)
 	if err != nil {
@@ -220,4 +228,3 @@ func (r *Repository) UpsertAddress(
 
 	return int(lastID), nil
 }
-

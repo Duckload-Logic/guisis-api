@@ -65,6 +65,26 @@ func (o *OCRClient) ProcessDocument(
 	return &result, nil
 }
 
+// ValidateDocument validates the uploaded file content.
+func (o *OCRClient) ValidateDocument(
+	ctx context.Context,
+	filename string,
+	file io.Reader,
+) (*ValidationResponse, error) {
+	respBody, err := o.upload(ctx, "/ocr/validate", filename, file)
+	if err != nil {
+		return nil, fmt.Errorf("[OCRClient] {ValidateDocument}: %w", err)
+	}
+	defer respBody.Close()
+
+	var result ValidationResponse
+	if err := json.NewDecoder(respBody).Decode(&result); err != nil {
+		return nil, fmt.Errorf("[OCRClient] {Decode Validate}: %w", err)
+	}
+
+	return &result, nil
+}
+
 // upload is a helper to perform multipart uploads to the AI service.
 func (o *OCRClient) upload(
 	ctx context.Context,
@@ -95,9 +115,7 @@ func (o *OCRClient) upload(
 	}
 
 	req.Header.Set("Content-Type", writer.FormDataContentType())
-	if o.apiKey != "" {
-		req.Header.Set("X-API-Key", o.apiKey)
-	}
+	req.Header.Set("X-API-Key", o.apiKey)
 
 	resp, err := o.http.Do(req)
 	if err != nil {
@@ -106,8 +124,20 @@ func (o *OCRClient) upload(
 
 	if resp.StatusCode != http.StatusOK {
 		defer resp.Body.Close()
-		return nil, fmt.Errorf("AI service returned status: %s", resp.Status)
+		return nil, &HTTPError{
+			StatusCode: resp.StatusCode,
+			Status:     resp.Status,
+		}
 	}
 
 	return resp.Body, nil
+}
+
+type HTTPError struct {
+	StatusCode int
+	Status     string
+}
+
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("AI service returned status: %s", e.Status)
 }

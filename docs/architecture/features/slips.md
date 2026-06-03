@@ -23,13 +23,13 @@ Package slips is a generated GoMock package.
   - *GetSlipByID godoc @Summary      Get excuse slip by ID @Description  Retrieves details for a specific excuse slip. @Tags         ExcuseSlips @Produce      json @Param        id   path      string  true  "Slip ID" @Success      200  {object} SlipDTO @Failure      404  {object} map[string]string @Failure      500  {object} map[string]string @Router       /slips/id/{id} [get]*
 - `GetSlipCategories`
   - *GetSlipCategoryList godoc @Summary      Get slip categories @Description  Retrieves available slip categories. @Tags         ExcuseSlips @Produce      json @Success      200  {object} []SlipCategory @Failure      500  {object} map[string]string @Router       /slips/lookups/categories [get]*
-- `GetSlipMe`
+- `GetSlipsMe`
   - *GetSlipListByIIR godoc @Summary      Get student's excuse slips @Description  Retrieves slips for the authenticated student. @Tags         ExcuseSlips @Produce      json @Success      200  {object} map[string]interface{} @Failure      403  {object} map[string]string @Failure      500  {object} map[string]string @Router       /slips/me [get]*
 - `GetSlipStats`
   - *GetSlipStatsList godoc @Summary      Get slip statistics @Description  Retrieves slip status counts. @Tags         ExcuseSlips @Produce      json @Success      200  {object} []SlipStatusCount @Failure      500  {object} map[string]string @Router       /slips/stats [get]*
 - `GetSlipStatuses`
   - *GetSlipStatusList godoc @Summary      Get slip statuses @Description  Retrieves available slip statuses. @Tags         ExcuseSlips @Produce      json @Success      200  {object} []SlipStatus @Failure      500  {object} map[string]string @Router       /slips/lookups/statuses [get]*
-- `GetSlipUrgent`
+- `GetUrgentSlips`
   - *GetUrgentSlipList godoc @Summary      Get urgent excuse slips @Description  Retrieves urgent slips for counselor review. @Tags         ExcuseSlips @Produce      json @Success      200  {object} map[string]interface{} @Failure      500  {object} map[string]string @Router       /slips/urgent [get]*
 - `GetSlips`
   - *GetSlipList godoc @Summary      Get all excuse slips @Description  Retrieves list of all submitted slips. @Tags         ExcuseSlips @Produce      json @Success      200  {object} map[string]interface{} @Failure      500  {object} map[string]string @Router       /slips [get]*

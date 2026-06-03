@@ -13,16 +13,20 @@ func RegisterRoutes(
 ) {
 	routes := rg.Group("/integrations/students")
 	routes.Use(middleware.AuthMiddleware(redis))
-
-	routes.POST("/linker", h.PostLinkStudent)
-	routes.POST("/linker/code", h.PostEmailVerificationCode)
+	routes.Use(middleware.RequireVerifiedM2M)
+	routes.Use(middleware.M2MAuditMiddleware())
 
 	routes.GET("/profiles", h.GetStudents)
 	routes.GET("/profile", h.GetStudentByEmail)
 	routes.GET("/:studentNumber", h.GetStudentByStudentNumber)
 	routes.GET(
 		"/:studentNumber/personal-info",
+		middleware.RequireM2MPersonalInfoAccess,
 		h.GetPersonalInfoByStudentNumber,
 	)
-	routes.GET("/:studentNumber/addresses", h.GetAddressByStudentNumber)
+	routes.GET(
+		"/:studentNumber/addresses",
+		middleware.RequireM2MPersonalInfoAccess,
+		h.GetAddressByStudentNumber,
+	)
 }

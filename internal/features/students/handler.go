@@ -2,11 +2,14 @@ package students
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
 )
 
@@ -32,6 +35,25 @@ func (h *Handler) GetGenders(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, genders)
+}
+
+func (h *Handler) GetEnrollmentYears(c *gin.Context) {
+	years, err := h.service.GetEnrollmentYears(c.Request.Context())
+	if err != nil {
+		log.Printf(
+			"[GetEnrollmentYears] {Fetch Years}: %v",
+			err,
+		)
+		response.SendError(
+			c,
+			"Failed to get enrollment years",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, years)
 }
 
 func (h *Handler) GetParentalStatusTypes(c *gin.Context) {
@@ -112,6 +134,22 @@ func (h *Handler) GetEducationalLevels(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, levels)
+}
+
+func (h *Handler) GetEducationalAttainments(c *gin.Context) {
+	attainments, err := h.service.GetEducationalAttainments(c.Request.Context())
+	if err != nil {
+		log.Printf("[GetEducationalAttainments] {Service Call}: %v", err)
+		response.SendError(
+			c,
+			"Failed to get educational attainments",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, attainments)
 }
 
 func (h *Handler) GetCourses(c *gin.Context) {
@@ -698,7 +736,6 @@ func (h *Handler) PostStudentIIR(c *gin.Context) {
 		return
 	}
 
-
 	iirID, err := h.service.SubmitStudentIIR(c.Request.Context(), userID, req)
 	if err != nil {
 		log.Printf("[PostStudentIIR] {Service Call}: %s", err.Error())
@@ -714,6 +751,41 @@ func (h *Handler) PostStudentIIR(c *gin.Context) {
 	response.SendSuccess(
 		c,
 		gin.H{"id": iirID, "message": "Student IIR submitted successfully"},
+	)
+}
+
+func (h *Handler) PatchStudentIIR(c *gin.Context) {
+	iirID := c.Param("iirID")
+	if iirID == "" {
+		response.SendFail(c, gin.H{"error": "IIR ID is required"})
+		return
+	}
+
+	var req ComprehensiveProfileDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[PatchStudentIIR] {JSON Bind}: %s", err.Error())
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+
+	_, err := h.service.UpdateStudentIIR(c.Request.Context(), iirID, req)
+	if err != nil {
+		log.Printf("[PatchStudentIIR] {Service Call}: %s", err.Error())
+		response.SendError(
+			c,
+			"Failed to update student IIR",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(
+		c,
+		gin.H{
+			"id":      iirID,
+			"message": "Student IIR updated successfully",
+		},
 	)
 }
 
@@ -735,7 +807,38 @@ func (h *Handler) GetStudentIIRPDF(c *gin.Context) {
 		return
 	}
 
-	pdfBytes, fileName, err := h.service.GenerateIIR(c.Request.Context(), iirID)
+	var isCounselor bool
+	if roleIDsVal, exists := c.Get("roleIDs"); exists {
+		if rids, ok := roleIDsVal.([]int); ok {
+			for _, rid := range rids {
+				if rid == int(constants.AdminRoleID) ||
+					rid == int(constants.SuperAdminRoleID) {
+					isCounselor = true
+					break
+				}
+			}
+		} else if rids, ok := roleIDsVal.([]interface{}); ok {
+			for _, item := range rids {
+				var rid int
+				if f, ok := item.(float64); ok {
+					rid = int(f)
+				} else if i, ok := item.(int); ok {
+					rid = i
+				}
+				if rid == int(constants.AdminRoleID) ||
+					rid == int(constants.SuperAdminRoleID) {
+					isCounselor = true
+					break
+				}
+			}
+		}
+	}
+
+	pdfBytes, fileName, err := h.service.GenerateIIR(
+		c.Request.Context(),
+		iirID,
+		isCounselor,
+	)
 	if err != nil {
 		log.Printf("[GetStudentIIRPDF] {Service Call}: %v", err)
 		response.SendError(
@@ -756,43 +859,28 @@ func (h *Handler) GetStudentIIRPDF(c *gin.Context) {
 	c.Data(http.StatusOK, "application/pdf", pdfBytes)
 }
 
-// PatchStudentBulkStatus handles PATCH /students/inventory/records/bulk-status.
-// It applies a lifecycle status transition to multiple student records in a
-// single transaction. For the "Graduated" status the service layer enforces
-// eligibility (Diploma/Year-3, Bachelor/Year-4) and quietly skips ineligible
-// records — the response always reports the attempted count so the frontend
-// can surface a warning if the actual count differs.
-func (h *Handler) PatchStudentStatusBulk(c *gin.Context) {
-	var req BulkUpdateStatusRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("[PatchStudentStatusBulk] {Bind JSON}: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request format"})
-		return
-	}
-
-	if err := h.service.BulkUpdateStudentStatus(c.Request.Context(), req); err != nil {
-		log.Printf("[PatchStudentStatusBulk] {Service Call}: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to update student status pool",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Bulk status update successful"})
-}
-
 func (h *Handler) PostStudentCOR(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 
 	file, err := c.FormFile("cor")
 	if err != nil {
-		response.SendFail(c, gin.H{"error": "COR file is required (field: cor)"})
+		response.SendFail(
+			c,
+			gin.H{"error": "COR file is required (field: cor)"},
+		)
 		return
 	}
 
 	fileID, err := h.service.SubmitCOR(c.Request.Context(), userID, file)
 	if err != nil {
-		log.Printf("[PostStudentCOR] {Service Call}: %v", err)
+		log.Printf("[PostStudentCOR] {Submit COR}: %v", err)
+		errStr := err.Error()
+		if errors.Is(err, ErrOutdatedCOR) ||
+			errors.Is(err, ErrCOROwnerMismatch) ||
+			strings.Contains(errStr, "valid COR") {
+			response.SendFail(c, gin.H{"error": errStr})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to submit COR",
@@ -830,13 +918,23 @@ func (h *Handler) PostStudentCORByIIRID(c *gin.Context) {
 
 	file, err := c.FormFile("cor")
 	if err != nil {
-		response.SendFail(c, gin.H{"error": "COR file is required (field: cor)"})
+		response.SendFail(
+			c,
+			gin.H{"error": "COR file is required (field: cor)"},
+		)
 		return
 	}
 
 	fileID, err := h.service.SubmitCOR(c.Request.Context(), iir.UserID, file)
 	if err != nil {
-		log.Printf("[PostStudentCORByIIRID] {Service Call}: %v", err)
+		log.Printf("[PostStudentCORByIIRID] {Submit COR}: %v", err)
+		errStr := err.Error()
+		if errors.Is(err, ErrOutdatedCOR) ||
+			errors.Is(err, ErrCOROwnerMismatch) ||
+			strings.Contains(errStr, "valid COR") {
+			response.SendFail(c, gin.H{"error": errStr})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to submit COR",
@@ -890,4 +988,53 @@ func (h *Handler) GetStudentCORs(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, cors)
+}
+
+func (h *Handler) GetAcademicSetting(c *gin.Context) {
+	setting, err := h.service.GetAcademicSetting(c.Request.Context())
+	if err != nil {
+		log.Printf("[GetAcademicSetting] {Fetch}: %v", err)
+		response.SendError(
+			c,
+			"Failed to retrieve academic setting",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+	response.SendSuccess(c, setting)
+}
+
+func (h *Handler) PutAcademicSetting(c *gin.Context) {
+	var req UpdateAcademicSettingDTO
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[PutAcademicSetting] {JSON Bind}: %v", err)
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	userIDStr, _ := userID.(string)
+	userEmailVal, _ := c.Get("userEmail")
+	userEmail, _ := userEmailVal.(string)
+
+	if err := h.service.UpdateAcademicSetting(
+		c.Request.Context(),
+		req,
+		userIDStr,
+		userEmail,
+	); err != nil {
+		log.Printf("[PutAcademicSetting] {Service Call}: %v", err)
+		response.SendError(
+			c,
+			"Failed to update academic setting",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{
+		"message": "Academic setting updated successfully",
+	})
 }

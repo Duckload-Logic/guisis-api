@@ -84,26 +84,38 @@ func (h *Handler) PostSlip(c *gin.Context) {
 	}
 
 	var files []*multipart.FileHeader
-	fieldNames := []string{
-		"files", "excuseLetter", "parentId", "medicalCert",
-	}
+	var parentIdFiles []*multipart.FileHeader
 
-	for _, field := range fieldNames {
+	for _, field := range []string{"files", "excuseLetter", "medicalCert"} {
 		if f := form.File[field]; len(f) > 0 {
 			files = append(files, f...)
 		}
 	}
+	if f := form.File["parentId"]; len(f) > 0 {
+		parentIdFiles = append(parentIdFiles, f...)
+	}
 
-	if len(files) == 0 {
+	if len(files) == 0 && len(parentIdFiles) == 0 {
 		response.SendFail(c, gin.H{"error": "At least one file required"})
 		return
 	}
 
 	slip, err := h.service.SubmitExcuseSlip(
-		c.Request.Context(), iirID, req, files,
+		c.Request.Context(), iirID, req, files, parentIdFiles,
 	)
 	if err != nil {
-		fmt.Printf("[PostSlip] {Submit Slip}: %v\n", err)
+		fmt.Printf("[PostSlip] {Submit Excuse Slip}: %v\n", err)
+		errStr := err.Error()
+		if strings.Contains(errStr, "invalid") ||
+			strings.Contains(errStr, "too large") ||
+			strings.Contains(errStr, "cannot") ||
+			strings.Contains(errStr, "absence date") ||
+			strings.Contains(errStr, "limit") ||
+			strings.Contains(errStr, "offline") ||
+			strings.Contains(errStr, "OCR") {
+			response.SendFail(c, gin.H{"error": errStr})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to submit slip",
@@ -113,10 +125,7 @@ func (h *Handler) PostSlip(c *gin.Context) {
 		return
 	}
 
-	response.SendSuccess(c, gin.H{
-		"message": "Excuse slip submitted successfully",
-		"slipId":  slip.ID,
-	}, http.StatusCreated)
+	response.SendSuccess(c, slip, http.StatusCreated)
 }
 
 // GetUrgentSlipList godoc
@@ -127,7 +136,7 @@ func (h *Handler) PostSlip(c *gin.Context) {
 // @Success      200  {object} map[string]interface{}
 // @Failure      500  {object} map[string]string
 // @Router       /slips/urgent [get]
-func (h *Handler) GetSlipUrgent(c *gin.Context) {
+func (h *Handler) GetUrgentSlips(c *gin.Context) {
 	var req ListSlipsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		response.SendFail(c, gin.H{"error": "Invalid query parameters"})
@@ -136,7 +145,7 @@ func (h *Handler) GetSlipUrgent(c *gin.Context) {
 
 	slips, err := h.service.GetUrgentSlips(c.Request.Context(), &req)
 	if err != nil {
-		fmt.Printf("[GetSlipUrgent] {Fetch Slips}: %v\n", err)
+		fmt.Printf("[GetUrgentSlips] {Fetch Slips}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve slips",
@@ -303,7 +312,7 @@ func (h *Handler) GetSlips(c *gin.Context) {
 // @Failure      403  {object} map[string]string
 // @Failure      500  {object} map[string]string
 // @Router       /slips/me [get]
-func (h *Handler) GetSlipMe(c *gin.Context) {
+func (h *Handler) GetSlipsMe(c *gin.Context) {
 	iirID, ok := getIIRIDFromContext(c)
 	if !ok {
 		return
@@ -315,9 +324,13 @@ func (h *Handler) GetSlipMe(c *gin.Context) {
 		return
 	}
 
-	slips, err := h.service.GetExcuseSlipsByIIRID(c.Request.Context(), iirID, req)
+	slips, err := h.service.GetExcuseSlipsByIIRID(
+		c.Request.Context(),
+		iirID,
+		req,
+	)
 	if err != nil {
-		fmt.Printf("[GetSlipMe] {Fetch Slips}: %v\n", err)
+		fmt.Printf("[GetSlipsMe] {Fetch Slips}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve slips",
@@ -377,7 +390,10 @@ func (h *Handler) GetSlipByID(c *gin.Context) {
 // @Router       /slips/id/{id}/attachments [get]
 func (h *Handler) GetSlipAttachments(c *gin.Context) {
 	idParam := c.Param("slipID")
-	attachments, err := h.service.GetSlipAttachments(c.Request.Context(), idParam)
+	attachments, err := h.service.GetSlipAttachments(
+		c.Request.Context(),
+		idParam,
+	)
 	if err != nil {
 		fmt.Printf("[GetSlipAttachments] {Fetch Attachments}: %v\n", err)
 		response.SendError(
@@ -469,31 +485,42 @@ func (h *Handler) PatchSlip(c *gin.Context) {
 	}
 
 	var files []*multipart.FileHeader
-	fieldNames := []string{
-		"files",
-		"excuseLetter",
-		"parentId",
-		"medicalCert",
-	}
-	for _, field := range fieldNames {
+	var parentIdFiles []*multipart.FileHeader
+
+	for _, field := range []string{"files", "excuseLetter", "medicalCert"} {
 		if f := form.File[field]; len(f) > 0 {
 			files = append(files, f...)
 		}
 	}
+	if f := form.File["parentId"]; len(f) > 0 {
+		parentIdFiles = append(parentIdFiles, f...)
+	}
 
-	if len(files) == 0 {
+	if len(files) == 0 && len(parentIdFiles) == 0 {
 		response.SendFail(c, gin.H{"error": "At least one file required"})
 		return
 	}
 
 	slip, err := h.service.UpdateExcuseSlip(
-		c.Request.Context(), iirID, idParam, req, files,
+		c.Request.Context(), iirID, idParam, req, files, parentIdFiles,
 	)
 	if err != nil {
-		fmt.Printf("[PatchSlip] {Update Slip}: %v\n", err)
+		fmt.Printf("[PatchSlip] {Update Excuse Slip}: %v\n", err)
+		errStr := err.Error()
+		if strings.Contains(errStr, "invalid") ||
+			strings.Contains(errStr, "too large") ||
+			strings.Contains(errStr, "cannot") ||
+			strings.Contains(errStr, "absence date") ||
+			strings.Contains(errStr, "limit") ||
+			strings.Contains(errStr, "offline") ||
+			strings.Contains(errStr, "OCR") ||
+			strings.Contains(errStr, "access denied") {
+			response.SendFail(c, gin.H{"error": errStr})
+			return
+		}
 		response.SendError(
 			c,
-			err.Error(),
+			"Failed to update slip",
 			http.StatusInternalServerError,
 			nil,
 		)
@@ -545,4 +572,93 @@ func (h *Handler) PatchSlipStatus(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, gin.H{"message": "Status updated successfully"})
+}
+
+// PostClaimTicket godoc
+// @Summary      Claim/Verify a ticket
+// @Description  Allows a counselor to verify a student's ticket on-site.
+// @Tags         ExcuseSlips
+// @Accept       json
+// @Produce      json
+// @Param        body body      TicketClaimRequest  true  "Ticket code"
+// @Success      200  {object} map[string]string
+// @Failure      400  {object} map[string]string
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /slips/tickets/claim [post]
+func (h *Handler) PostClaimTicket(c *gin.Context) {
+	var req TicketClaimRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Printf("[PostClaimTicket] {Bind Request}: %v\n", err)
+		response.SendFail(c, gin.H{"error": "Invalid request format"})
+		return
+	}
+
+	userID := c.GetString("userID")
+	err := h.service.ClaimTicket(c.Request.Context(), req.TicketCode, userID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			response.SendFail(
+				c,
+				gin.H{"error": "Ticket not found"},
+				http.StatusNotFound,
+			)
+			return
+		}
+		if strings.Contains(err.Error(), "already verified") {
+			response.SendFail(c, gin.H{"error": err.Error()})
+			return
+		}
+		fmt.Printf("[PostClaimTicket] {Claim Ticket}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to claim ticket",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{"message": "Ticket verified successfully"})
+}
+
+// GetTicketDetails godoc
+// @Summary      Get slip details by ticket code
+// @Description  Allows a counselor to view slip details before verification.
+// @Tags         ExcuseSlips
+// @Produce      json
+// @Param        code path      string  true  "Ticket code"
+// @Success      200  {object} Slip
+// @Failure      404  {object} map[string]string
+// @Failure      500  {object} map[string]string
+// @Router       /slips/tickets/{code} [get]
+func (h *Handler) GetTicketDetails(c *gin.Context) {
+	code := c.Param("code")
+	if code == "" {
+		response.SendFail(c, gin.H{"error": "Ticket code is required"})
+		return
+	}
+
+	slip, err := h.service.GetSlipByTicketCode(c.Request.Context(), code)
+	if err != nil {
+		fmt.Printf("[GetTicketDetails] {Get Slip}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to get ticket details",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	if slip == nil {
+		response.SendFail(
+			c,
+			gin.H{"error": "Ticket not found"},
+			http.StatusNotFound,
+		)
+		return
+	}
+
+	response.SendSuccess(c, slip)
 }

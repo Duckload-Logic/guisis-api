@@ -22,13 +22,13 @@ const (
 const appointmentsBaseQuery = `
 	SELECT
 		a.id,
-		u.id AS user_id,
-		ir.id AS iir_id,
-		spi.student_number AS student_number,
-		u.first_name AS user_first_name,
+		COALESCE(u.id, '') AS user_id,
+		COALESCE(ir.id, '') AS iir_id,
+		COALESCE(spi.student_number, '') AS student_number,
+		COALESCE(u.first_name, '') AS user_first_name,
 		u.middle_name AS user_middle_name,
-		u.last_name AS user_last_name,
-		u.email AS user_email,
+		COALESCE(u.last_name, '') AS user_last_name,
+		COALESCE(u.email, '') AS user_email,
 		a.reason AS reason,
 		a.admin_notes AS admin_notes,
 		DATE_FORMAT(a.when_date, '%Y-%m-%d') AS when_date,
@@ -40,13 +40,12 @@ const appointmentsBaseQuery = `
 		ac.name AS category_name,
 		as2.id AS status_id,
 		as2.name AS status_name,
-		as2.color_key AS status_color_key,
 		a.urgency_level AS urgency_level,
 		a.urgency_score AS urgency_score
 	FROM appointments a
-	JOIN iir_records ir ON a.iir_id = ir.id
-	JOIN users u ON ir.user_id = u.id
-	JOIN student_personal_info spi ON ir.id = spi.iir_id
+	LEFT JOIN iir_records ir ON a.iir_id = ir.id
+	LEFT JOIN users u ON ir.user_id = u.id
+	LEFT JOIN student_personal_info spi ON ir.id = spi.iir_id
 	JOIN time_slots ts ON a.time_slot_id = ts.id
 	JOIN appointment_categories ac ON
 		a.appointment_category_id = ac.id
@@ -68,21 +67,6 @@ func (r *Repository) GetDB() *sqlx.DB {
 	return r.db
 }
 
-func (r *Repository) GetTimeSlots(
-	ctx context.Context,
-	date string,
-) ([]TimeSlot, error) {
-	query := `SELECT id, time FROM time_slots`
-
-	var slots []TimeSlot
-	err := r.db.SelectContext(ctx, &slots, query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get time slots: %w", err)
-	}
-
-	return slots, nil
-}
-
 func (r *Repository) GetCategories(
 	ctx context.Context,
 ) ([]AppointmentCategory, error) {
@@ -99,6 +83,7 @@ func (r *Repository) GetCategories(
 
 func (r *Repository) GetAppointment(
 	ctx context.Context,
+	db datastore.DB,
 	id string,
 ) (*AppointmentWithDetailsView, error) {
 	query := fmt.Sprintf(`
@@ -107,7 +92,7 @@ func (r *Repository) GetAppointment(
 	`, appointmentsBaseQuery)
 
 	var appt AppointmentWithDetailsView
-	err := r.db.GetContext(ctx, &appt, query, id)
+	err := db.GetContext(ctx, &appt, query, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -247,7 +232,7 @@ func (r *Repository) List(
 	}
 
 	query += fmt.Sprintf(
-		" ORDER BY a.%s LIMIT %d OFFSET %d",
+		" ORDER BY a.%s DESC LIMIT %d OFFSET %d",
 		orderBy,
 		limit,
 		offset,
@@ -307,7 +292,7 @@ func (r *Repository) GetStatusByID(
 	id int,
 ) (*AppointmentStatus, error) {
 	query := `
-		SELECT id, name, color_key
+		SELECT id, name
 		FROM statuses
 		WHERE status_type IN ('appointment', 'both')
 		AND id = ?
@@ -321,7 +306,6 @@ func (r *Repository) GetStatusByID(
 
 	return &status, nil
 }
-
 func (r *Repository) IsSlotAvailableForUpdate(
 	ctx context.Context,
 	tx datastore.DB,
@@ -372,7 +356,7 @@ func (r *Repository) GetStatuses(
 	ctx context.Context,
 ) ([]AppointmentStatus, error) {
 	query := `
-		SELECT id, name, color_key
+		SELECT id, name
 		FROM statuses
 		WHERE status_type IN ('appointment', 'both')
 	`
@@ -402,7 +386,7 @@ func (r *Repository) ListByUserID(
 	)
 
 	query += fmt.Sprintf(
-		" ORDER BY a.%s LIMIT %d OFFSET %d",
+		" ORDER BY a.%s DESC LIMIT %d OFFSET %d",
 		orderBy,
 		limit,
 		offset,
@@ -416,7 +400,6 @@ func (r *Repository) ListByUserID(
 
 	return appts, nil
 }
-
 func (r *Repository) ListByIIRID(
 	ctx context.Context,
 	iirID string,
@@ -434,7 +417,7 @@ func (r *Repository) ListByIIRID(
 	)
 
 	query += fmt.Sprintf(
-		" ORDER BY a.%s LIMIT %d OFFSET %d",
+		" ORDER BY a.%s DESC LIMIT %d OFFSET %d",
 		orderBy,
 		limit,
 		offset,
@@ -502,7 +485,7 @@ func (r *Repository) CreateAppointment(
 	ctx context.Context,
 	tx datastore.DB,
 	appt *Appointment,
-) error {
+) (*AppointmentWithDetailsView, error) {
 	query := `
 		INSERT INTO appointments (
 			id, iir_id, reason, admin_notes, when_date,
@@ -517,9 +500,15 @@ func (r *Repository) CreateAppointment(
 
 	_, err := tx.NamedExecContext(ctx, query, appt)
 	if err != nil {
-		return fmt.Errorf("failed to create appointment: %w", err)
+		return nil, fmt.Errorf("failed to create appointment: %w", err)
 	}
-	return nil
+
+	newAppt, err := r.GetAppointment(ctx, tx, appt.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get created appointment: %w", err)
+	}
+
+	return newAppt, nil
 }
 
 func (r *Repository) UpdateAppointment(
@@ -567,4 +556,3 @@ func (r *Repository) UpdateAppointment(
 	_, err := tx.ExecContext(ctx, query, args...)
 	return err
 }
-

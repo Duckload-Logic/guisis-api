@@ -22,26 +22,28 @@ type ListStudentsResponse struct {
 }
 
 type StudentProfileDTO struct {
-	IIRID         string                 `json:"iirId"`
-	UserID        string                 `json:"userId"`
-	FirstName     string                 `json:"firstName"`
-	MiddleName    structs.NullableString `json:"middleName,omitempty"`
-	LastName      string                 `json:"lastName"`
-	SuffixName    structs.NullableString `json:"suffixName,omitempty"`
-	Gender        Gender                 `json:"gender"`
-	Email         string                 `json:"email"`
-	StudentNumber string                 `json:"studentNumber"`
-	Course        Course                 `json:"course"`
-	Section       int                    `json:"section"`
-	YearLevel     int                    `json:"yearLevel"`
-	Status        StudentStatus          `json:"status"`
-	StudentCORURL string                 `json:"studentCorUrl,omitempty"`
+	IIRID             string                 `json:"iirId"`
+	UserID            string                 `json:"userId"`
+	FirstName         string                 `json:"firstName"`
+	MiddleName        structs.NullableString `json:"middleName,omitempty"`
+	LastName          string                 `json:"lastName"`
+	SuffixName        structs.NullableString `json:"suffixName,omitempty"`
+	Gender            Gender                 `json:"gender"`
+	Email             string                 `json:"email"`
+	StudentNumber     string                 `json:"studentNumber"`
+	Course            Course                 `json:"course"`
+	Section           int                    `json:"section"`
+	YearLevel         int                    `json:"yearLevel"`
+	Status            StudentStatus          `json:"status"`
+	StudentCORURL     string                 `json:"studentCorUrl,omitempty"`
+	IsStudentCORValid bool                   `json:"isStudentCorValid"`
 }
 
 type ComprehensiveProfileDTO struct {
-	IIRID         string `json:"iirId,omitempty"`
-	StudentCORURL string `json:"studentCorUrl,omitempty"`
-	Student struct {
+	IIRID             string `json:"iirId,omitempty"`
+	StudentCORURL     string `json:"studentCorUrl,omitempty"`
+	IsStudentCORValid bool   `json:"isStudentCorValid"`
+	Student           struct {
 		BasicInfo              StudentBasicInfoViewDTO `json:"basicInfo"`
 		StudentPersonalInfoDTO `json:"personalInfo"`
 		Addresses              []StudentAddressDTO `json:"addresses"`
@@ -83,29 +85,31 @@ type StudentBasicInfoViewDTO struct {
 }
 
 type StudentPersonalInfoDTO struct {
-	ID               int                    `json:"id,omitempty"`
-	IIRID            string                 `json:"iirId,omitempty"`
-	StudentNumber    string                 `json:"studentNumber"              binding:"required"`
-	Gender           Gender                 `json:"gender"                     binding:"required"`
-	CivilStatus      CivilStatusType        `json:"civilStatus"                binding:"required"`
-	Religion         Religion               `json:"religion"                   binding:"required"`
-	HeightM          float64                `json:"heightM"                   binding:"required"`
-	WeightKg         float64                `json:"weightKg"                   binding:"required"`
-	Complexion       string                 `json:"complexion"                 binding:"required"`
-	HighSchoolGWA    float64                `json:"highSchoolGWA"              binding:"required"`
-	Course           Course                 `json:"course"                     binding:"required"`
-	YearLevel        int                    `json:"yearLevel"                  binding:"required"`
-	Section          int                    `json:"section"                    binding:"required"`
-	PlaceOfBirth     string                 `json:"placeOfBirth"               binding:"required"`
-	DateOfBirth      string                 `json:"dateOfBirth"                binding:"required"`
-	IsEmployed       bool                   `json:"isEmployed"`
-	EmployerName     structs.NullableString `json:"employerName,omitempty"`
-	EmployerAddress  structs.NullableString `json:"employerAddress,omitempty"`
-	MobileNumber     string                 `json:"mobileNumber"               binding:"required"`
-	TelephoneNumber  structs.NullableString `json:"telephoneNumber,omitempty"`
-	Status           StudentStatus          `json:"status"                     binding:"required"`
-	GraduationYear   *int                   `json:"graduationYear,omitempty"`
-	EmergencyContact EmergencyContactDTO    `json:"emergencyContact,omitempty"`
+	ID                    int                    `json:"id,omitempty"`
+	IIRID                 string                 `json:"iirId,omitempty"`
+	StudentNumber         string                 `json:"studentNumber"                   binding:"required"`
+	Gender                Gender                 `json:"gender"                          binding:"required"`
+	CivilStatus           CivilStatusType        `json:"civilStatus"                     binding:"required"`
+	Religion              Religion               `json:"religion"                        binding:"required"`
+	HeightM               float64                `json:"heightM"                         binding:"required"`
+	WeightKg              float64                `json:"weightKg"                        binding:"required"`
+	Complexion            string                 `json:"complexion"                      binding:"required"`
+	HighSchoolGWA         float64                `json:"highSchoolGWA"                   binding:"required"`
+	Course                Course                 `json:"course"                          binding:"required"`
+	YearLevel             int                    `json:"yearLevel"                       binding:"required"`
+	Section               int                    `json:"section"                         binding:"required"`
+	PlaceOfBirth          string                 `json:"placeOfBirth"                    binding:"required"`
+	DateOfBirth           string                 `json:"dateOfBirth"                     binding:"required"`
+	IsEmployed            bool                   `json:"isEmployed"`
+	EmployerName          structs.NullableString `json:"employerName,omitempty"`
+	EmployerAddress       structs.NullableString `json:"employerAddress,omitempty"`
+	MobileNumber          string                 `json:"mobileNumber"                    binding:"required"`
+	TelephoneNumber       structs.NullableString `json:"telephoneNumber,omitempty"`
+	EmployerContactNumber structs.NullableString `json:"employerContactNumber,omitempty"`
+	OtherReligionText     structs.NullableString `json:"otherReligionText"`
+	Status                StudentStatus          `json:"status"                          binding:"required"`
+	GraduationYear        *int                   `json:"graduationYear,omitempty"`
+	EmergencyContact      EmergencyContactDTO    `json:"emergencyContact,omitempty"`
 }
 
 type BulkUpdateStatusRequest struct {
@@ -161,21 +165,37 @@ type SchoolDetailsDTO struct {
 	Awards           structs.NullableString `json:"awards,omitempty"`
 }
 
+type RelType = StudentRelationshipType
+type EduAttain = EducationalAttainment
+
 type RelatedPersonDTO struct {
-	ID               int                     `json:"id,omitempty"`
-	LastName         string                  `json:"lastName"                  binding:"required"`
-	FirstName        string                  `json:"firstName"                 binding:"required"`
-	MiddleName       structs.NullableString  `json:"middleName,omitempty"`
-	SuffixName       structs.NullableString  `json:"suffixName,omitempty"`
-	DateOfBirth      string                  `json:"dateOfBirth,omitempty"     binding:"omitempty"`
-	EducationalLevel string                  `json:"educationalLevel"`
-	Occupation       structs.NullableString  `json:"occupation,omitempty"`
-	EmployerName     structs.NullableString  `json:"employerName,omitempty"`
-	EmployerAddress  structs.NullableString  `json:"employerAddress,omitempty"`
-	Relationship     StudentRelationshipType `json:"relationship"              binding:"required"`
-	IsParent         bool                    `json:"isParent"`
-	IsGuardian       bool                    `json:"isGuardian"`
-	IsLiving         bool                    `json:"isLiving"`
+	ID int `json:"id,omitempty"`
+
+	LastName string `json:"lastName" binding:"omitempty"`
+
+	FirstName string `json:"firstName" binding:"omitempty"`
+
+	MiddleName structs.NullableString `json:"middleName,omitempty"`
+
+	SuffixName structs.NullableString `json:"suffixName,omitempty"`
+
+	DateOfBirth string `json:"dateOfBirth,omitempty" binding:"omitempty"`
+
+	EducationalAttainment EduAttain `json:"educationalAttainment"`
+
+	Occupation structs.NullableString `json:"occupation,omitempty"`
+
+	EmployerName structs.NullableString `json:"employerName,omitempty"`
+
+	EmployerAddress structs.NullableString `json:"employerAddress,omitempty"`
+
+	Relationship RelType `json:"relationship" binding:"omitempty"`
+
+	IsParent bool `json:"isParent"`
+
+	IsGuardian bool `json:"isGuardian"`
+
+	IsLiving bool `json:"isLiving"`
 }
 
 type FamilyBackgroundDTO struct {
@@ -205,22 +225,24 @@ type EducationalBGDTO struct {
 
 type StudentFinanceDTO struct {
 	ID                       int                    `json:"id,omitempty"`
-	MonthlyFamilyIncomeRange IncomeRange            `json:"monthlyFamilyIncomeRange"     binding:"required"`
+	MonthlyFamilyIncomeRange IncomeRange            `json:"monthlyFamilyIncomeRange"        binding:"required"`
 	OtherIncomeDetails       structs.NullableString `json:"otherIncomeDetails,omitempty"`
-	FinancialSupportTypes    []StudentSupportType   `json:"financialSupportTypes"        binding:"required"`
-	WeeklyAllowance          float64                `json:"weeklyAllowance"              binding:"required"`
+	FinancialSupportTypes    []StudentSupportType   `json:"financialSupportTypes,omitempty"`
+	WeeklyAllowance          float64                `json:"weeklyAllowance"                 binding:"required"`
 }
 
 type StudentHealthRecordDTO struct {
-	ID                      int                    `json:"id,omitempty"`
-	VisionHasProblem        bool                   `json:"visionHasProblem"`
-	VisionDetails           structs.NullableString `json:"visionDetails,omitempty"`
-	HearingHasProblem       bool                   `json:"hearingHasProblem"`
-	HearingDetails          structs.NullableString `json:"hearingDetails,omitempty"`
-	SpeechHasProblem        bool                   `json:"speechHasProblem"`
-	SpeechDetails           structs.NullableString `json:"speechDetails,omitempty"`
-	GeneralHealthHasProblem bool                   `json:"generalHealthHasProblem"`
-	GeneralHealthDetails    structs.NullableString `json:"generalHealthDetails,omitempty"`
+	ID                        int                    `json:"id,omitempty"`
+	VisionHasProblem          bool                   `json:"visionHasProblem"`
+	VisionDetails             structs.NullableString `json:"visionDetails,omitempty"`
+	HearingHasProblem         bool                   `json:"hearingHasProblem"`
+	HearingDetails            structs.NullableString `json:"hearingDetails,omitempty"`
+	SpeechHasProblem          bool                   `json:"speechHasProblem"`
+	SpeechDetails             structs.NullableString `json:"speechDetails,omitempty"`
+	GeneralHealthHasProblem   bool                   `json:"generalHealthHasProblem"`
+	GeneralHealthDetails      structs.NullableString `json:"generalHealthDetails,omitempty"`
+	MentalEmotionalHasProblem bool                   `json:"mentalEmotionalHasProblem"`
+	MentalEmotionalDetails    structs.NullableString `json:"mentalEmotionalDetails,omitempty"`
 }
 
 type StudentConsultationDTO struct {
@@ -258,4 +280,261 @@ type TestResultDTO struct {
 	RawScore    string `json:"rawScore"              binding:"required"`
 	Percentile  string `json:"percentile"            binding:"required"`
 	Description string `json:"description,omitempty"`
+}
+
+// UpdateAcademicSettingDTO is the request body for the SuperAdmin-only
+// PUT /students/settings/academic endpoint.
+type UpdateAcademicSettingDTO struct {
+	CurrentYearStart int `json:"currentYearStart" binding:"required,min=1900,max=2100"`
+	CurrentYearEnd   int `json:"currentYearEnd"   binding:"required,min=1900,max=2100"`
+	CurrentTerm      int `json:"currentTerm"      binding:"required,min=1,max=3"`
+}
+
+// ============================================================================
+// DTO Mappings / ToDTO Receivers
+// ============================================================================
+
+// ToDTO converts a StudentProfileView database model to a StudentProfileDTO.
+func (st *StudentProfileView) ToDTO() StudentProfileDTO {
+	return StudentProfileDTO{
+		IIRID:      st.IIRID,
+		UserID:     st.UserID,
+		FirstName:  st.FirstName,
+		MiddleName: st.MiddleName,
+		LastName:   st.LastName,
+		SuffixName: st.SuffixName,
+		Gender: Gender{
+			ID:   st.GenderID,
+			Name: st.GenderName,
+		},
+		Email:         st.Email,
+		StudentNumber: st.StudentNumber,
+		Course: Course{
+			ID:   st.CourseID,
+			Code: st.CourseCode,
+			Name: st.CourseName,
+		},
+		Section:   st.Section,
+		YearLevel: st.YearLevel,
+		Status: StudentStatus{
+			ID:   st.StatusID,
+			Name: st.StatusName,
+		},
+	}
+}
+
+// ToDTO converts a StudentPersonalInfoView to StudentPersonalInfoDTO.
+func (view *StudentPersonalInfoView) ToDTO(
+	emergencyAddr locations.AddressDTO,
+) *StudentPersonalInfoDTO {
+	statusDTO := StudentStatus{
+		ID:   view.StatusID,
+		Name: view.StatusName,
+	}
+
+	var gradYear *int
+	if view.GraduationYear.Valid {
+		gy := int(view.GraduationYear.Int64)
+		gradYear = &gy
+	}
+
+	return &StudentPersonalInfoDTO{
+		ID:            view.ID,
+		IIRID:         view.IIRID,
+		StudentNumber: view.StudentNumber,
+		Gender: Gender{
+			ID:   view.GenderID,
+			Name: view.GenderName,
+		},
+		CivilStatus: CivilStatusType{
+			ID:   view.CivilStatusID,
+			Name: view.CivilStatusName,
+		},
+		Religion: Religion{
+			ID:   view.ReligionID,
+			Name: view.ReligionName,
+		},
+		HeightM:       view.HeightM,
+		WeightKg:      view.WeightKg,
+		Complexion:    view.Complexion,
+		HighSchoolGWA: view.HighSchoolGWA,
+		Course: Course{
+			ID:   view.CourseID,
+			Code: view.CourseCode,
+			Name: view.CourseName,
+		},
+		YearLevel:             view.YearLevel,
+		Section:               view.Section,
+		PlaceOfBirth:          view.PlaceOfBirth,
+		DateOfBirth:           view.DateOfBirth,
+		TelephoneNumber:       view.TelephoneNumber,
+		MobileNumber:          view.MobileNumber,
+		IsEmployed:            view.IsEmployed,
+		EmployerName:          view.EmployerName,
+		EmployerAddress:       view.EmployerAddress,
+		EmployerContactNumber: view.EmployerContactNumber,
+		OtherReligionText:     view.OtherReligionText,
+		Status:                statusDTO,
+		GraduationYear:        gradYear,
+		EmergencyContact: EmergencyContactDTO{
+			ID:            view.EmergencyID,
+			FirstName:     view.EmergencyFirstName,
+			MiddleName:    view.EmergencyMiddleName,
+			LastName:      view.EmergencyLastName,
+			ContactNumber: view.EmergencyContactNumber,
+			Relationship: StudentRelationshipType{
+				ID:   view.EmergencyRelationshipID,
+				Name: view.EmergencyRelationshipName,
+			},
+			Address: emergencyAddr,
+		},
+	}
+}
+
+// ToDTO converts a RelatedPersonView to RelatedPersonDTO.
+func (view *RelatedPersonView) ToDTO() RelatedPersonDTO {
+	return RelatedPersonDTO{
+		ID: view.ID,
+		EducationalAttainment: EducationalAttainment{
+			ID:   view.EducationalAttainmentID,
+			Name: view.EducationalAttainmentName,
+		},
+		DateOfBirth:     view.DateOfBirth,
+		LastName:        view.LastName,
+		FirstName:       view.FirstName,
+		MiddleName:      view.MiddleName,
+		SuffixName:      view.SuffixName,
+		Occupation:      view.Occupation,
+		EmployerName:    view.EmployerName,
+		EmployerAddress: view.EmployerAddress,
+		Relationship: StudentRelationshipType{
+			ID:   view.RelationshipID,
+			Name: view.RelationshipName,
+		},
+		IsParent:   view.IsParent,
+		IsGuardian: view.IsGuardian,
+		IsLiving:   view.IsLiving,
+	}
+}
+
+// ToDTO converts a StudentFinanceView to StudentFinanceDTO.
+func (view *StudentFinanceView) ToDTO(
+	supports []StudentSupportType,
+) StudentFinanceDTO {
+	return StudentFinanceDTO{
+		ID: view.ID,
+		MonthlyFamilyIncomeRange: IncomeRange{
+			ID:   view.IncomeRangeID,
+			Text: view.IncomeRangeText,
+		},
+		OtherIncomeDetails:    view.OtherIncome,
+		WeeklyAllowance:       view.WeeklyAllowance,
+		FinancialSupportTypes: supports,
+	}
+}
+
+// ToDTO converts a StudentHealthRecord to StudentHealthRecordDTO.
+func (hr *StudentHealthRecord) ToDTO() StudentHealthRecordDTO {
+	return StudentHealthRecordDTO{
+		ID:                        hr.ID,
+		VisionHasProblem:          hr.VisionHasProblem,
+		VisionDetails:             hr.VisionDetails,
+		HearingHasProblem:         hr.HearingHasProblem,
+		HearingDetails:            hr.HearingDetails,
+		SpeechHasProblem:          hr.SpeechHasProblem,
+		SpeechDetails:             hr.SpeechDetails,
+		GeneralHealthHasProblem:   hr.GeneralHealthHasProblem,
+		GeneralHealthDetails:      hr.GeneralHealthDetails,
+		MentalEmotionalHasProblem: hr.MentalEmotionalHasProblem,
+		MentalEmotionalDetails:    hr.MentalEmotionalDetails,
+	}
+}
+
+// ToDTO converts a StudentAddress model and address DTO to StudentAddressDTO.
+func (addr *StudentAddress) ToDTO(
+	addrDTO locations.AddressDTO,
+) StudentAddressDTO {
+	return StudentAddressDTO{
+		ID:          addr.ID,
+		Address:     addrDTO,
+		AddressType: addr.AddressType,
+		CreatedAt:   addr.CreatedAt,
+		UpdatedAt:   addr.UpdatedAt,
+	}
+}
+
+// ToDTO converts FamilyBackground to FamilyBackgroundDTO.
+func (fb *FamilyBackground) ToDTO(
+	parentalStatus ParentalStatusType,
+	natureOfResidence NatureOfResidenceType,
+	siblingSupports []SibilingSupportType,
+) FamilyBackgroundDTO {
+	return FamilyBackgroundDTO{
+		ID:                    fb.ID,
+		ParentalStatus:        parentalStatus,
+		ParentalStatusDetails: fb.ParentalStatusDetails,
+		Brothers:              &fb.Brothers,
+		Sisters:               &fb.Sisters,
+		EmployedSiblings:      &fb.EmployedSiblings,
+		OrdinalPosition:       fb.OrdinalPosition,
+		HaveQuietPlaceToStudy: fb.HaveQuietPlaceToStudy,
+		IsSharingRoom:         fb.IsSharingRoom,
+		SiblingSupportTypes:   siblingSupports,
+		RoomSharingDetails:    fb.RoomSharingDetails,
+		NatureOfResidence:     natureOfResidence,
+	}
+}
+
+// ToDTO converts StudentConsultation to StudentConsultationDTO.
+func (c *StudentConsultation) ToDTO() StudentConsultationDTO {
+	return StudentConsultationDTO{
+		ID:               c.ID,
+		ProfessionalType: c.ProfessionalType,
+		HasConsulted:     c.HasConsulted,
+		WhenDate:         c.WhenDate,
+		ForWhat:          c.ForWhat,
+	}
+}
+
+// ToDTO converts StudentActivity to StudentActivityDTO.
+func (a *StudentActivity) ToDTO(
+	option ActivityOption,
+) StudentActivityDTO {
+	return StudentActivityDTO{
+		ID:                 a.ID,
+		ActivityOption:     option,
+		OtherSpecification: a.OtherSpecification,
+		Role:               a.Role,
+		RoleSpecification:  a.RoleSpecification,
+	}
+}
+
+// ToDTO converts StudentSubjectPreference to StudentSubjectPreferenceDTO.
+func (p *StudentSubjectPreference) ToDTO() StudentSubjectPreferenceDTO {
+	return StudentSubjectPreferenceDTO{
+		ID:          p.ID,
+		SubjectName: p.SubjectName,
+		IsFavorite:  p.IsFavorite,
+	}
+}
+
+// ToDTO converts StudentHobby to StudentHobbyDTO.
+func (h *StudentHobby) ToDTO() StudentHobbyDTO {
+	return StudentHobbyDTO{
+		ID:           h.ID,
+		HobbyName:    h.HobbyName,
+		PriorityRank: h.PriorityRank,
+	}
+}
+
+// ToDTO converts TestResult to TestResultDTO.
+func (r *TestResult) ToDTO() TestResultDTO {
+	return TestResultDTO{
+		ID:          r.ID,
+		TestDate:    r.TestDate,
+		TestName:    r.TestName,
+		RawScore:    r.RawScore,
+		Percentile:  r.Percentile,
+		Description: r.Description,
+	}
 }

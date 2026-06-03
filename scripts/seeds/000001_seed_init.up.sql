@@ -10,18 +10,6 @@ VALUES
     (3, 'SUPERADMIN'),
     (4, 'DEVELOPER');
 
-INSERT INTO enrollment_reasons (id, reason_text) VALUES
-    (1, 'Lower tuition fee'),
-    (2, 'Safety of the place'),
-    (3, 'Spacious Campus'),
-    (4, 'Nearness of home to school'),
-    (5, 'Accessible to transportation'),
-    (6, 'Better quality of education'),
-    (7, 'Adequate School Facilities'),
-    (8, 'Son / Daughter of PUP Employee'),
-    (9, 'Closer Student-Faculty Relations'),
-    (10, 'Expecting Scholarship Offer');
-
 INSERT INTO student_support_types (support_type_name) VALUES
     ('Parents'),
     ('Brother/Sister'),
@@ -52,7 +40,8 @@ INSERT INTO parental_status_types (id, status_name) VALUES
 INSERT INTO educational_levels (level_name) VALUES
     ('Pre-Elementary'),
     ('Elementary'),
-    ('High School'),
+    ('Junior High School'),
+    ('Senior High School'),
     ('Vocational'),
     ('College');
 
@@ -79,11 +68,16 @@ INSERT INTO civil_status_types (id, status_name) VALUES
 INSERT INTO student_relationship_types (relationship_name) VALUES
     ('Father'),
     ('Mother'),
-    ('Guardian'),
-    ('Relative'),
+    ('Uncle'),
+    ('Auntie'),
+    ('Brother'),
+    ('Sister'),
+    ('Grandmother'),
+    ('Grandfather'),
+    ('Cousin'),
+    ('Legal Guardian'),
     ('Friend'),
-    ('Spouse'),
-    ('Other');
+    ('Other relative');
 
 INSERT INTO nature_of_residence_types (residence_type_name) VALUES
     ('Family home'),
@@ -101,16 +95,16 @@ INSERT INTO religions (religion_name) VALUES
     ('Iglesia ni Cristo'),
     ('Islam/Muslim'),
     ('Protestant'),
-    ('MCGI'),
-    ('Jehovah’s Witness'),
+    ('Members Church of God International'),
+    ("Jehovah's Witness"),
     ('Seventh-Day Adventist'),
     ('Mormons/Latter-day Saints'),
     ('Apostolic'),
-    ('UCCP'),
-    ('COC'),
+    ('United Church of Christ in the Philippines'),
+    ('Church of Christ'),
     ('United Pentecostal'),
-    ('Other'),
-    ('Not Applicable');
+    ('Others'),
+    ('Not Indicated');
 
 INSERT INTO sibling_support_types (`name`) VALUES
     ('Family'),
@@ -128,7 +122,8 @@ INSERT INTO activity_options (`name`, category) VALUES
     ('Chess Club', 'extra_curricular'),
     ('Glee Club', 'extra_curricular'),
     ('Scouting', 'extra_curricular'),
-    ("Others", 'both');
+    ('Others', 'academic'),
+    ('Others', 'extra_curricular');
 
 INSERT INTO appointment_categories (id, name) VALUES
     (1, 'Academic'),
@@ -136,24 +131,26 @@ INSERT INTO appointment_categories (id, name) VALUES
     (3, 'Personal'),
     (4, 'Career Guidance'),
     (5, 'Mental Health'),
-    (6, 'Other');
+    (6, 'Psychological Testing'),
+    (7, 'Other');
 
 INSERT INTO admission_slip_categories (id, name) VALUES
     (1, 'Medical'),
     (2, 'Personal'),
     (3, 'Family-related'),
-    (4, 'Other');
+    (4, 'Scholarship'),
+    (5, 'Other');
 
-INSERT INTO statuses (id, name, color_key, status_type) VALUES
-    (1, 'Pending', 'warning', 'both'), -- Orange
-    (2, 'Scheduled', 'info', 'appointment'), -- Blue
-    (3, 'Completed', 'success', 'appointment'), -- Green
-    (4, 'Cancelled', 'danger', 'appointment'), -- Red
-    (5, 'Rejected', 'danger', 'both'), -- Red
-    (6, 'Rescheduled', 'notice', 'appointment'), -- Orange
-    (7, 'No-show', 'stale', 'appointment'), -- Gray
-    (8, 'Approved', 'success', 'slip'), -- Green
-    (9, 'For Revision', 'notice', 'slip'); -- Red
+INSERT INTO statuses (id, name, status_type) VALUES
+    (1, 'Pending', 'both'),
+    (2, 'Scheduled', 'appointment'),
+    (3, 'Completed',  'appointment'),
+    (4, 'Cancelled', 'appointment'),
+    (5, 'Rejected', 'both'),
+    (6, 'Rescheduled', 'appointment'),
+    (7, 'No-show', 'appointment'),
+    (8, 'Approved', 'slip'),
+    (9, 'For Revision', 'slip');
 
 INSERT INTO time_slots (id, time) VALUES
     (1, '08:00:00'),
@@ -163,12 +160,4 @@ INSERT INTO time_slots (id, time) VALUES
     (5, '13:00:00'),
     (6, '14:00:00'),
     (7, '15:00:00'),
-    (8, '16:00:00'),
-    (9, '17:00:00');
-
--- INSERT INTO appointment_types (id, appointment_type_name)
--- VALUES
---     (1, 'Initial Interview'),
---     (2, 'Mental Health Consultation'),
---     (3, 'Career Guidance'),
---     (4, 'Follow-up');
+    (8, '16:00:00');

@@ -1,6 +1,10 @@
 package middleware
 
-import "context"
+import (
+	"context"
+
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
+)
 
 // SecurityLogger is an interface for recording security log events.
 // This interface is implemented by logs.Service and is used to break
@@ -10,6 +14,7 @@ type SecurityLogger interface {
 		ctx context.Context,
 		action, message, userEmail, ipAddress, userAgent string,
 	)
+	RecordEntry(ctx context.Context, entry audit.LogEntry)
 }
 
 // SecurityLoggerContextKey is the gin context key used to store the security

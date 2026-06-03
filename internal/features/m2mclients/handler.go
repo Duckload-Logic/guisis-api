@@ -1,6 +1,7 @@
 package m2mclients
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -37,7 +38,8 @@ func (h *Handler) isAdmin(c *gin.Context) bool {
 	}
 
 	for _, id := range roleIDs {
-		if id == int(constants.SuperAdminRoleID) || id == int(constants.DeveloperRoleID) {
+		if id == int(constants.SuperAdminRoleID) ||
+			id == int(constants.DeveloperRoleID) {
 			return true
 		}
 	}
@@ -78,7 +80,11 @@ func (h *Handler) PostM2MToken(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.Authenticate(c.Request.Context(), req.ClientID, req.ClientSecret)
+	resp, err := h.service.Authenticate(
+		c.Request.Context(),
+		req.ClientID,
+		req.ClientSecret,
+	)
 	if err != nil {
 		response.SendError(c, err.Error(), http.StatusUnauthorized, nil)
 		return
@@ -104,7 +110,10 @@ func (h *Handler) PostM2MTokenRefresh(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.service.RefreshM2MToken(c.Request.Context(), req.RefreshToken)
+	resp, err := h.service.RefreshM2MToken(
+		c.Request.Context(),
+		req.RefreshToken,
+	)
 	if err != nil {
 		response.SendError(c, err.Error(), http.StatusUnauthorized, nil)
 		return
@@ -116,7 +125,10 @@ func (h *Handler) PostM2MTokenRefresh(c *gin.Context) {
 func (h *Handler) GetM2MClients(c *gin.Context) {
 	includeRevoked := c.Query("include_revoked")
 
-	clients, err := h.service.ListClients(c.Request.Context(), includeRevoked == "true")
+	clients, err := h.service.ListClients(
+		c.Request.Context(),
+		includeRevoked == "true",
+	)
 	if err != nil {
 		response.SendError(c, err.Error(), http.StatusInternalServerError, nil)
 		return
@@ -175,10 +187,48 @@ func (h *Handler) DeleteM2MClient(c *gin.Context) {
 
 func (h *Handler) PatchM2MClientVerify(c *gin.Context) {
 	id := c.Param("id")
-	err := h.service.Verify(c.Request.Context(), id)
+
+	var req struct {
+		HasPersonalInfoAccess bool `json:"hasPersonalInfoAccess"`
+	}
+	_ = c.ShouldBindJSON(&req)
+
+	err := h.service.Verify(
+		c.Request.Context(),
+		id,
+		req.HasPersonalInfoAccess,
+	)
 	if err != nil {
-		response.SendError(c, err.Error(), http.StatusInternalServerError, nil)
+		log.Printf(
+			"[PatchM2MClientVerify] {Verify M2M Client}: %v",
+			err,
+		)
+		response.SendError(
+			c,
+			err.Error(),
+			http.StatusInternalServerError,
+			nil,
+		)
 		return
 	}
 	response.SendSuccess(c, gin.H{"message": "Verified"})
+}
+
+func (h *Handler) PatchM2MClientReject(c *gin.Context) {
+	id := c.Param("id")
+	err := h.service.Reject(c.Request.Context(), id)
+	if err != nil {
+		log.Printf(
+			"[PatchM2MClientReject] {Reject M2M Client}: %v",
+			err,
+		)
+		response.SendError(
+			c,
+			err.Error(),
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+	response.SendSuccess(c, gin.H{"message": "Rejected"})
 }

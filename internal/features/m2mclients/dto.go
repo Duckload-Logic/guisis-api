@@ -9,6 +9,7 @@ type CreateM2MClientRequest struct {
 	ClientDescription string   `json:"clientDescription"   binding:"required"`
 	Scopes            []string `json:"scopes,omitempty"`
 	ExpiresAt         *string  `json:"expiresAt,omitempty"` // RFC3339 format, optional
+	HasPersonalInfoAccess bool `json:"hasPersonalInfoAccess"`
 }
 
 type ListM2MClientsRequest struct {
@@ -34,6 +35,7 @@ type M2MClientDTO struct {
 	Scopes            []string   `json:"scopes,omitempty"`
 	IsActive          bool       `json:"isActive"`
 	IsVerified        bool       `json:"isVerified"`
+	HasPersonalInfoAccess bool   `json:"hasPersonalInfoAccess"`
 	LastUsedAt        *time.Time `json:"lastUsedAt,omitempty"`
 	ExpiresAt         *time.Time `json:"expiresAt,omitempty"`
 	CreatedAt         time.Time  `json:"createdAt"`

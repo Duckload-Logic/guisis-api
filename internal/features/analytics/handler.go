@@ -16,7 +16,7 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-func (h *Handler) GetDashboard(c *gin.Context) {
+func (h *Handler) GetIIRAnalyticsReport(c *gin.Context) {
 	yearStr := c.DefaultQuery("year", "0")
 	courseIDStr := c.DefaultQuery("course_id", "0")
 
@@ -24,16 +24,16 @@ func (h *Handler) GetDashboard(c *gin.Context) {
 	fmt.Sscanf(yearStr, "%d", &year)
 	fmt.Sscanf(courseIDStr, "%d", &courseID)
 
-	dashboardData, err := h.service.GetDashboard(
+	dashboardData, err := h.service.GetIIRAnalyticsReport(
 		c.Request.Context(),
 		year,
 		courseID,
 	)
 	if err != nil {
-		fmt.Printf("[GetDashboard] {Fetch Data}: %v\n", err)
+		fmt.Printf("[GetIIRAnalyticsReport] {Fetch Data}: %v\n", err)
 		response.SendError(
 			c,
-			"Failed to generate analytics dashboard",
+			"Failed to generate analytics report",
 			http.StatusInternalServerError,
 			nil,
 		)
@@ -41,6 +41,38 @@ func (h *Handler) GetDashboard(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, dashboardData)
+}
+
+func (h *Handler) ExportIIRAnalyticsReport(c *gin.Context) {
+	yearStr := c.DefaultQuery("year", "0")
+	courseIDStr := c.DefaultQuery("course_id", "0")
+
+	var year, courseID int
+	fmt.Sscanf(yearStr, "%d", &year)
+	fmt.Sscanf(courseIDStr, "%d", &courseID)
+
+	pdfBytes, err := h.service.ExportIIRAnalyticsReport(
+		c.Request.Context(),
+		year,
+		courseID,
+	)
+	if err != nil {
+		fmt.Printf("[ExportIIRAnalyticsReport] {Generate PDF}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to export analytics report",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	c.Header("Content-Type", "application/pdf")
+	c.Header(
+		"Content-Disposition",
+		"attachment; filename=iir_analytics_report.pdf",
+	)
+	c.Data(http.StatusOK, "application/pdf", pdfBytes)
 }
 
 func (h *Handler) GetAdminDashboard(c *gin.Context) {

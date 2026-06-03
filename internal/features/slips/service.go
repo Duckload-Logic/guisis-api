@@ -12,12 +12,15 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/datetime"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
+	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/ocr"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/storage"
 )
 
@@ -26,33 +29,44 @@ type Service struct {
 	repo           *Repository
 	logService     audit.Logger
 	notifService   audit.Notifier
+	emailService   audit.Emailer
 	fileStorage    storage.FileStorage
 	userService    *users.Service
 	studentService *students.Service
 	filesService   *files.Service
+	ocrClient      *ocr.OCRClient
+	cfg            *config.Config
 }
 
 func NewService(
 	repo *Repository,
 	logService audit.Logger,
 	notifService audit.Notifier,
+	emailService audit.Emailer,
 	fileStorage storage.FileStorage,
 	userService *users.Service,
 	studentService *students.Service,
 	filesService *files.Service,
+	ocrClient *ocr.OCRClient,
+	cfg *config.Config,
 ) *Service {
 	return &Service{
 		repo:           repo,
 		logService:     logService,
 		notifService:   notifService,
+		emailService:   emailService,
 		fileStorage:    fileStorage,
 		userService:    userService,
 		studentService: studentService,
 		filesService:   filesService,
+		ocrClient:      ocrClient,
+		cfg:            cfg,
 	}
 }
 
-func (s *Service) GetSlipStatuses(ctx context.Context) ([]SlipStatus, error) {
+func (s *Service) GetSlipStatuses(
+	ctx context.Context,
+) ([]SlipStatus, error) {
 	statuses, err := s.repo.GetSlipStatuses(ctx)
 	if err != nil {
 		return nil, err
@@ -74,7 +88,7 @@ func (s *Service) GetSlipByID(
 	ctx context.Context,
 	id string,
 ) (*SlipDTO, error) {
-	slip, err := s.repo.GetSlipByIDWithDetails(ctx, id)
+	slip, err := s.repo.GetSlipByIDWithDetails(ctx, s.repo.GetDB(), id)
 	if err != nil {
 		return nil, err
 	}
@@ -82,35 +96,15 @@ func (s *Service) GetSlipByID(
 		return nil, fmt.Errorf("slip not found")
 	}
 
-	dto := &SlipDTO{
-		ID:     slip.ID,
-		UserID: slip.UserID,
-		IIRID:  slip.IIRID,
-		User: users.UserResponse{
-			FirstName:  slip.UserFirstName,
-			MiddleName: slip.UserMiddleName,
-			LastName:   slip.UserLastName,
-			Email:      slip.UserEmail,
-		},
-		StudentNumber: slip.StudentNumber,
-		Reason:        slip.Reason,
-		DateOfAbsence: slip.DateOfAbsence,
-		DateNeeded:    slip.DateNeeded,
-		AdminNotes:    slip.AdminNotes,
-		Category: SlipCategory{
-			ID:   slip.CategoryID,
-			Name: slip.CategoryName,
-		},
-		Status: SlipStatus{
-			ID:       slip.StatusID,
-			Name:     slip.StatusName,
-			ColorKey: slip.StatusColorKey,
-		},
-		CreatedAt: slip.CreatedAt,
-		UpdatedAt: slip.UpdatedAt,
-	}
+	dto := s.mapToDTO(slip)
 
-	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, []string{slip.UserID})
+	hasNote, _ := s.repo.HasNoteForAdmissionSlip(ctx, id)
+	dto.HasSignificantNote = hasNote
+
+	corMap, _ := s.studentService.GetLatestCORsByUserIDs(
+		ctx,
+		[]string{slip.UserID},
+	)
 	dto.StudentCORURL = corMap[slip.UserID]
 
 	return dto, nil
@@ -157,9 +151,8 @@ func (s *Service) GetUrgentSlips(
 				Name: slips[s].CategoryName,
 			},
 			Status: SlipStatus{
-				ID:       slips[s].StatusID,
-				Name:     slips[s].StatusName,
-				ColorKey: slips[s].StatusColorKey,
+				ID:   slips[s].StatusID,
+				Name: slips[s].StatusName,
 			},
 			StudentCORURL: corMap[slips[s].UserID],
 			CreatedAt:     slips[s].CreatedAt,
@@ -234,9 +227,8 @@ func (s *Service) GetAllExcuseSlips(
 				Name: slips[s].CategoryName,
 			},
 			Status: SlipStatus{
-				ID:       slips[s].StatusID,
-				Name:     slips[s].StatusName,
-				ColorKey: slips[s].StatusColorKey,
+				ID:   slips[s].StatusID,
+				Name: slips[s].StatusName,
 			},
 			StudentCORURL: corMap[slips[s].UserID],
 			CreatedAt:     slips[s].CreatedAt,
@@ -244,7 +236,7 @@ func (s *Service) GetAllExcuseSlips(
 		})
 	}
 
-	total, err := s.repo.GetTotalSlipsCount(ctx, &req)
+	total, err := s.repo.GetTotalSlipsCount(ctx, &req, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get slips count: %w", err)
 	}
@@ -289,16 +281,15 @@ func (s *Service) GetExcuseSlipsByIIRID(
 				Name: slips[s].CategoryName,
 			},
 			Status: SlipStatus{
-				ID:       slips[s].StatusID,
-				Name:     slips[s].StatusName,
-				ColorKey: slips[s].StatusColorKey,
+				ID:   slips[s].StatusID,
+				Name: slips[s].StatusName,
 			},
 			CreatedAt: slips[s].CreatedAt,
 			UpdatedAt: slips[s].UpdatedAt,
 		})
 	}
 
-	total, err := s.repo.GetTotalSlipsCount(ctx, &req)
+	total, err := s.repo.GetTotalSlipsCount(ctx, &req, &iirID)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to get slips count: %w",
@@ -333,22 +324,6 @@ func (s *Service) GetSlipAttachments(
 	}
 
 	return attachmentDTOs, nil
-}
-
-func (s *Service) GetAttachmentFile(
-	ctx context.Context,
-	attachmentID string,
-) (*SlipAttachment, error) {
-	attachment, err := s.repo.GetAttachmentByID(ctx, attachmentID)
-	if err != nil {
-		return nil, err
-	}
-
-	if attachment == nil {
-		return nil, fmt.Errorf("attachment not found")
-	}
-
-	return attachment, nil
 }
 
 func (s *Service) validateFiles(files []*multipart.FileHeader) error {
@@ -388,7 +363,8 @@ func (s *Service) validateFiles(files []*multipart.FileHeader) error {
 
 		if !allowedMime[contentType] {
 			return fmt.Errorf(
-				"invalid content type for '%s': expected PDF or Image, got %s",
+				"invalid content type for '%s': "+
+					"expected PDF or Image, got %s",
 				file.Filename,
 				contentType,
 			)
@@ -406,26 +382,54 @@ func (s *Service) validateFiles(files []*multipart.FileHeader) error {
 	return nil
 }
 
+func (s *Service) validateFilesOCR(
+	ctx context.Context,
+	files []*multipart.FileHeader,
+) error {
+	for _, file := range files {
+		f, err := file.Open()
+		if err != nil {
+			return fmt.Errorf(
+				"failed to open file '%s' for validation: %w",
+				file.Filename,
+				err,
+			)
+		}
+
+		res, err := s.ocrClient.ValidateDocument(ctx, file.Filename, f)
+		f.Close()
+		if err != nil {
+			return fmt.Errorf("OCR validation service is currently offline")
+		}
+		if !res.IsValid {
+			return fmt.Errorf(
+				"file '%s' is invalid: %s",
+				file.Filename,
+				res.Message,
+			)
+		}
+	}
+	return nil
+}
+
 // SubmitExcuseSlip creates a new slip with attachments.
 func (s *Service) SubmitExcuseSlip(
 	ctx context.Context,
 	iirID string,
 	req CreateSlipRequest,
 	files []*multipart.FileHeader,
-) (*Slip, error) {
-	// Graduated Student Protocol: Lock records for Graduated or Archived students
-	isLocked, err := s.studentService.IsStudentLocked(ctx, iirID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check student status: %w", err)
-	}
-	if isLocked {
-		return nil, fmt.Errorf(
-			"cannot submit slip: student record is locked (Graduated/Archived)",
-		)
-	}
+	parentIdFiles []*multipart.FileHeader,
+) (*SlipDTO, error) {
+	allFiles := append([]*multipart.FileHeader{}, files...)
+	allFiles = append(allFiles, parentIdFiles...)
 
 	// Validate all files
-	if err := s.validateFiles(files); err != nil {
+	if err := s.validateFiles(allFiles); err != nil {
+		return nil, err
+	}
+
+	// OCR check on non-ID files
+	if err := s.validateFilesOCR(ctx, files); err != nil {
 		return nil, err
 	}
 
@@ -446,8 +450,17 @@ func (s *Service) SubmitExcuseSlip(
 		return nil, fmt.Errorf("absence date cannot be in future")
 	}
 
+	dateNeeded := strings.Split(req.DateNeeded, "T")[0]
+	parsedDateNeeded, err := time.Parse("2006-01-02", dateNeeded)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date needed format: YYYY-MM-DD")
+	}
+	if parsedDateNeeded.Before(today) {
+		return nil, fmt.Errorf("date needed cannot be in the past")
+	}
+
 	// Unified File Implementation: Use files features
-	uploadedFiles, err := s.filesService.UploadFiles(ctx, files, "slips")
+	uploadedFiles, err := s.filesService.UploadFiles(ctx, allFiles, "slips")
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload files: %w", err)
 	}
@@ -462,10 +475,12 @@ func (s *Service) SubmitExcuseSlip(
 		StatusID:      1,
 	}
 
+	var createdSlip *SlipWithDetailsView
 	err = s.repo.WithTransaction(
 		ctx,
 		func(tx datastore.DB) error {
-			_, err := s.repo.CreateSlip(ctx, tx, slip)
+			var err error
+			createdSlip, err = s.repo.CreateSlip(ctx, tx, slip)
 			if err != nil {
 				return err
 			}
@@ -489,35 +504,40 @@ func (s *Service) SubmitExcuseSlip(
 		},
 	)
 	if err != nil {
-		audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
-			Log: &audit.LogParams{
-				Level:    audit.LevelError,
-				Category: audit.CategoryAudit,
-				Action:   audit.ActionSlipFailed,
-				Message: fmt.Sprintf(
-					"Failed to create slip for IIR #%s",
-					iirID,
-				),
-				Metadata: &audit.LogMetadata{
-					EntityType: constants.SlipEntityType,
-					EntityID:   slip.ID,
-					Error:      err.Error(),
-				},
-			},
-			Notifications: []audit.NotificationParams{
-				{
-					Title: fmt.Sprintf(
-						"Slip Creation Failed for IIR #%s",
+		audit.Dispatch(
+			ctx,
+			s.logService,
+			s.notifService,
+			s.emailService,
+			audit.DispatchParams{
+				Log: &audit.LogParams{
+					Level:    audit.LevelError,
+					Category: audit.CategoryAudit,
+					Action:   audit.ActionSlipFailed,
+					Message: fmt.Sprintf(
+						"Failed to create slip for IIR #%s",
 						iirID,
 					),
-					Message: fmt.Sprintf(
-						"An error occurred while creating the slip: %s",
-						err.Error(),
-					),
-					Type: constants.SlipEntityType,
+					Metadata: &audit.LogMetadata{
+						EntityType: constants.SlipEntityType,
+						EntityID:   slip.ID,
+						Error:      err.Error(),
+					},
 				},
-			},
-		})
+				Notifications: []audit.NotificationParams{
+					{
+						Title: fmt.Sprintf(
+							"Slip Creation Failed for IIR #%s",
+							iirID,
+						),
+						Message: fmt.Sprintf(
+							"An error occurred while creating the slip: %s",
+							err.Error(),
+						),
+						Type: constants.SlipEntityType,
+					},
+				},
+			})
 		return nil, err
 	}
 
@@ -564,22 +584,57 @@ func (s *Service) SubmitExcuseSlip(
 		})
 	}
 
-	audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
-		Log: &audit.LogParams{
-			Level:    audit.LevelInfo,
-			Category: audit.CategoryAudit,
-			Action:   audit.ActionSlipCreated,
-			Message:  fmt.Sprintf("Excuse slip #%s created", slip.ID),
-			Metadata: &audit.LogMetadata{
-				EntityType: constants.SlipEntityType,
-				EntityID:   slip.ID,
-				NewValues:  slip,
-			},
-		},
-		Notifications: notifications,
-	})
+	counselorEmails, _ := s.userService.GetEmailsByRole(
+		ctx,
+		int(constants.AdminRoleID),
+	)
 
-	return slip, nil
+	newSlipDTO := s.mapToDTO(createdSlip)
+
+	audit.Dispatch(
+		ctx,
+		s.logService,
+		s.notifService,
+		s.emailService,
+		audit.DispatchParams{
+			Log: &audit.LogParams{
+				Level:    audit.LevelInfo,
+				Category: audit.CategoryAudit,
+				Action:   audit.ActionSlipCreated,
+				Message:  fmt.Sprintf("Excuse slip #%s created", slip.ID),
+				Metadata: &audit.LogMetadata{
+					EntityType: constants.SlipEntityType,
+					EntityID:   slip.ID,
+				},
+			},
+			Notifications: notifications,
+			Email: []audit.EmailParams{
+				{
+					To:           counselorEmails,
+					Subject:      "New Admission Slip Request",
+					TemplatePath: "request.html",
+					TemplateData: map[string]interface{}{
+						"EntityType": constants.SlipEntityType,
+						"StudentName": fmt.Sprintf(
+							"%s %s",
+							newSlipDTO.User.FirstName,
+							newSlipDTO.User.LastName,
+						),
+						"Category": newSlipDTO.Category.Name,
+						"DateOfAbsence": datetime.FormatDate(
+							newSlipDTO.DateOfAbsence,
+						),
+						"DateNeeded": datetime.FormatDate(
+							newSlipDTO.DateNeeded,
+						),
+						"Status":     newSlipDTO.Status.Name,
+						"AdminNotes": nil,
+					},
+				},
+			},
+		})
+
+	return newSlipDTO, nil
 }
 
 func (s *Service) UpdateExcuseSlip(
@@ -588,19 +643,8 @@ func (s *Service) UpdateExcuseSlip(
 	slipID string,
 	req CreateSlipRequest,
 	files []*multipart.FileHeader,
+	parentIdFiles []*multipart.FileHeader,
 ) (*Slip, error) {
-	// Graduated Student Protocol: Lock records for Graduated or
-	// Archived students
-	isLocked, err := s.studentService.IsStudentLocked(ctx, iirID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check student status: %w", err)
-	}
-	if isLocked {
-		return nil, fmt.Errorf(
-			"cannot update slip: student record is locked (Graduated/Archived)",
-		)
-	}
-
 	// Fetch existing slip and validate ownership/status
 	existingSlip, err := s.repo.GetSlipByID(ctx, slipID)
 	if err != nil {
@@ -618,8 +662,16 @@ func (s *Service) UpdateExcuseSlip(
 		return nil, fmt.Errorf("cannot edit slip in current status")
 	}
 
+	allFiles := append([]*multipart.FileHeader{}, files...)
+	allFiles = append(allFiles, parentIdFiles...)
+
 	// Validate all files
-	if err := s.validateFiles(files); err != nil {
+	if err := s.validateFiles(allFiles); err != nil {
+		return nil, err
+	}
+
+	// OCR check on non-ID files
+	if err := s.validateFilesOCR(ctx, files); err != nil {
 		return nil, err
 	}
 
@@ -638,6 +690,15 @@ func (s *Service) UpdateExcuseSlip(
 		return nil, fmt.Errorf("absence date cannot be in future")
 	}
 
+	dateNeeded := strings.Split(req.DateNeeded, "T")[0]
+	parsedDateNeeded, err := time.Parse("2006-01-02", dateNeeded)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date needed format: YYYY-MM-DD")
+	}
+	if parsedDateNeeded.Before(today) {
+		return nil, fmt.Errorf("date needed cannot be in the past")
+	}
+
 	// Delete old attachments from both slip records and files table
 	oldAttachments, err := s.repo.GetSlipAttachments(ctx, slipID)
 	if err == nil {
@@ -647,7 +708,7 @@ func (s *Service) UpdateExcuseSlip(
 	}
 
 	// Upload new files using centralized service
-	uploadedFiles, err := s.filesService.UploadFiles(ctx, files, "slips")
+	uploadedFiles, err := s.filesService.UploadFiles(ctx, allFiles, "slips")
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload files: %w", err)
 	}
@@ -693,35 +754,44 @@ func (s *Service) UpdateExcuseSlip(
 	}
 
 	studentUserID, _ := s.repo.GetUserIDBySlipID(ctx, slipID)
-	audit.Dispatch(ctx, s.logService, s.notifService, audit.DispatchParams{
-		Log: &audit.LogParams{
-			Level:    audit.LevelInfo,
-			Category: audit.CategoryAudit,
-			Action:   audit.ActionSlipUpdated,
-			Message:  fmt.Sprintf("Excuse slip #%s updated", slipID),
-			Metadata: &audit.LogMetadata{
-				EntityType: constants.SlipEntityType,
-				EntityID:   slipID,
-				NewValues:  updatedSlip,
+	audit.Dispatch(
+		ctx,
+		s.logService,
+		s.notifService,
+		s.emailService,
+		audit.DispatchParams{
+			Log: &audit.LogParams{
+				Level:    audit.LevelInfo,
+				Category: audit.CategoryAudit,
+				Action:   audit.ActionSlipUpdated,
+				Message:  fmt.Sprintf("Excuse slip #%s updated", slipID),
+				Metadata: &audit.LogMetadata{
+					EntityType: constants.SlipEntityType,
+					EntityID:   slipID,
+				},
 			},
-		},
-		Notifications: []audit.NotificationParams{
-			// Notification para sa Student
-			{
-				ReceiverID: structs.StringToNullableString(studentUserID),
-				Title:      "Slip Updated",
-				Message:    fmt.Sprintf("Your slip #%s has been updated", slipID),
-				Type:       constants.SlipEntityType,
+			Notifications: []audit.NotificationParams{
+				// Notification para sa Student
+				{
+					ReceiverID: structs.StringToNullableString(studentUserID),
+					Title:      "Slip Updated",
+					Message: fmt.Sprintf(
+						"Your slip #%s has been updated",
+						slipID,
+					),
+					Type: constants.SlipEntityType,
+				},
+				// Notification para sa Counselor (if needed)
+				{
+					ReceiverID: structs.StringToNullableString(
+						audit.ExtractUserID(ctx),
+					),
+					Title:   "New Slip Update",
+					Message: fmt.Sprintf("Student updated slip #%s", slipID),
+					Type:    constants.SlipEntityType,
+				},
 			},
-			// Notification para sa Counselor (if needed)
-			{
-				ReceiverID: structs.StringToNullableString(audit.ExtractUserID(ctx)),
-				Title:      "New Slip Update",
-				Message:    fmt.Sprintf("Student updated slip #%s", slipID),
-				Type:       constants.SlipEntityType,
-			},
-		},
-	})
+		})
 
 	return updatedSlip, nil
 }
@@ -774,12 +844,13 @@ func (s *Service) UpdateExcuseSlipStatus(
 
 	if !validStatuses[newStatus] {
 		return fmt.Errorf(
-			"invalid status: must be 'Pending', 'Approved', 'Rejected', or 'For Revision'",
+			"invalid status: must be 'Pending', 'Approved', " +
+				"'Rejected', or 'For Revision'",
 		)
 	}
 
 	// Fetch old state for audit trail
-	oldSlip, _ := s.repo.GetSlipByID(ctx, id)
+	oldSlip, _ := s.repo.GetSlipByIDWithDetails(ctx, s.repo.GetDB(), id)
 
 	return s.repo.WithTransaction(
 		ctx,
@@ -790,6 +861,7 @@ func (s *Service) UpdateExcuseSlipStatus(
 					ctx,
 					s.logService,
 					s.notifService,
+					s.emailService,
 					audit.DispatchParams{
 						Tx: tx,
 						Log: &audit.LogParams{
@@ -823,6 +895,73 @@ func (s *Service) UpdateExcuseSlipStatus(
 				return err
 			}
 
+			emails := []audit.EmailParams{}
+			ticketCode := ""
+
+			// Handle ticket and email for Approved status
+			if newStatus == "Approved" {
+				ticket, err := s.repo.GetTicketBySlipID(ctx, id)
+				if err != nil {
+					fmt.Printf(
+						"[UpdateExcuseSlipStatus] {Get Ticket}: %v\n",
+						err,
+					)
+				}
+
+				if ticket == nil {
+					// Generate new ticket
+					ticketCode = fmt.Sprintf(
+						"SLIP-%d-%s",
+						time.Now().Year(),
+						strings.ToUpper(uuid.New().String()[:8]),
+					)
+					newTicket := &AdmissionTicket{
+						ID:              uuid.New().String(),
+						AdmissionSlipID: id,
+						TicketCode:      ticketCode,
+					}
+					if err := s.repo.CreateTicket(ctx, tx, newTicket); err != nil {
+						return err
+					}
+				} else {
+					ticketCode = ticket.TicketCode
+				}
+
+				// Always send approval email
+				emails = append(emails, audit.EmailParams{
+					To:           []string{oldSlip.UserEmail},
+					Subject:      "Your Admission Slip Has Been Approved!",
+					TemplatePath: "slip.html",
+					TemplateData: map[string]interface{}{
+						"IsApproved": true,
+						"TicketCode": ticketCode,
+					},
+				})
+			} else {
+				emails = append(emails, audit.EmailParams{
+					To:           []string{oldSlip.UserEmail},
+					Subject:      "Admission Slip Status Updated",
+					TemplatePath: "slip.html",
+					TemplateData: map[string]interface{}{
+						"IsApproved": false,
+						"StudentName": fmt.Sprintf(
+							"%s %s",
+							oldSlip.UserFirstName,
+							oldSlip.UserLastName,
+						),
+						"Category": oldSlip.CategoryName,
+						"DateOfAbsence": datetime.FormatDate(
+							oldSlip.DateOfAbsence,
+						),
+						"DateNeeded": datetime.FormatDate(
+							oldSlip.DateNeeded,
+						),
+						"Status":     newStatus,
+						"AdminNotes": adminNotes,
+					},
+				})
+			}
+
 			// Fetch student UserID for notification
 			studentUserID, _ := s.repo.GetUserIDBySlipID(ctx, id)
 
@@ -847,7 +986,8 @@ func (s *Service) UpdateExcuseSlipStatus(
 					),
 					Title: "Admission Slip Updated Successfully",
 					Message: fmt.Sprintf(
-						"You have successfully updated the status of admission slip %s to '%s'.",
+						"You have successfully updated the status "+
+							"of admission slip %s to '%s'.",
 						structs.TruncateString(id, 7),
 						newStatus,
 					),
@@ -859,6 +999,7 @@ func (s *Service) UpdateExcuseSlipStatus(
 				ctx,
 				s.logService,
 				s.notifService,
+				s.emailService,
 				audit.DispatchParams{
 					Tx: tx,
 					Log: &audit.LogParams{
@@ -873,14 +1014,10 @@ func (s *Service) UpdateExcuseSlipStatus(
 						Metadata: &audit.LogMetadata{
 							EntityType: constants.SlipEntityType,
 							EntityID:   id,
-							OldValues:  oldSlip,
-							NewValues: map[string]interface{}{
-								"status":     newStatus,
-								"adminNotes": adminNotes,
-							},
 						},
 					},
 					Notifications: notifications,
+					Email:         emails,
 				},
 			)
 			return nil
@@ -888,9 +1025,113 @@ func (s *Service) UpdateExcuseSlipStatus(
 	)
 }
 
-func (s *Service) GetUserIDBySlipID(
+func (s *Service) ClaimTicket(
 	ctx context.Context,
-	id string,
-) (string, error) {
-	return s.repo.GetUserIDBySlipID(ctx, id)
+	code string,
+	counselorID string,
+) error {
+	ticket, err := s.repo.GetTicketByCode(ctx, code)
+	if err != nil {
+		return err
+	}
+	if ticket == nil {
+		return fmt.Errorf("ticket not found")
+	}
+	if ticket.IsVerified {
+		return fmt.Errorf("ticket already verified")
+	}
+
+	return s.repo.WithTransaction(
+		ctx,
+		func(tx datastore.DB) error {
+			if err := s.repo.UpdateTicketVerification(
+				ctx,
+				tx,
+				ticket.ID,
+				counselorID,
+			); err != nil {
+				return err
+			}
+
+			// Audit the verification
+			audit.Dispatch(
+				ctx,
+				s.logService,
+				s.notifService,
+				s.emailService,
+				audit.DispatchParams{
+					Tx: tx,
+					Log: &audit.LogParams{
+						Level:    audit.LevelInfo,
+						Category: audit.CategoryAudit,
+						Action:   audit.ActionSlipStatusUpdated,
+						Message:  fmt.Sprintf("Ticket #%s verified", code),
+						Metadata: &audit.LogMetadata{
+							EntityType: "ticket",
+							EntityID:   ticket.ID,
+						},
+					},
+				})
+			return nil
+		},
+	)
+}
+
+func (s *Service) GetSlipByTicketCode(
+	ctx context.Context,
+	code string,
+) (*SlipDTO, error) {
+	slip, err := s.repo.GetSlipByTicketCode(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+	if slip == nil {
+		return nil, nil
+	}
+	return s.mapToDTO(slip), nil
+}
+
+func (s *Service) mapToDTO(slip *SlipWithDetailsView) *SlipDTO {
+	if slip == nil {
+		return nil
+	}
+
+	dto := &SlipDTO{
+		ID:     slip.ID,
+		UserID: slip.UserID,
+		IIRID:  slip.IIRID,
+		User: users.UserResponse{
+			FirstName:  slip.UserFirstName,
+			MiddleName: slip.UserMiddleName,
+			LastName:   slip.UserLastName,
+			Email:      slip.UserEmail,
+		},
+		StudentNumber: slip.StudentNumber,
+		Reason:        slip.Reason,
+		DateOfAbsence: slip.DateOfAbsence,
+		DateNeeded:    slip.DateNeeded,
+		AdminNotes:    slip.AdminNotes,
+		Category: SlipCategory{
+			ID:   slip.CategoryID,
+			Name: slip.CategoryName,
+		},
+		Status: SlipStatus{
+			ID:   slip.StatusID,
+			Name: slip.StatusName,
+		},
+		CreatedAt: slip.CreatedAt,
+		UpdatedAt: slip.UpdatedAt,
+	}
+
+	if slip.TicketCode.Valid {
+		dto.Ticket = &TicketDTO{
+			TicketCode: slip.TicketCode.String,
+			IsVerified: slip.IsVerified.Bool,
+		}
+		if slip.VerifiedAt.Valid {
+			dto.Ticket.VerifiedAt = slip.VerifiedAt.Time
+		}
+	}
+
+	return dto
 }

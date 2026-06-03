@@ -61,6 +61,21 @@ func (r *Repository) GetUserByID(
 	return &user, nil
 }
 
+func (r *Repository) GetUsersByRole(
+	ctx context.Context,
+	roleID int,
+) ([]User, error) {
+	var users []User
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM users
+		JOIN user_roles ur ON ur.user_id = users.id
+		WHERE ur.role_id = ?
+	`, datastore.GetColumns(User{}))
+	err := r.db.SelectContext(ctx, &users, query, roleID)
+	return users, err
+}
+
 func (r *Repository) CheckUserWhitelist(
 	ctx context.Context,
 	email string,
@@ -202,7 +217,7 @@ func (r *Repository) GetProfilePictureURLByUserID(
 
 	return fileURL, nil
 }
- 
+
 func (r *Repository) GetStudentCORURLByUserID(
 	ctx context.Context,
 	userID string,
@@ -223,6 +238,27 @@ func (r *Repository) GetStudentCORURLByUserID(
 	}
 
 	return fileURL, nil
+}
+
+func (r *Repository) CheckStudentCORValidByUserID(
+	ctx context.Context,
+	userID string,
+) (bool, error) {
+	var valid bool
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM student_cors sc
+			JOIN academic_settings ac ON ac.id = 1
+			WHERE sc.student_id = ?
+			  AND sc.year_start = ac.current_year_start
+			  AND sc.term = ac.current_term
+		)
+	`
+	err := r.db.GetContext(ctx, &valid, query, userID)
+	if err != nil {
+		return false, err
+	}
+	return valid, nil
 }
 
 func (r *Repository) PostProfilePicture(
@@ -277,6 +313,21 @@ func (r *Repository) GetUserIDsByRole(
 	query := `SELECT user_id FROM user_roles WHERE role_id = ?`
 	err := r.db.SelectContext(ctx, &userIDs, query, roleID)
 	return userIDs, err
+}
+
+func (r *Repository) GetEmailsByRole(
+	ctx context.Context,
+	roleID int,
+) ([]string, error) {
+	var emails []string
+	query := `
+		SELECT u.email
+		FROM users u
+		JOIN user_roles ur ON ur.user_id = u.id
+		WHERE ur.role_id = ? AND u.is_active = 1
+	`
+	err := r.db.SelectContext(ctx, &emails, query, roleID)
+	return emails, err
 }
 
 func (r *Repository) ListUsers(
@@ -396,7 +447,9 @@ func (r *Repository) ListUsers(
 			}
 			for i := range users {
 				if url, ok := picMap[users[i].ID]; ok {
-					users[i].ProfilePicture = structs.StringToNullableString(url)
+					users[i].ProfilePicture = structs.StringToNullableString(
+						url,
+					)
 				}
 			}
 		}
@@ -471,4 +524,18 @@ func (r *Repository) RemoveUserFromWhitelist(
 	query := `DELETE FROM whitelists WHERE email = ?`
 	_, err := tx.ExecContext(ctx, query, email)
 	return err
+}
+
+func (r *Repository) ListWhitelist(
+	ctx context.Context,
+) ([]WhitelistEntry, error) {
+	var entries []WhitelistEntry
+	query := `
+		SELECT w.email, w.role_id, r.name as role_name, w.created_at
+		FROM whitelists w
+		JOIN roles r ON r.id = w.role_id
+		ORDER BY w.created_at DESC
+	`
+	err := r.db.SelectContext(ctx, &entries, query)
+	return entries, err
 }

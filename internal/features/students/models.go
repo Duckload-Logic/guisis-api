@@ -20,8 +20,8 @@ type ParentalStatusType struct {
 
 // StudentSupportType represents the domain entity for student support types.
 type StudentSupportType struct {
-	ID   int    `db:"id"                  json:"id"`
-	Name string `db:"support_type_name"   json:"name"`
+	ID   int    `db:"id"                json:"id"`
+	Name string `db:"support_type_name" json:"name"`
 }
 
 // EnrollmentReason represents the domain entity for enrollment reasons.
@@ -32,14 +32,20 @@ type EnrollmentReason struct {
 
 // IncomeRange represents the domain entity for family income ranges.
 type IncomeRange struct {
-	ID   int    `db:"id"          json:"id"`
-	Text string `db:"range_text"  json:"text"`
+	ID   int    `db:"id"         json:"id"`
+	Text string `db:"range_text" json:"text"`
 }
 
 // EducationalLevel represents the domain entity for educational levels.
 type EducationalLevel struct {
-	ID   int    `db:"id"          json:"id"`
-	Name string `db:"level_name"  json:"name"`
+	ID   int    `db:"id"         json:"id"`
+	Name string `db:"level_name" json:"name"`
+}
+
+// EducationalAttainment represents the standardized educational attainment levels.
+type EducationalAttainment struct {
+	ID   int    `db:"id"   json:"id"`
+	Name string `db:"name" json:"name"`
 }
 
 // Course represents the domain entity for academic courses.
@@ -63,8 +69,8 @@ type Religion struct {
 
 // StudentRelationshipType represents the domain entity for relationships.
 type StudentRelationshipType struct {
-	ID   int    `db:"id"                 json:"id"`
-	Name string `db:"relationship_name"  json:"name"`
+	ID   int    `db:"id"                json:"id"`
+	Name string `db:"relationship_name" json:"name"`
 }
 
 // NatureOfResidenceType represents the domain entity for residence types.
@@ -87,10 +93,10 @@ type StudentStatus struct {
 
 // ActivityOption represents the domain entity for student activities.
 type ActivityOption struct {
-	ID       int    `db:"id"          json:"id"`
-	Name     string `db:"name"        json:"name"`
-	Category string `db:"category"    json:"category"`
-	IsActive bool   `db:"is_active"   json:"isActive"`
+	ID       int    `db:"id"        json:"id"`
+	Name     string `db:"name"      json:"name"`
+	Category string `db:"category"  json:"category"`
+	IsActive bool   `db:"is_active" json:"isActive"`
 }
 
 // StudentBasicInfoView represents a simplified view of student identification info.
@@ -103,22 +109,24 @@ type StudentBasicInfoView struct {
 	SuffixName structs.NullableString `db:"suffix_name"`
 }
 
-// StudentProfileView represents a summary view of a student's profile.
 type StudentProfileView struct {
-	IIRID         string                 `db:"iir_id"         json:"iirId"`
-	UserID        string                 `db:"user_id"        json:"userId"`
-	FirstName     string                 `db:"first_name"     json:"firstName"`
-	MiddleName    structs.NullableString `db:"middle_name"    json:"middleName,omitempty"`
-	LastName      string                 `db:"last_name"      json:"lastName"`
-	SuffixName    structs.NullableString `db:"suffix_name"    json:"suffixName,omitempty"`
-	Email         string                 `db:"email"          json:"email"`
-	StudentNumber string                 `db:"student_number" json:"studentNumber"`
-	GenderID      int                    `db:"gender_id"      json:"genderId"`
-	CourseID      int                    `db:"course_id"      json:"courseId"`
-	Section       int                    `db:"section"        json:"section"`
-	YearLevel     int                    `db:"year_level"     json:"yearLevel"`
-	StatusID      int                    `db:"status_id"      json:"statusId"`
-	StatusName    string                 `db:"status_name"    json:"statusName"`
+	IIRID         string                 `db:"iir_id"`
+	UserID        string                 `db:"user_id"`
+	FirstName     string                 `db:"first_name"`
+	MiddleName    structs.NullableString `db:"middle_name"`
+	LastName      string                 `db:"last_name"`
+	SuffixName    structs.NullableString `db:"suffix_name"`
+	Email         string                 `db:"email"`
+	StudentNumber string                 `db:"student_number"`
+	GenderID      int                    `db:"gender_id"`
+	CourseID      int                    `db:"course_id"`
+	Section       int                    `db:"section"`
+	YearLevel     int                    `db:"year_level"`
+	StatusID      int                    `db:"status_id"`
+	StatusName    string                 `db:"status_name"`
+	GenderName    string                 `db:"gender_name"`
+	CourseCode    string                 `db:"course_code"`
+	CourseName    string                 `db:"course_name"`
 }
 
 // IIRDraft represents an unsubmitted draft of the student's IIR form.
@@ -154,13 +162,13 @@ type StudentPersonalInfo struct {
 	StudentNumber string `db:"student_number" json:"studentNumber"`
 
 	// Personal Details
-	GenderID      int `db:"gender_id"      json:"genderId"`
+	GenderID      int `db:"gender_id"       json:"genderId"`
 	CivilStatusID int `db:"civil_status_id" json:"civilStatusId"`
 	ReligionID    int `db:"religion_id"     json:"religionId"`
 
 	// Physical Attributes
-	HeightM    float64 `db:"height_m"    json:"heightM"`
-	WeightKg   float64 `db:"weight_kg"   json:"weightKg"`
+	HeightM    float64 `db:"height_m"   json:"heightM"`
+	WeightKg   float64 `db:"weight_kg"  json:"weightKg"`
 	Complexion string  `db:"complexion" json:"complexion"`
 
 	// Academic Information
@@ -170,17 +178,20 @@ type StudentPersonalInfo struct {
 	Section       int     `db:"section"         json:"section"`
 
 	// Additional Details
-	PlaceOfBirth    string                 `db:"place_of_birth"    json:"placeOfBirth"`
-	DateOfBirth     string                 `db:"date_of_birth"     json:"dateOfBirth"`
-	IsEmployed      bool                   `db:"is_employed"       json:"isEmployed"`
-	EmployerName    structs.NullableString `db:"employer_name"     json:"employerName,omitempty"`
-	EmployerAddress structs.NullableString `db:"employer_address"  json:"employerAddress,omitempty"`
-	MobileNumber    string                 `db:"mobile_number"     json:"mobileNumber"`
-	TelephoneNumber structs.NullableString `db:"telephone_number"  json:"telephoneNumber,omitempty"`
-	StatusID        int                    `db:"status_id"         json:"statusId"`
-	GraduationYear  structs.NullableInt64  `db:"graduation_year"   json:"graduationYear,omitempty"`
-	CreatedAt       time.Time              `db:"created_at"        json:"createdAt"`
-	UpdatedAt       time.Time              `db:"updated_at"        json:"updatedAt"`
+	PlaceOfBirth          string                 `db:"place_of_birth"          json:"placeOfBirth"`
+	DateOfBirth           string                 `db:"date_of_birth"           json:"dateOfBirth"`
+	IsEmployed            bool                   `db:"is_employed"             json:"isEmployed"`
+	EmployerName          structs.NullableString `db:"employer_name"           json:"employerName,omitempty"`
+	EmployerAddress       structs.NullableString `db:"employer_address"        json:"employerAddress,omitempty"`
+	MobileNumber          string                 `db:"mobile_number"           json:"mobileNumber"`
+	TelephoneNumber       structs.NullableString `db:"telephone_number"        json:"telephoneNumber,omitempty"`
+	EmployerContactNumber structs.NullableString `db:"employer_contact_number" json:"employerContactNumber,omitempty"`
+	OtherReligionText     structs.NullableString `db:"other_religion_text"`
+
+	StatusID       int                   `db:"status_id"       json:"statusId"`
+	GraduationYear structs.NullableInt64 `db:"graduation_year" json:"graduationYear,omitempty"`
+	CreatedAt      time.Time             `db:"created_at"      json:"createdAt"`
+	UpdatedAt      time.Time             `db:"updated_at"      json:"updatedAt"`
 }
 
 // EmergencyContact represents the contact person in case of emergency.
@@ -210,18 +221,18 @@ type StudentAddress struct {
 
 // RelatedPerson represents family members or guardians.
 type RelatedPerson struct {
-	ID               int                    `db:"id"                json:"id"`
-	EducationalLevel string                 `db:"educational_level" json:"educationalLevel"`
-	DateOfBirth      string                 `db:"date_of_birth"     json:"dateOfBirth"`
-	LastName         string                 `db:"last_name"         json:"lastName"`
-	FirstName        string                 `db:"first_name"        json:"firstName"`
-	MiddleName       structs.NullableString `db:"middle_name"       json:"middleName,omitempty"`
-	SuffixName       structs.NullableString `db:"suffix_name"       json:"suffixName,omitempty"`
-	Occupation       structs.NullableString `db:"occupation"        json:"occupation,omitempty"`
-	EmployerName     structs.NullableString `db:"employer_name"      json:"employerName,omitempty"`
-	EmployerAddress  structs.NullableString `db:"employer_address"   json:"employerAddress,omitempty"`
-	CreatedAt        time.Time              `db:"created_at"         json:"createdAt"`
-	UpdatedAt        time.Time              `db:"updated_at"         json:"updatedAt"`
+	ID                      int                    `db:"id"                        json:"id"`
+	EducationalAttainmentID structs.NullableInt64  `db:"educational_attainment_id" json:"educationalAttainmentId,omitempty"`
+	DateOfBirth             string                 `db:"date_of_birth"             json:"dateOfBirth"`
+	LastName                string                 `db:"last_name"                 json:"lastName"`
+	FirstName               string                 `db:"first_name"                json:"firstName"`
+	MiddleName              structs.NullableString `db:"middle_name"               json:"middleName,omitempty"`
+	SuffixName              structs.NullableString `db:"suffix_name"               json:"suffixName,omitempty"`
+	Occupation              structs.NullableString `db:"occupation"                json:"occupation,omitempty"`
+	EmployerName            structs.NullableString `db:"employer_name"             json:"employerName,omitempty"`
+	EmployerAddress         structs.NullableString `db:"employer_address"          json:"employerAddress,omitempty"`
+	CreatedAt               time.Time              `db:"created_at"                json:"createdAt"`
+	UpdatedAt               time.Time              `db:"updated_at"                json:"updatedAt"`
 }
 
 // StudentRelatedPerson represents the link between a student and a related person.
@@ -238,26 +249,26 @@ type StudentRelatedPerson struct {
 
 // FamilyBackground represents family dynamics and housing information.
 type FamilyBackground struct {
-	ID                    int                    `db:"id"                      json:"id"`
-	IIRID                 string                 `db:"iir_id"                  json:"iirId"`
-	ParentalStatusID      int                    `db:"parental_status_id"      json:"parentalStatusId"`
-	ParentalStatusDetails structs.NullableString `db:"parental_status_details" json:"parentalStatusDetails,omitempty"`
-	Brothers              int                    `db:"brothers"                json:"brothers"`
-	Sisters               int                    `db:"sisters"                 json:"sisters"`
-	EmployedSiblings      int                    `db:"employed_siblings"       json:"employedSiblings"`
-	OrdinalPosition       int                    `db:"ordinal_position"        json:"ordinalPosition"`
+	ID                    int                    `db:"id"                        json:"id"`
+	IIRID                 string                 `db:"iir_id"                    json:"iirId"`
+	ParentalStatusID      int                    `db:"parental_status_id"        json:"parentalStatusId"`
+	ParentalStatusDetails structs.NullableString `db:"parental_status_details"   json:"parentalStatusDetails,omitempty"`
+	Brothers              int                    `db:"brothers"                  json:"brothers"`
+	Sisters               int                    `db:"sisters"                   json:"sisters"`
+	EmployedSiblings      int                    `db:"employed_siblings"         json:"employedSiblings"`
+	OrdinalPosition       int                    `db:"ordinal_position"          json:"ordinalPosition"`
 	HaveQuietPlaceToStudy bool                   `db:"have_quiet_place_to_study" json:"haveQuietPlaceToStudy"`
-	IsSharingRoom         bool                   `db:"is_sharing_room"         json:"isSharingRoom"`
-	RoomSharingDetails    structs.NullableString `db:"room_sharing_details"    json:"roomSharingDetails,omitempty"`
-	NatureOfResidenceId   int                    `db:"nature_of_residence_id"  json:"natureOfResidenceId"`
-	CreatedAt             time.Time              `db:"created_at"              json:"createdAt"`
-	UpdatedAt             time.Time              `db:"updated_at"              json:"updatedAt"`
+	IsSharingRoom         bool                   `db:"is_sharing_room"           json:"isSharingRoom"`
+	RoomSharingDetails    structs.NullableString `db:"room_sharing_details"      json:"roomSharingDetails,omitempty"`
+	NatureOfResidenceId   int                    `db:"nature_of_residence_id"    json:"natureOfResidenceId"`
+	CreatedAt             time.Time              `db:"created_at"                json:"createdAt"`
+	UpdatedAt             time.Time              `db:"updated_at"                json:"updatedAt"`
 }
 
 // StudentSiblingSupport represents financial support for siblings.
 type StudentSiblingSupport struct {
 	FamilyBackgroundID int `db:"family_background_id" json:"familyBackgroundId"`
-	SupportTypeID      int `db:"support_type_id"       json:"supportTypeId"`
+	SupportTypeID      int `db:"support_type_id"      json:"supportTypeId"`
 }
 
 // EducationalBackground represents overall educational history.
@@ -287,18 +298,20 @@ type SchoolDetails struct {
 
 // StudentHealthRecord represents physical health status.
 type StudentHealthRecord struct {
-	ID                      int                    `db:"id"                          json:"id"`
-	IIRID                   string                 `db:"iir_id"                      json:"iirId"`
-	VisionHasProblem        bool                   `db:"vision_has_problem"          json:"visionHasProblem"`
-	VisionDetails           structs.NullableString `db:"vision_details"              json:"visionDetails,omitempty"`
-	HearingHasProblem       bool                   `db:"hearing_has_problem"         json:"hearingHasProblem"`
-	HearingDetails          structs.NullableString `db:"hearing_details"             json:"hearingDetails,omitempty"`
-	SpeechHasProblem        bool                   `db:"speech_has_problem"          json:"speechHasProblem"`
-	SpeechDetails           structs.NullableString `db:"speech_details"              json:"speechDetails,omitempty"`
-	GeneralHealthHasProblem bool                   `db:"general_health_has_problem"  json:"generalHealthHasProblem"`
-	GeneralHealthDetails    structs.NullableString `db:"general_health_details"      json:"generalHealthDetails,omitempty"`
-	CreatedAt               time.Time              `db:"created_at"                  json:"createdAt"`
-	UpdatedAt               time.Time              `db:"updated_at"                  json:"updatedAt"`
+	ID                        int                    `db:"id"                           json:"id"`
+	IIRID                     string                 `db:"iir_id"                       json:"iirId"`
+	VisionHasProblem          bool                   `db:"vision_has_problem"           json:"visionHasProblem"`
+	VisionDetails             structs.NullableString `db:"vision_details"               json:"visionDetails,omitempty"`
+	HearingHasProblem         bool                   `db:"hearing_has_problem"          json:"hearingHasProblem"`
+	HearingDetails            structs.NullableString `db:"hearing_details"              json:"hearingDetails,omitempty"`
+	SpeechHasProblem          bool                   `db:"speech_has_problem"           json:"speechHasProblem"`
+	SpeechDetails             structs.NullableString `db:"speech_details"               json:"speechDetails,omitempty"`
+	GeneralHealthHasProblem   bool                   `db:"general_health_has_problem"   json:"generalHealthHasProblem"`
+	GeneralHealthDetails      structs.NullableString `db:"general_health_details"       json:"generalHealthDetails,omitempty"`
+	MentalEmotionalHasProblem bool                   `db:"mental_emotional_has_problem" json:"mentalEmotionalHasProblem"`
+	MentalEmotionalDetails    structs.NullableString `db:"mental_emotional_details"     json:"mentalEmotionalDetails,omitempty"`
+	CreatedAt                 time.Time              `db:"created_at"                   json:"createdAt"`
+	UpdatedAt                 time.Time              `db:"updated_at"                   json:"updatedAt"`
 }
 
 // StudentConsultation represents history with professional counselors.
@@ -308,28 +321,28 @@ type StudentConsultation struct {
 	ProfessionalType string                 `db:"professional_type" json:"professionalType"`
 	HasConsulted     bool                   `db:"has_consulted"     json:"hasConsulted"`
 	WhenDate         structs.NullableString `db:"when_date"         json:"whenDate,omitempty"`
-	ForWhat          structs.NullableString `db:"for_what"         json:"forWhat,omitempty"`
+	ForWhat          structs.NullableString `db:"for_what"          json:"forWhat,omitempty"`
 	CreatedAt        time.Time              `db:"created_at"        json:"createdAt"`
 	UpdatedAt        time.Time              `db:"updated_at"        json:"updatedAt"`
 }
 
 // StudentFinance represents family financial status.
 type StudentFinance struct {
-	ID              int                    `db:"id"                          json:"id"`
-	IIRID           string                 `db:"iir_id"                      json:"iirId"`
+	ID              int                    `db:"id"                             json:"id"`
+	IIRID           string                 `db:"iir_id"                         json:"iirId"`
 	IncomeRangeID   int                    `db:"monthly_family_income_range_id" json:"incomeRangeId"`
-	OtherIncome     structs.NullableString `db:"other_income_details"         json:"otherIncome,omitempty"`
-	WeeklyAllowance float64                `db:"weekly_allowance"            json:"weeklyAllowance"`
-	CreatedAt       time.Time              `db:"created_at"                  json:"createdAt"`
-	UpdatedAt       time.Time              `db:"updated_at"                  json:"updatedAt"`
+	OtherIncome     structs.NullableString `db:"other_income_details"           json:"otherIncome,omitempty"`
+	WeeklyAllowance float64                `db:"weekly_allowance"               json:"weeklyAllowance"`
+	CreatedAt       time.Time              `db:"created_at"                     json:"createdAt"`
+	UpdatedAt       time.Time              `db:"updated_at"                     json:"updatedAt"`
 }
 
 // StudentFinancialSupport represents sources of financial aid.
 type StudentFinancialSupport struct {
-	StudentFinanceID int       `db:"sf_id"      json:"sfId"`
+	StudentFinanceID int       `db:"sf_id"           json:"sfId"`
 	SupportTypeID    int       `db:"support_type_id" json:"supportTypeId"`
-	CreatedAt        time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt        time.Time `db:"updated_at" json:"updatedAt"`
+	CreatedAt        time.Time `db:"created_at"      json:"createdAt"`
+	UpdatedAt        time.Time `db:"updated_at"      json:"updatedAt"`
 }
 
 // StudentActivity represents participation in clubs or sports.
@@ -379,11 +392,112 @@ type TestResult struct {
 
 // StudentCOR represents the Certificate of Registration file link.
 type StudentCOR struct {
-	FileID     string               `db:"file_id"     json:"fileId"`
-	StudentID  string               `db:"student_id"  json:"studentId"`
-	ValidFrom  structs.NullableTime `db:"valid_from"  json:"validFrom,omitempty"`
-	ValidUntil structs.NullableTime `db:"valid_until" json:"validUntil,omitempty"`
+	FileID        string               `db:"file_id"        json:"fileId"`
+	StudentID     string               `db:"student_id"     json:"studentId"`
+	StudentNumber string               `db:"student_number" json:"studentNumber"`
+	CourseCode    string               `db:"course_code"    json:"courseCode"`
+	CourseDesc    string               `db:"course_desc"    json:"courseDesc"`
+	YearLevel     int                  `db:"year_level"     json:"yearLevel"`
+	Section       int                  `db:"section"        json:"section"`
+	Campus        string               `db:"campus"         json:"campus"`
+	YearStart     int                  `db:"year_start"     json:"yearStart"`
+	YearEnd       int                  `db:"year_end"       json:"yearEnd"`
+	Term          int                  `db:"term"           json:"term"`
+	ValidFrom     structs.NullableTime `db:"valid_from"     json:"validFrom,omitempty"`
+	ValidUntil    structs.NullableTime `db:"valid_until"    json:"validUntil,omitempty"`
 }
 
+// AcademicSetting holds the single-row global academic year + term setting
+// managed by the SuperAdmin. Used to validate uploaded student CORs.
+type AcademicSetting struct {
+	ID               int       `db:"id"                 json:"id"`
+	CurrentYearStart int       `db:"current_year_start" json:"currentYearStart"`
+	CurrentYearEnd   int       `db:"current_year_end"   json:"currentYearEnd"`
+	CurrentTerm      int       `db:"current_term"       json:"currentTerm"`
+	UpdatedAt        time.Time `db:"updated_at"         json:"updatedAt"`
+}
 
+// StudentPersonalInfoView holds joined personal info and emergency details.
+type StudentPersonalInfoView struct {
+	ID                    int                    `db:"id"`
+	IIRID                 string                 `db:"iir_id"`
+	StudentNumber         string                 `db:"student_number"`
+	GenderID              int                    `db:"gender_id"`
+	GenderName            string                 `db:"gender_name"`
+	CivilStatusID         int                    `db:"civil_status_id"`
+	CivilStatusName       string                 `db:"civil_status_name"`
+	ReligionID            int                    `db:"religion_id"`
+	ReligionName          string                 `db:"religion_name"`
+	HeightM               float64                `db:"height_m"`
+	WeightKg              float64                `db:"weight_kg"`
+	Complexion            string                 `db:"complexion"`
+	HighSchoolGWA         float64                `db:"high_school_gwa"`
+	CourseID              int                    `db:"course_id"`
+	CourseCode            string                 `db:"course_code"`
+	CourseName            string                 `db:"course_name"`
+	YearLevel             int                    `db:"year_level"`
+	Section               int                    `db:"section"`
+	PlaceOfBirth          string                 `db:"place_of_birth"`
+	DateOfBirth           string                 `db:"date_of_birth"`
+	IsEmployed            bool                   `db:"is_employed"`
+	EmployerName          structs.NullableString `db:"employer_name"`
+	EmployerAddress       structs.NullableString `db:"employer_address"`
+	MobileNumber          string                 `db:"mobile_number"`
+	TelephoneNumber       structs.NullableString `db:"telephone_number"`
+	EmployerContactNumber structs.NullableString `db:"employer_contact_number"`
+	OtherReligionText     structs.NullableString `db:"other_religion_text"`
+	StatusID              int                    `db:"status_id"`
+	StatusName            string                 `db:"status_name"`
+	GraduationYear        structs.NullableInt64  `db:"graduation_year"`
 
+	// Emergency Contact Details
+	EmergencyID               int                    `db:"emergency_id"`
+	EmergencyFirstName        string                 `db:"emergency_first_name"`
+	EmergencyMiddleName       structs.NullableString `db:"emergency_middle_name"`
+	EmergencyLastName         string                 `db:"emergency_last_name"`
+	EmergencyContactNumber    string                 `db:"emergency_contact_number"`
+	EmergencyRelationshipID   int                    `db:"emergency_relationship_id"`
+	EmergencyRelationshipName string                 `db:"emergency_relationship_name"`
+	EmergencyAddressID        int                    `db:"emergency_address_id"`
+}
+
+// RelatedPersonView holds joined related person and relationship details.
+type RelatedPersonView struct {
+	ID                        int                    `db:"id"`
+	LastName                  string                 `db:"last_name"`
+	FirstName                 string                 `db:"first_name"`
+	MiddleName                structs.NullableString `db:"middle_name"`
+	SuffixName                structs.NullableString `db:"suffix_name"`
+	DateOfBirth               string                 `db:"date_of_birth"`
+	EducationalAttainmentID   int                    `db:"educational_attainment_id"`
+	EducationalAttainmentName string                 `db:"educational_attainment_name"`
+	Occupation                structs.NullableString `db:"occupation"`
+	EmployerName              structs.NullableString `db:"employer_name"`
+	EmployerAddress           structs.NullableString `db:"employer_address"`
+	RelationshipID            int                    `db:"relationship_id"`
+	RelationshipName          string                 `db:"relationship_name"`
+	IsParent                  bool                   `db:"is_parent"`
+	IsGuardian                bool                   `db:"is_guardian"`
+	IsLiving                  bool                   `db:"is_living"`
+}
+
+// StudentFinanceView holds joined student finance and income range details.
+type StudentFinanceView struct {
+	ID              int                    `db:"id"`
+	IIRID           string                 `db:"iir_id"`
+	IncomeRangeID   int                    `db:"income_range_id"`
+	IncomeRangeText string                 `db:"income_range_text"`
+	OtherIncome     structs.NullableString `db:"other_income"`
+	WeeklyAllowance float64                `db:"weekly_allowance"`
+}
+// SignificantNote represents a note record from the database.
+type SignificantNote struct {
+	ID              string                 `db:"id"`
+	IIRID           structs.NullableString `db:"iir_id"`
+	AppointmentID   structs.NullableString `db:"appointment_id"`
+	AdmissionSlipID structs.NullableString `db:"admission_slip_id"`
+	Note            string                 `db:"note"`
+	Remarks         string                 `db:"remarks"`
+	CreatedAt       time.Time              `db:"created_at"`
+	UpdatedAt       time.Time              `db:"updated_at"`
+}

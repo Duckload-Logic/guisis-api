@@ -212,6 +212,45 @@ func (r *Repository) GetActivityStats(
 	return stats, nil
 }
 
+func (r *Repository) GetByID(
+	ctx context.Context,
+	id int64,
+) (*SystemLog, error) {
+	query := `
+		SELECT id, level, category, action, message, user_id,
+		       target_id, target_type, user_email, target_email,
+		       ip_address, user_agent, metadata, trace_id, created_at
+		FROM system_logs
+		WHERE id = ?
+	`
+	var log SystemLog
+	err := r.db.GetContext(ctx, &log, query, id)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get log by id: %w", err)
+	}
+	return &log, nil
+}
+
+func (r *Repository) GetByTraceID(
+	ctx context.Context,
+	traceID string,
+) ([]SystemLog, error) {
+	query := `
+		SELECT id, level, category, action, message, user_id,
+		       target_id, target_type, user_email, target_email,
+		       ip_address, user_agent, metadata, trace_id, created_at
+		FROM system_logs
+		WHERE trace_id = ?
+		ORDER BY created_at ASC
+	`
+	var logs []SystemLog
+	err := r.db.SelectContext(ctx, &logs, query, traceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get logs by trace id: %w", err)
+	}
+	return logs, nil
+}
+
 func (r *Repository) DeleteLogsOlderThan(
 	ctx context.Context,
 	days int,
@@ -232,4 +271,3 @@ func (r *Repository) DeleteLogsOlderThan(
 
 	return rows, nil
 }
-

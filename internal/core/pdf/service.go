@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/datetime"
@@ -90,12 +91,57 @@ func getBasicHelpers() template.FuncMap {
 			return *i
 		},
 		"makeSlice": func(args ...interface{}) []interface{} { return args },
+		"dict": func(values ...interface{}) (map[string]interface{}, error) {
+			if len(values)%2 != 0 {
+				return nil, fmt.Errorf("invalid dict call")
+			}
+			dict := make(map[string]interface{}, len(values)/2)
+			for i := 0; i < len(values); i += 2 {
+				key, ok := values[i].(string)
+				if !ok {
+					return nil, fmt.Errorf("dict keys must be strings")
+				}
+				dict[key] = values[i+1]
+			}
+			return dict, nil
+		},
 		"iterate": func(n int) []int {
 			var i []int
 			for j := 0; j < n; j++ {
 				i = append(i, j)
 			}
 			return i
+		},
+		"sumInt": func(slice interface{}, field string) int {
+			v := reflect.ValueOf(slice)
+			if v.Kind() != reflect.Slice {
+				return 0
+			}
+			sum := 0
+			for i := 0; i < v.Len(); i++ {
+				item := reflect.Indirect(v.Index(i))
+				f := item.FieldByName(field)
+				if f.IsValid() && f.Kind() == reflect.Int {
+					sum += int(f.Int())
+				}
+			}
+			return sum
+		},
+		"sumFloat": func(slice interface{}, field string) float64 {
+			v := reflect.ValueOf(slice)
+			if v.Kind() != reflect.Slice {
+				return 0
+			}
+			sum := 0.0
+			for i := 0; i < v.Len(); i++ {
+				item := reflect.Indirect(v.Index(i))
+				f := item.FieldByName(field)
+				if f.IsValid() && (f.Kind() == reflect.Float64 ||
+					f.Kind() == reflect.Float32) {
+					sum += f.Float()
+				}
+			}
+			return sum
 		},
 	}
 }
@@ -166,9 +212,35 @@ func getActivityHelpers() template.FuncMap {
 			}
 			for i := 0; i < v.Len(); i++ {
 				item := reflect.Indirect(v.Index(i))
-				if item.FieldByName("ActivityOption").
-					FieldByName("Category").String() == target {
-					return true
+				opt := item.FieldByName("ActivityOption")
+				if opt.IsValid() {
+					name := opt.FieldByName("Name").String()
+					if strings.EqualFold(name, target) {
+						return true
+					}
+				}
+			}
+			return false
+		},
+		"hasActivityCategory": func(
+			activities interface{},
+			target string,
+			category string,
+		) bool {
+			v := reflect.ValueOf(activities)
+			if v.Kind() != reflect.Slice {
+				return false
+			}
+			for i := 0; i < v.Len(); i++ {
+				item := reflect.Indirect(v.Index(i))
+				opt := item.FieldByName("ActivityOption")
+				if opt.IsValid() {
+					name := opt.FieldByName("Name").String()
+					cat := opt.FieldByName("Category").String()
+					if strings.EqualFold(name, target) &&
+						strings.EqualFold(cat, category) {
+						return true
+					}
 				}
 			}
 			return false
@@ -202,11 +274,13 @@ func getRelationHelpers() template.FuncMap {
 
 				switch role {
 				case "Father":
-					if (isParent && relName == "Father") || relName == "Father" {
+					if (isParent && relName == "Father") ||
+						relName == "Father" {
 						return p.Interface()
 					}
 				case "Mother":
-					if (isParent && relName == "Mother") || relName == "Mother" {
+					if (isParent && relName == "Mother") ||
+						relName == "Mother" {
 						return p.Interface()
 					}
 				case "Guardian":

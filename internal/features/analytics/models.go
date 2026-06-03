@@ -4,11 +4,11 @@ import "time"
 
 // DemographicStat represents demographic statistics for analytics.
 type DemographicStat struct {
-	Category    string `db:"category"     json:"category"`
-	MaleCount   int    `db:"male_count"   json:"maleCount"`
-	FemaleCount int    `db:"female_count" json:"femaleCount"`
-	Total       int    `db:"total"        json:"total"`
-	RankPos     int    `db:"rank_pos"     json:"rankPos"`
+	Category    string  `db:"category"     json:"category"`
+	MaleCount   int     `db:"male_count"   json:"maleCount"`
+	FemaleCount int     `db:"female_count" json:"femaleCount"`
+	Total       int     `db:"total"        json:"total"`
+	RankPos     float64 `db:"rank_pos"     json:"rankPos"`
 }
 
 // StudentPersonalInfo represents personal information data for analytics.
@@ -28,10 +28,11 @@ type StudentPersonalInfo struct {
 	Section         int       `db:"section"          json:"section"`
 	PlaceOfBirth    string    `db:"place_of_birth"   json:"placeOfBirth"`
 	DateOfBirth     time.Time `db:"date_of_birth"    json:"dateOfBirth"`
-	IsEmployed      bool      `db:"is_employed"      json:"isEmployed"`
-	EmployerName    *string   `db:"employer_name"    json:"employerName"`
-	EmployerAddress *string   `db:"employer_address" json:"employerAddress"`
-	MobileNumber    string    `db:"mobile_number"    json:"mobileNumber"`
+	IsEmployed        bool      `db:"is_employed"      json:"isEmployed"`
+	EmployerName      *string   `db:"employer_name"    json:"employerName"`
+	EmployerAddress   *string   `db:"employer_address" json:"employerAddress"`
+	OtherReligionText *string   `db:"other_religion_text"`
+	MobileNumber      string    `db:"mobile_number"    json:"mobileNumber"`
 	CreatedAt       time.Time `db:"created_at"       json:"createdAt"`
 	UpdatedAt       time.Time `db:"updated_at"       json:"updatedAt"`
 }

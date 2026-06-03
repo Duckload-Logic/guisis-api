@@ -223,6 +223,13 @@ func (h *Handler) DeleteUserSession(c *gin.Context) {
 	adminEmail := c.MustGet("userEmail").(string)
 	adminID := c.MustGet("userID").(string)
 
+	user, err := h.service.GetUserByID(c.Request.Context(), targetUserID)
+	if err != nil {
+		fmt.Printf("[DeleteUserSession] {GetUserByID}: %v\n", err)
+		response.SendError(c, "Failed to find user", http.StatusNotFound, nil)
+		return
+	}
+
 	h.logger.Record(
 		c.Request.Context(),
 		nil,
@@ -236,8 +243,10 @@ func (h *Handler) DeleteUserSession(c *gin.Context) {
 				jti,
 				targetUserID,
 			),
-			UserID:   structs.StringToNullableString(adminID),
-			TargetID: structs.StringToNullableString(targetUserID),
+			UserID:      structs.StringToNullableString(adminID),
+			UserEmail:   structs.StringToNullableString(adminEmail),
+			TargetID:    structs.StringToNullableString(targetUserID),
+			TargetEmail: structs.StringToNullableString(user.Email),
 		},
 	)
 
@@ -295,6 +304,13 @@ func (h *Handler) PostUpdateRoles(c *gin.Context) {
 	err := h.service.UpdateUserRoles(c.Request.Context(), req, adminID)
 	if err != nil {
 		fmt.Printf("[PostUpdateRoles] {UpdateUserRoles}: %v\n", err)
+		if err.Error() == "cannot modify your own roles" ||
+			err.Error() == "user cannot be both Counselor and SuperAdmin" ||
+			err.Error() == "user cannot be both Student and Counselor" ||
+			err.Error() == "user cannot be both Counselor and Developer" {
+			response.SendFail(c, gin.H{"error": err.Error()})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to update user roles",
@@ -337,6 +353,12 @@ func (h *Handler) PostUserToWhitelist(c *gin.Context) {
 	err := h.service.AddUserToWhitelist(c.Request.Context(), req)
 	if err != nil {
 		fmt.Printf("[PostUserToWhitelist] {AddUserToWhitelist}: %v\n", err)
+		if err.Error() == "user cannot be whitelisted as both Counselor and SuperAdmin" ||
+			err.Error() == "user cannot be whitelisted as both Student and Counselor" ||
+			err.Error() == "user cannot be whitelisted as both Counselor and Developer" {
+			response.SendFail(c, gin.H{"error": err.Error()})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to add user to whitelist",
@@ -362,7 +384,8 @@ func (h *Handler) PostRemoveUserFromWhitelist(c *gin.Context) {
 	err := h.service.RemoveUserFromWhitelist(c.Request.Context(), req)
 	if err != nil {
 		fmt.Printf(
-			"[PostRemoveUserFromWhitelist] {RemoveUserFromWhitelist}: %v\n", err,
+			"[PostRemoveUserFromWhitelist] {RemoveUserFromWhitelist}: %v\n",
+			err,
 		)
 		response.SendError(
 			c,
@@ -377,6 +400,22 @@ func (h *Handler) PostRemoveUserFromWhitelist(c *gin.Context) {
 		c,
 		gin.H{"message": "User removed from whitelist successfully"},
 	)
+}
+
+func (h *Handler) GetWhitelist(c *gin.Context) {
+	entries, err := h.service.ListWhitelist(c.Request.Context())
+	if err != nil {
+		fmt.Printf("[GetWhitelist] {ListWhitelist}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to fetch whitelist",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, entries)
 }
 
 func (h *Handler) PostProfilePicture(c *gin.Context) {
