@@ -29,7 +29,7 @@ func RegisterRoutes(
 	))
 	{
 		adminOnly.GET("", h.GetSlips)
-		adminOnly.GET("/urgent", h.GetSlipUrgent)
+		adminOnly.GET("/urgent", h.GetUrgentSlips)
 		adminOnly.PATCH("/id/:slipID/status", h.PatchSlipStatus)
 		adminOnly.POST("/tickets/claim", h.PostClaimTicket)
 		adminOnly.GET("/tickets/:code", h.GetTicketDetails)
@@ -43,7 +43,7 @@ func RegisterRoutes(
 		constants.DeveloperRoleID,
 	))
 	{
-		studentOnly.GET("/me", h.GetSlipMe)
+		studentOnly.GET("/me", h.GetSlipsMe)
 		studentOnly.POST("", middleware.RequireCOR(), h.PostSlip)
 		studentOnly.PATCH(
 			"/id/:slipID",

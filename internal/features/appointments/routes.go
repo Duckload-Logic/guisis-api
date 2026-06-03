@@ -40,13 +40,13 @@ func RegisterRoutes(
 		constants.DeveloperRoleID,
 	))
 	{
-		studentOnly.GET("/me", h.GetAppointmentMe)
+		studentOnly.GET("/me", h.GetAppointmentsMe)
 		studentOnly.POST("", middleware.RequireCOR(), h.PostAppointment)
 		studentOnly.POST(
 			"/id/:appointmentID/cancel",
 			appointmentLookup,
 			middleware.RequireCOR(),
-			h.PostAppointmentCancel,
+			h.PostAppointmentCancellation,
 		)
 	}
 

@@ -298,7 +298,7 @@ func (h *Handler) GetAppointmentStatuses(c *gin.Context) {
 // @Failure      403  {object} map[string]string
 // @Failure      500  {object} map[string]string
 // @Router       /appointments/me [get]
-func (h *Handler) GetAppointmentMe(c *gin.Context) {
+func (h *Handler) GetAppointmentsMe(c *gin.Context) {
 	iirID, ok := getIIRIDFromContext(c)
 	if !ok {
 		return
@@ -314,7 +314,7 @@ func (h *Handler) GetAppointmentMe(c *gin.Context) {
 		c.Request.Context(), iirID, req,
 	)
 	if err != nil {
-		fmt.Printf("[GetAppointmentMe] {Fetch Appointments}: %v\n", err)
+		fmt.Printf("[GetAppointmentsMe] {Fetch Appointments}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve appointments",
@@ -429,7 +429,7 @@ type CancelAppointmentRequest struct {
 	Reason string `json:"reason"`
 }
 
-func (h *Handler) PostAppointmentCancel(c *gin.Context) {
+func (h *Handler) PostAppointmentCancellation(c *gin.Context) {
 	id := c.Param("appointmentID")
 	userID := audit.ExtractUserID(c.Request.Context())
 
@@ -439,7 +439,7 @@ func (h *Handler) PostAppointmentCancel(c *gin.Context) {
 	)
 	if err != nil {
 		fmt.Printf(
-			"[PostAppointmentCancel] {Verify Ownership}: %v\n",
+			"[PostAppointmentCancellation] {Verify Ownership}: %v\n",
 			err,
 		)
 		response.SendError(
@@ -462,7 +462,7 @@ func (h *Handler) PostAppointmentCancel(c *gin.Context) {
 	appt, err := h.service.GetAppointmentByID(c.Request.Context(), id)
 	if err != nil {
 		fmt.Printf(
-			"[PostAppointmentCancel] {Fetch Appointment}: %v\n",
+			"[PostAppointmentCancellation] {Fetch Appointment}: %v\n",
 			err,
 		)
 		response.SendError(
@@ -525,7 +525,10 @@ func (h *Handler) PostAppointmentCancel(c *gin.Context) {
 	var req CancelAppointmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		if err.Error() != "EOF" {
-			fmt.Printf("[PostAppointmentCancel] {Bind Request}: %v\n", err)
+			fmt.Printf(
+				"[PostAppointmentCancellation] {Bind Request}: %v\n",
+				err,
+			)
 		}
 	}
 
@@ -544,7 +547,7 @@ func (h *Handler) PostAppointmentCancel(c *gin.Context) {
 	if err := h.service.UpdateAppointment(
 		c.Request.Context(), id, updateReq,
 	); err != nil {
-		fmt.Printf("[PostAppointmentCancel] {Update}: %v\n", err)
+		fmt.Printf("[PostAppointmentCancellation] {Update}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to cancel appointment",

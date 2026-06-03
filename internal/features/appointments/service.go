@@ -143,7 +143,11 @@ func (s *Service) CreateAppointment(
 
 	// Fetch personalized notification targets
 	userID := audit.ExtractUserID(ctx)
-	student, _ := s.userService.GetUserByID(ctx, userID)
+	student, err := s.userService.GetUserByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	studentName := "A student"
 	if student != nil {
 		studentName = fmt.Sprintf(
@@ -153,10 +157,18 @@ func (s *Service) CreateAppointment(
 		)
 	}
 
-	counselorIDs, _ := s.userService.GetUserIDsByRole(
+	counselors, err := s.userService.GetUsersByRole(
 		ctx,
 		int(constants.AdminRoleID),
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	counselorEmails := make([]string, 0, len(counselors))
+	for _, counselor := range counselors {
+		counselorEmails = append(counselorEmails, counselor.Email)
+	}
 
 	notifications := []audit.NotificationParams{
 		{
@@ -172,14 +184,9 @@ func (s *Service) CreateAppointment(
 		},
 	}
 
-	counselorEmails, _ := s.userService.GetEmailsByRole(
-		ctx,
-		int(constants.AdminRoleID),
-	)
-
-	for _, cid := range counselorIDs {
+	for _, counselor := range counselors {
 		notifications = append(notifications, audit.NotificationParams{
-			ReceiverID: structs.StringToNullableString(cid),
+			ReceiverID: structs.StringToNullableString(counselor.ID),
 			TargetID:   structs.StringToNullableString(appt.ID),
 			TargetType: structs.StringToNullableString(
 				constants.AppointmentEntityType,

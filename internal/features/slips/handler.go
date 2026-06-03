@@ -136,7 +136,7 @@ func (h *Handler) PostSlip(c *gin.Context) {
 // @Success      200  {object} map[string]interface{}
 // @Failure      500  {object} map[string]string
 // @Router       /slips/urgent [get]
-func (h *Handler) GetSlipUrgent(c *gin.Context) {
+func (h *Handler) GetUrgentSlips(c *gin.Context) {
 	var req ListSlipsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		response.SendFail(c, gin.H{"error": "Invalid query parameters"})
@@ -145,7 +145,7 @@ func (h *Handler) GetSlipUrgent(c *gin.Context) {
 
 	slips, err := h.service.GetUrgentSlips(c.Request.Context(), &req)
 	if err != nil {
-		fmt.Printf("[GetSlipUrgent] {Fetch Slips}: %v\n", err)
+		fmt.Printf("[GetUrgentSlips] {Fetch Slips}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve slips",
@@ -312,7 +312,7 @@ func (h *Handler) GetSlips(c *gin.Context) {
 // @Failure      403  {object} map[string]string
 // @Failure      500  {object} map[string]string
 // @Router       /slips/me [get]
-func (h *Handler) GetSlipMe(c *gin.Context) {
+func (h *Handler) GetSlipsMe(c *gin.Context) {
 	iirID, ok := getIIRIDFromContext(c)
 	if !ok {
 		return
@@ -330,7 +330,7 @@ func (h *Handler) GetSlipMe(c *gin.Context) {
 		req,
 	)
 	if err != nil {
-		fmt.Printf("[GetSlipMe] {Fetch Slips}: %v\n", err)
+		fmt.Printf("[GetSlipsMe] {Fetch Slips}: %v\n", err)
 		response.SendError(
 			c,
 			"Failed to retrieve slips",
