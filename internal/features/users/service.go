@@ -64,6 +64,23 @@ func (s *Service) GetUserByID(
 	return s.mapToResponse(user), nil
 }
 
+func (s *Service) GetUsersByRole(
+	ctx context.Context,
+	roleID int,
+) ([]UserResponse, error) {
+	users, err := s.repo.GetUsersByRole(ctx, roleID)
+	if err != nil {
+		return nil, err
+	}
+
+	userDTOs := make([]UserResponse, len(users))
+	for i, user := range users {
+		userDTOs[i] = *s.mapToResponse(&user)
+	}
+
+	return userDTOs, nil
+}
+
 // GetUserByEmail retrieves a user by their email and auth type.
 func (s *Service) GetUserByEmail(
 	ctx context.Context,

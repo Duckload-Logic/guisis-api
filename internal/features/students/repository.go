@@ -1564,3 +1564,16 @@ func (r *Repository) GetStudentSignificantNotes(
 
 	return results, nil
 }
+
+func (r *Repository) DeleteOrphanedAddresses(
+	ctx context.Context,
+	tx datastore.DB,
+) error {
+	query := `
+		DELETE FROM addresses 
+		WHERE id NOT IN (SELECT address_id FROM student_addresses)
+		  AND id NOT IN (SELECT address_id FROM emergency_contacts)
+	`
+	_, err := tx.ExecContext(ctx, query)
+	return err
+}

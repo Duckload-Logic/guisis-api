@@ -61,6 +61,21 @@ func (r *Repository) GetUserByID(
 	return &user, nil
 }
 
+func (r *Repository) GetUsersByRole(
+	ctx context.Context,
+	roleID int,
+) ([]User, error) {
+	var users []User
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM users
+		JOIN user_roles ur ON ur.user_id = users.id
+		WHERE ur.role_id = ?
+	`, datastore.GetColumns(User{}))
+	err := r.db.SelectContext(ctx, &users, query, roleID)
+	return users, err
+}
+
 func (r *Repository) CheckUserWhitelist(
 	ctx context.Context,
 	email string,

@@ -83,7 +83,7 @@ func (s *Service) SubmitCOR(
 ) (string, error) {
 	file, err := s.filesSvc.UploadFile(ctx, fileHeader, "cors")
 	if err != nil {
-		return "", fmt.Errorf("[StudentService] {SubmitCOR Upload}: %w", err)
+		return "", fmt.Errorf("%w", err)
 	}
 
 	cor := StudentCOR{
@@ -95,7 +95,7 @@ func (s *Service) SubmitCOR(
 	ocrResult, err := s.filesSvc.GetOCRResult(ctx, file.ID)
 	if err != nil {
 		// Non-fatal, but we'll use fallback dates
-		fmt.Printf("[StudentService] {SubmitCOR GetOCRResult}: %v\n", err)
+		fmt.Printf("%v\n", err)
 	}
 
 	if ocrResult != nil && ocrResult.StructuredData != "" {
@@ -145,7 +145,7 @@ func (s *Service) SubmitCOR(
 			if sErr != nil {
 				_ = s.filesSvc.DeleteFile(ctx, file.ID)
 				return "", fmt.Errorf(
-					"[StudentService] {SubmitCOR Fetch Setting}: %w",
+					"%w",
 					sErr,
 				)
 			}
@@ -635,17 +635,31 @@ func (s *Service) GetStudentFamilyBackground(
 		ctx,
 		studentFamily.ParentalStatusID,
 	)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get parental status: %w",
+			err,
+		)
+	}
+
 	natureOfResidence, err := s.repo.GetNatureOfResidenceByID(
 		ctx,
 		studentFamily.NatureOfResidenceId,
 	)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get nature of residence: %w",
+			err,
+		)
+	}
+
 	siblingSupportTypes, err := s.repo.GetStudentSiblingSupport(
 		ctx,
 		studentFamily.ID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"failed to get student family background: %w",
+			"failed to get sibling support types: %w",
 			err,
 		)
 	}
@@ -881,6 +895,13 @@ func (s *Service) SubmitStudentIIR(
 		return "", fmt.Errorf("[StudentService] {SubmitStudentIIR}: %w", err)
 	}
 
+	// Clean up orphaned addresses asynchronously to avoid lock contention.
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = s.repo.DeleteOrphanedAddresses(bgCtx, s.repo.GetDB())
+	}()
+
 	return iirID, nil
 }
 
@@ -912,6 +933,13 @@ func (s *Service) UpdateStudentIIR(
 			err,
 		)
 	}
+
+	// Clean up orphaned addresses asynchronously to avoid lock contention.
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = s.repo.DeleteOrphanedAddresses(bgCtx, s.repo.GetDB())
+	}()
 
 	// Notify counselors when student updates their IIR details
 	counselorIDs, err := s.userService.GetUserIDsByRole(
@@ -1286,15 +1314,15 @@ func (s *Service) saveComprehensiveProfile(
 
 		rpID, err := s.repo.UpsertRelatedPerson(
 			ctx, tx, &RelatedPerson{
-				FirstName:       rpDTO.FirstName,
-				MiddleName:      rpDTO.MiddleName,
-				LastName:        rpDTO.LastName,
-				SuffixName:      rpDTO.SuffixName,
-				DateOfBirth:     rpDTO.DateOfBirth,
+				FirstName:               rpDTO.FirstName,
+				MiddleName:              rpDTO.MiddleName,
+				LastName:                rpDTO.LastName,
+				SuffixName:              rpDTO.SuffixName,
+				DateOfBirth:             rpDTO.DateOfBirth,
 				EducationalAttainmentID: eduID,
-				Occupation:      rpDTO.Occupation,
-				EmployerName:    rpDTO.EmployerName,
-				EmployerAddress: rpDTO.EmployerAddress,
+				Occupation:              rpDTO.Occupation,
+				EmployerName:            rpDTO.EmployerName,
+				EmployerAddress:         rpDTO.EmployerAddress,
 			},
 		)
 		if err != nil {
