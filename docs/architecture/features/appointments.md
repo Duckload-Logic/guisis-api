@@ -99,7 +99,7 @@ PatchAppointment godoc
   - *GetAppointmentCategoryList godoc @Summary      Get appointment categories @Description  Retrieves available appointment categories. @Tags         Appointments @Produce      json @Success      200  {object} []AppointmentCategory @Failure      500  {object} map[string]string @Router       /appointments/lookups/categories [get] GetAppointmentCategoryList retrieves all appointment concern categories.*
 - `GetAppointmentDailyStats`
   - *GetDailyStatusCountList godoc @Summary      Get daily status count @Description  Retrieves appointment status counts by date. @Tags         Appointments @Produce      json @Param        start_date query string true "Start date (YYYY-MM-DD)" @Success      200  {object} []DailyStatusCount @Failure      400  {object} map[string]string @Failure      500  {object} map[string]string @Router       /appointments/calendar/stats [get]*
-- `GetAppointmentMe`
+- `GetAppointmentsMe`
   - *GetAppointmentListByIIR godoc @Summary      Get student's appointments @Description  Retrieves appointments for the authenticated student. @Tags         Appointments @Produce      json @Success      200  {object} map[string]interface{} @Failure      403  {object} map[string]string @Failure      500  {object} map[string]string @Router       /appointments/me [get]*
 - `GetAppointmentSlots`
   - *GetAvailableTimeSlotList godoc @Summary      Get available time slots @Description  Retrieves available time slots for a date. @Tags         Appointments @Produce      json @Param        date query string true "Date (YYYY-MM-DD)" @Success      200  {object} []AvailableTimeSlotView @Failure      400  {object} map[string]string @Failure      500  {object} map[string]string @Router       /appointments/lookups/slots [get]*
@@ -113,7 +113,7 @@ PatchAppointment godoc
   - *PatchAppointment godoc*
 - `PostAppointment`
   - *PostAppointment godoc @Summary      Book a new appointment @Description  Schedules a new appointment for a student. @Tags         Appointments @Accept       json @Produce      json @Param        request body      AppointmentDTO true "Appointment Details" @Success      201     {object}  map[string]interface{} @Failure      400     {object}  map[string]string @Failure      403     {object}  map[string]string @Failure      500     {object}  map[string]string @Router       /appointments [post]*
-- `PostAppointmentCancel`
+- `PostAppointmentCancellation`
 
 **Constructors/Factory Functions:**
 - `NewHandler`
