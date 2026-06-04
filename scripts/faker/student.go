@@ -358,7 +358,10 @@ func validContact(contact structs.NullableString) string {
 	if contact.Valid && strings.TrimSpace(contact.String) != "" {
 		return contact.String
 	}
-	return gofakeit.Phone()
+	phoneNumber := gofakeit.Phone()
+	phoneNumber = "09" + phoneNumber[2:]
+
+	return phoneNumber
 }
 
 func insertEmergencyContact(
