@@ -2,16 +2,22 @@ package analytics
 
 import (
 	"context"
+	_ "embed"
 	"encoding/base64"
 	"fmt"
 	"math"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/pdf"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
+
+//go:embed assets/report.html
+var reportTemplate string
+
+//go:embed assets/pup-logo.png
+var pupLogo []byte
 
 type Service struct {
 	repo  *Repository
@@ -260,20 +266,7 @@ func (s *Service) ExportIIRAnalyticsReport(
 		return nil, fmt.Errorf("failed to fetch analytics data: %w", err)
 	}
 
-	// For simplicity in this capstone, we load the template from disk.
-	// In production, this would be embedded.
-	tmplPath := "internal/features/analytics/assets/report.html"
-	tmplBytes, err := os.ReadFile(tmplPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read template: %w", err)
-	}
-
-	logoPath := "internal/features/analytics/assets/pup-logo.png"
-	logoBytes, err := os.ReadFile(logoPath)
-	logoBase64 := ""
-	if err == nil {
-		logoBase64 = base64.StdEncoding.EncodeToString(logoBytes)
-	}
+	logoBase64 := base64.StdEncoding.EncodeToString(pupLogo)
 
 	courseCode := ""
 	courseName := ""
@@ -405,7 +398,7 @@ func (s *Service) ExportIIRAnalyticsReport(
 	pdfBytes, err := s.pdf.GenerateFromContent(
 		ctx,
 		"analytics_report",
-		string(tmplBytes),
+		reportTemplate,
 		reportData,
 	)
 	if err != nil {
