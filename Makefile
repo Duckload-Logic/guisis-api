@@ -85,4 +85,5 @@ compose-up:
 	docker-compose --env-file $(ENV) up --build
 
 compose-prod:
-	DOCKER_STAGE=prod docker-compose --env-file $(ENV) up --build -d
+	docker-compose -f docker-compose.prod.yml \
+		--env-file $(ENV) up --build -d
