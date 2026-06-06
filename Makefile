@@ -82,8 +82,8 @@ swagger-integrations:
 	--instanceName integrations
 
 compose-up:
-	docker-compose --env-file $(ENV) up --build
+	docker compose --env-file $(ENV) up --build
 
 compose-prod:
-	docker-compose -f docker-compose.prod.yml \
+	docker compose -f docker-compose.prod.yml \
 		--env-file $(ENV) up --build -d
