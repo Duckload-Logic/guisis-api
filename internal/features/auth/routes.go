@@ -14,9 +14,6 @@ func RegisterRoutes(
 	authRoutes := rg.Group("/auth")
 	{
 		authRoutes.POST("/login", h.PostLogin)
-		authRoutes.POST("/register", h.PostRegister)
-		authRoutes.POST("/verify/resend", h.PostResendVerification)
-		authRoutes.POST("/verify", h.PostVerify)
 		authRoutes.POST("/refresh", h.PostRefreshToken)
 		authRoutes.GET(
 			"/me",

@@ -63,7 +63,7 @@ func getServices(
 	gotenbergClient := gotenberg.NewClient(cfg.GotenbergURL)
 	pdfService := pdf.NewService(gotenbergClient)
 
-	ocrClient := ocr.NewClient(cfg.AIBaseUrl, cfg.AiAPIKey)
+	ocrClient := ocr.NewClient(cfg.AIBaseUrl, cfg.AIAPIKey)
 
 	fileService := files.NewService(
 		repos.FileRepo,

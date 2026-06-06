@@ -130,6 +130,13 @@ func (s *Service) CreateSignificantNote(
 	return nil
 }
 
+func (s *Service) DeleteSignificantNote(
+	ctx context.Context,
+	noteID string,
+) (bool, error) {
+	return s.repo.DeleteSignificantNote(ctx, noteID)
+}
+
 func (s *Service) HasNoteForAppointment(
 	ctx context.Context,
 	appointmentID string,

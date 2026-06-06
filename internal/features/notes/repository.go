@@ -71,6 +71,33 @@ func (r *Repository) CreateSignificantNote(
 	)
 }
 
+func (r *Repository) DeleteSignificantNote(
+	ctx context.Context,
+	noteID string,
+) (bool, error) {
+
+	return datastore.NewRunInTransaction(
+		ctx,
+		r.db,
+		func(tx datastore.DB) (bool, error) {
+			query := fmt.Sprintf(`
+				DELETE FROM
+					significant_notes
+				WHERE
+					1 = 1 AND
+					id = %s
+			`)
+
+			_, err := tx.ExecContext(ctx, query, noteID)
+			if err != nil {
+				return false, fmt.Errorf("[NoteRepository] {DeleteNote}: ", err)
+			}
+
+			return true, nil
+		},
+	)
+}
+
 func (r *Repository) HasNoteForAppointment(
 	ctx context.Context,
 	appointmentID string,

@@ -20,9 +20,7 @@ type Config struct {
 
 	WebsitesPort string
 
-	LocalUploadDIR               string
-	AzureStorageConnectionString string
-	AzureContainerName           string
+	LocalUploadDIR string
 
 	IsProduction bool
 
@@ -46,7 +44,7 @@ type Config struct {
 	MailPitPort int
 
 	AIBaseUrl string
-	AiAPIKey  string
+	AIAPIKey  string
 
 	VAPIDPublicKey  string
 	VAPIDPrivateKey string
@@ -70,10 +68,6 @@ func LoadConfig() *Config {
 		WebsitesPort: os.Getenv("WEBSITES_PORT"),
 
 		LocalUploadDIR: os.Getenv("UPLOAD_DIR"),
-		AzureStorageConnectionString: os.Getenv(
-			"AZURE_STORAGE_CONNECTION_STRING",
-		),
-		AzureContainerName: os.Getenv("AZURE_CONTAINER_NAME"),
 
 		IsProduction: os.Getenv("IS_PRODUCTION") == "true",
 
@@ -116,7 +110,7 @@ func LoadConfig() *Config {
 		}(),
 
 		AIBaseUrl: os.Getenv("AI_BASE_URL"),
-		AiAPIKey:  os.Getenv("AI_API_KEY"),
+		AIAPIKey:  os.Getenv("AI_API_KEY"),
 
 		VAPIDPublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
 		VAPIDPrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
@@ -179,15 +173,7 @@ func validateCoreConfig(config *Config) {
 
 func validateStorageConfig(config *Config) {
 	if config.IsProduction {
-		if config.AzureStorageConnectionString == "" {
-			panic(
-				"AZURE_STORAGE_CONNECTION_STRING is required for " +
-					"Azure Blob Storage",
-			)
-		}
-		if config.AzureContainerName == "" {
-			panic("AZURE_CONTAINER_NAME is required for Azure Blob Storage")
-		}
+
 	} else {
 		if config.LocalUploadDIR == "" {
 			panic("UPLOAD_DIR is required for local storage")

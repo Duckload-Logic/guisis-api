@@ -1,32 +1,78 @@
-version: "3.8"
-
 services:
   api:
-    image: olazojohnalbert/capstone-gin-api:latest
+    build:
+      context: .
+      target: prod
     ports:
       - "80:8080"
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASS=
+    env_file:
+      - .env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
     networks:
       - app-network
+    restart: always
 
   redis:
     image: redis:7-alpine
     container_name: capstone-redis
     command: redis-server --stop-writes-on-bgsave-error no
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     restart: always
     networks:
       - app-network
     volumes:
       - redis-data:/data
 
+  mysql:
+    image: mysql:8.0
+    container_name: capstone-mysql
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1024M
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Bind to localhost so you can access via SSH tunnel securely
+    ports:
+      - "127.0.0.1:3306:3306"
+    restart: always
+    networks:
+      - app-network
+    volumes:
+      - mysql-data:/var/lib/mysql
+
   gotenberg:
     image: gotenberg/gotenberg:8
     container_name: capstone-gotenberg
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
     restart: always
     networks:
       - app-network
@@ -37,3 +83,4 @@ networks:
 
 volumes:
   redis-data:
+  mysql-data:

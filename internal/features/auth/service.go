@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -21,13 +20,12 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/identity/idp"
-	"github.com/pquerna/otp/totp"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {
 	repo           *users.Repository
-	idpClient      idp.IDPClientInterface
+	idpClient      idp.IDPClient
 	redis          *datastore.RedisClient
 	sessionService *sessions.Service
 	emailer        audit.Emailer
@@ -43,219 +41,12 @@ func NewService(
 ) *Service {
 	return &Service{
 		repo:           repo,
-		idpClient:      idp.NewIDPClient(),
+		idpClient:      *idp.NewIDPClient(),
 		redis:          redis,
 		sessionService: sessionService,
 		emailer:        emailer,
 		logger:         logger,
 	}
-}
-
-// RegisterUser handles native user registration.
-func (s *Service) RegisterUser(
-	ctx context.Context,
-	req RegisterRequest,
-) (string, error) {
-	// Check cooldown
-	cooldownKey := fmt.Sprintf("cooldown:%s", req.Email)
-	if val, _ := s.redis.Get(ctx, cooldownKey); val != "" {
-		return "", fmt.Errorf(
-			"please wait before requesting another verification email",
-		)
-	}
-
-	// Check if user already exists
-	existingUser, _ := s.repo.GetUserByEmail(
-		ctx,
-		req.Email,
-		string(constants.AuthTypeNative),
-	)
-	if existingUser != nil {
-		return "", fmt.Errorf("user already exists: %s", req.Email)
-	}
-
-	// Validate password length
-	if len(req.Password) < 8 {
-		return "", fmt.Errorf("password must be at least 8 characters long")
-	}
-
-	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword(
-		[]byte(req.Password),
-		bcrypt.DefaultCost,
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to hash password: %v", err)
-	}
-
-	transactionID := uuid.NewString()
-
-	// Create user object in Domain format
-	user := users.User{
-		ID:           uuid.NewString(),
-		Email:        req.Email,
-		FirstName:    req.FirstName,
-		LastName:     req.LastName,
-		MiddleName:   structs.StringToNullableString(req.MiddleName),
-		SuffixName:   structs.StringToNullableString(req.SuffixName),
-		PasswordHash: structs.StringToNullableString(string(hashedPassword)),
-		Roles:        []users.Role{{ID: int(constants.DeveloperRoleID)}},
-		AuthType:     string(constants.AuthTypeNative),
-		IsActive:     false,
-	}
-
-	verificationOTP, err := s.get6DigitOTP()
-	if err != nil {
-		return "", fmt.Errorf("failed to generate verification token: %v", err)
-	}
-	hashedOTP, err := bcrypt.GenerateFromPassword(
-		[]byte(verificationOTP),
-		bcrypt.DefaultCost,
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to generate verification token: %v", err)
-	}
-
-	// Use a map for storage to include the hidden PasswordHash
-	storageData := map[string]interface{}{
-		"user":         user,
-		"passwordHash": user.PasswordHash,
-	}
-
-	userJSON, err := json.Marshal(storageData)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal user: %v", err)
-	}
-
-	// Store in Redis using the UUID (transactionID)
-	val := map[string]string{
-		"registrationID":    transactionID,
-		"verificationToken": string(hashedOTP),
-		"user":              string(userJSON),
-	}
-	err = s.sessionService.StoreToken(
-		ctx,
-		sessions.NewJTI(transactionID),
-		val,
-		300,
-	)
-	if err != nil {
-		return "", fmt.Errorf("failed to store token in redis: %v", err)
-	}
-
-	if err := s.validateEmailDomain(req.Email); err != nil {
-		return "", err
-	}
-
-	err = s.sendVerificationEmail(ctx, verificationOTP, req.Email)
-	if err != nil {
-		return "", err
-	}
-
-	// Set cooldown
-	_ = s.redis.Set(ctx, cooldownKey, "1", 120*time.Second)
-
-	return transactionID, nil
-}
-
-func (s *Service) ResendVerification(
-	ctx context.Context,
-	registrationID string,
-) error {
-	val, err := s.sessionService.GetToken(ctx, sessions.NewJTI(registrationID))
-	if err != nil {
-		return fmt.Errorf("failed to get token from redis: %v", err)
-	}
-
-	// Extract email for cooldown check
-	var storageData struct {
-		User users.User `json:"user"`
-	}
-	_ = json.Unmarshal([]byte(val["user"]), &storageData)
-	userEmail := storageData.User.Email
-
-	// Check cooldown
-	cooldownKey := fmt.Sprintf("cooldown:%s", userEmail)
-	if cval, _ := s.redis.Get(ctx, cooldownKey); cval != "" {
-		return fmt.Errorf(
-			"please wait before requesting another verification email",
-		)
-	}
-
-	// Resend limit
-	var resends int
-	if r, ok := val["resends"]; ok {
-		fmt.Sscanf(r, "%d", &resends)
-	}
-	resends++
-	val["resends"] = fmt.Sprintf("%d", resends)
-
-	if resends > 3 {
-		return fmt.Errorf(
-			"too many resends. please try again later or contact support",
-		)
-	}
-
-	verificationOTP, err := s.get6DigitOTP()
-	if err != nil {
-		return fmt.Errorf("failed to generate verification token: %v", err)
-	}
-
-	hashedOTP, err := bcrypt.GenerateFromPassword(
-		[]byte(verificationOTP),
-		bcrypt.DefaultCost,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to generate verification token: %v", err)
-	}
-
-	val["verificationToken"] = string(hashedOTP)
-	err = s.sessionService.StoreToken(
-		ctx,
-		sessions.NewJTI(registrationID),
-		val,
-		300,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to store token in redis: %v", err)
-	}
-
-	err = json.Unmarshal([]byte(val["user"]), &storageData)
-	if err != nil {
-		return fmt.Errorf("failed to unmarshal user: %v", err)
-	}
-	user := storageData.User
-
-	if err := s.validateEmailDomain(user.Email); err != nil {
-		return err
-	}
-
-	err = s.sendVerificationEmail(ctx, verificationOTP, user.Email)
-	if err != nil {
-		return err
-	}
-
-	// Set cooldown
-	_ = s.redis.Set(ctx, userEmail, "1", 120*time.Second)
-
-	return nil
-}
-
-func (s *Service) get6DigitOTP() (string, error) {
-	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      constants.ClaimsIssuer,
-		AccountName: constants.FromEmail(),
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to generate verification token: %v", err)
-	}
-
-	verificationOTP, err := totp.GenerateCode(key.Secret(), time.Now())
-	if err != nil {
-		return "", fmt.Errorf("failed to generate verification token: %v", err)
-	}
-
-	return verificationOTP, nil
 }
 
 func (s *Service) validateEmailDomain(email string) error {
@@ -271,92 +62,13 @@ func (s *Service) validateEmailDomain(email string) error {
 	return nil
 }
 
-func (s *Service) sendVerificationEmail(
-	ctx context.Context,
-	verificationOTP, receiverEmail string,
-) error {
-	err := s.emailer.SendOTP(ctx, receiverEmail, verificationOTP)
-	if err != nil {
-		return fmt.Errorf("failed to send verification email: %v", err)
-	}
-
-	return nil
-}
-
-func (s *Service) VerifyUser(
-	ctx context.Context,
-	registrationID string,
-	verificationOTP string,
-) (string, string, error) {
-	// Get user from Redis
-	jti := sessions.NewJTI(registrationID)
-	val, err := s.sessionService.GetToken(ctx, jti)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to get token from redis: %v", err)
-	}
-
-	// Trials management
-	var trials int
-	if t, ok := val["trials"]; ok {
-		fmt.Sscanf(t, "%d", &trials)
-	}
-
-	trials++
-	val["trials"] = fmt.Sprintf("%d", trials)
-
-	if trials > 5 {
-		_ = s.sessionService.DeleteToken(ctx, jti)
-		return "", "", fmt.Errorf(
-			"too many verification attempts. registration expired",
-		)
-	}
-
-	// Update trials in Redis
-	_ = s.sessionService.StoreToken(ctx, jti, val, 300)
-
-	// Verify OTP
-	err = bcrypt.CompareHashAndPassword(
-		[]byte(val["verificationToken"]),
-		[]byte(verificationOTP),
-	)
-	if err != nil {
-		return "", "", fmt.Errorf("invalid credentials: %v", err)
-	}
-
-	var storageData struct {
-		User         users.User             `json:"user"`
-		PasswordHash structs.NullableString `json:"passwordHash"`
-	}
-
-	err = json.Unmarshal([]byte(val["user"]), &storageData)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to unmarshal user data: %v", err)
-	}
-
-	user := storageData.User
-	user.PasswordHash = storageData.PasswordHash
-
-	user.IsActive = true
-
-	// Run in transaction
-	err = s.repo.WithTransaction(
-		ctx,
-		func(tx datastore.DB) error {
-			return s.repo.CreateUser(ctx, tx, user)
-		},
-	)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to create user: %v", err)
-	}
-
-	return user.ID, user.Email, nil
-}
-
 // AuthenticateUser handles native email/password authentication.
+// TODO: This will be depracated
 func (s *Service) AuthenticateUser(
 	ctx context.Context, email, password, ipAddress, userAgent string,
 ) (string, string, string, error) {
-	// Check lockout
+	// Check if user is locked out
+	// TODO: Remove this implementation in the future
 	lockoutKey := fmt.Sprintf("lockout:%s", email)
 	if locked, _ := s.redis.Get(ctx, lockoutKey); locked != "" {
 		log.Printf("Account locked for user: %s", email)
@@ -849,7 +561,7 @@ func (s *Service) PostIDPTokenExchange(
 	ipAddress, userAgent string,
 ) (string, string, string, string, string, error) {
 	// Exchange authorization code for IDP tokens
-	tokenResp, err := s.idpClient.ExchangeCodeForToken(ctx, code, cfg)
+	idpTokenResp, err := s.idpClient.ExchangeCodeForToken(ctx, code, cfg)
 	if err != nil {
 		return "", "", "", "", "", fmt.Errorf(
 			"[AuthService] {Token Exchange}: %w",
@@ -858,17 +570,13 @@ func (s *Service) PostIDPTokenExchange(
 	}
 
 	// Fetch User Info from IDP
-	userInfo, err := s.GetIDPUserInfo(ctx, tokenResp.AccessToken, cfg)
+	userInfo, err := s.GetIDPUserInfo(ctx, idpTokenResp.AccessToken, cfg)
 	if err != nil {
 		return "", "", "", "", "", fmt.Errorf(
 			"[AuthService] {Fetch User Info}: %w",
 			err,
 		)
 	}
-
-	// Parse Tokens
-	idpAccessToken := tokenResp.AccessToken
-	idpRefreshToken := tokenResp.RefreshToken
 
 	// Whitelist Check: Authoritative role source for IDP users.
 	// We check this on every login to support dynamic role changes (promotions).
@@ -895,13 +603,11 @@ func (s *Service) PostIDPTokenExchange(
 
 	if len(whitelistRoleIDs) > 0 {
 		targetRoleIDs = whitelistRoleIDs
-	} else if err == sql.ErrNoRows {
-		// New users not in whitelist default to Student.
-		targetRoleIDs = []int{int(constants.StudentRoleID)}
 	}
 
-	switch err {
-	case sql.ErrNoRows:
+	if err == sql.ErrNoRows {
+		targetRoleIDs = []int{int(constants.StudentRoleID)}
+
 		// JIT Provisioning (First Login Only)
 		roles := make([]users.Role, len(targetRoleIDs))
 		for i, id := range targetRoleIDs {
@@ -914,6 +620,7 @@ func (s *Service) PostIDPTokenExchange(
 			Roles:        roles,
 			FirstName:    userInfo.FirstName,
 			LastName:     userInfo.LastName,
+			MiddleName:   structs.StringToNullableString(userInfo.MiddleName),
 			SuffixName:   structs.StringToNullableString(userInfo.SuffixName),
 			AuthType:     string(constants.AuthTypeIDP),
 			PasswordHash: structs.NullableString{Valid: false},
@@ -942,72 +649,12 @@ func (s *Service) PostIDPTokenExchange(
 				err,
 			)
 		}
-	case nil:
-		// User exists. Sync roles and consume whitelist if present
-		if len(whitelistRoleIDs) > 0 && len(targetRoleIDs) > 0 {
-			addedAny := false
-			err = s.repo.WithTransaction(
-				ctx,
-				func(tx datastore.DB) error {
-					for _, targetID := range targetRoleIDs {
-						hasRole := false
-						for _, r := range localUser.Roles {
-							if r.ID == targetID {
-								hasRole = true
-								break
-							}
-						}
-
-						if !hasRole {
-							addedAny = true
-							// Promotion or sync from whitelist
-							err = s.repo.AssignRole(
-								ctx,
-								tx,
-								users.RoleAssignment{
-									UserID: localUser.ID,
-									RoleID: targetID,
-									Reason: structs.StringToNullableString(
-										"Whitelist synchronization",
-									),
-									AssignedBy: structs.StringToNullableString(
-										constants.SystemEntityType,
-									),
-								},
-							)
-							if err != nil {
-								return err
-							}
-						}
-					}
-					return s.repo.RemoveUserFromWhitelist(
-						ctx,
-						tx,
-						userInfo.Email,
-					)
-				},
-			)
-			if err != nil {
-				return "", "", "", "", "", fmt.Errorf(
-					"[AuthService] {Sync Roles & Clear Whitelist}: %w",
-					err,
-				)
-			}
-
-			if addedAny {
-				// Refresh roles
-				updatedRoles, _ := s.repo.GetRolesByUserID(ctx, localUser.ID)
-				localUser.Roles = updatedRoles
-			}
-		}
-	default:
+	} else {
 		return "", "", "", "", "", fmt.Errorf(
 			"[AuthService] {Anchor Check}: %w",
 			err,
 		)
 	}
-
-	appUserID := localUser.ID
 
 	roleName := "student"
 	if len(localUser.Roles) > 0 {
@@ -1019,7 +666,7 @@ func (s *Service) PostIDPTokenExchange(
 		roleIDs[i] = r.ID
 	}
 
-	// Look up student IDs if they have Student role
+	// Hydrate Student IIR and COR IDs
 	var iirID, corID string
 	for _, r := range localUser.Roles {
 		if r.ID == int(constants.StudentRoleID) {
@@ -1036,13 +683,13 @@ func (s *Service) PostIDPTokenExchange(
 	appAccessToken, _, err := tokens.NewService().
 		GenerateSessionToken(
 			userInfo.Email,
-			appUserID,
+			localUser.ID,
 			roleIDs,
 			string(constants.AuthTypeIDP),
 			constants.AccessTokenMaxAge,
 			func(c *tokens.Claims) {
 				c.IsVerified = localUser.IsActive
-				c.IDPAccessToken = idpAccessToken
+				c.IDPAccessToken = idpTokenResp.AccessToken
 				c.IIRID = iirID
 				c.CORID = corID
 			},
@@ -1054,13 +701,13 @@ func (s *Service) PostIDPTokenExchange(
 	appRefreshToken, refreshClaims, err := tokens.NewService().
 		GenerateSessionToken(
 			userInfo.Email,
-			appUserID,
+			localUser.ID,
 			roleIDs,
 			string(constants.AuthTypeIDP),
 			constants.RefreshTokenMaxAge,
 			func(c *tokens.Claims) {
 				c.IsVerified = localUser.IsActive
-				c.IDPAccessToken = idpAccessToken
+				c.IDPAccessToken = idpTokenResp.AccessToken
 				c.IIRID = iirID
 				c.CORID = corID
 			},
@@ -1073,7 +720,7 @@ func (s *Service) PostIDPTokenExchange(
 	err = s.redis.Set(
 		ctx,
 		idpRefreshKey,
-		idpRefreshToken,
+		idpTokenResp.RefreshToken,
 		time.Duration(constants.RefreshTokenMaxAge)*time.Second,
 	)
 	if err != nil {
@@ -1089,13 +736,13 @@ func (s *Service) PostIDPTokenExchange(
 			"User %s successfully logged in via IDP",
 			userInfo.Email,
 		),
-		UserID:    structs.StringToNullableString(appUserID),
+		UserID:    structs.StringToNullableString(localUser.ID),
 		UserEmail: structs.StringToNullableString(userInfo.Email),
 		IPAddress: structs.StringToNullableString(ipAddress),
 		UserAgent: structs.StringToNullableString(userAgent),
 	})
 
-	return appAccessToken, appRefreshToken, appUserID, userInfo.Email,
+	return appAccessToken, appRefreshToken, localUser.ID, userInfo.Email,
 		roleName, nil
 }
 

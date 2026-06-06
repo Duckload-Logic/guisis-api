@@ -3,7 +3,6 @@ package bootstrap
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
@@ -22,32 +21,8 @@ func Initialize(db *sqlx.DB, cfg *config.Config) (*Application, error) {
 	var emailer email.Emailer
 
 	if cfg.IsProduction {
-		{
-			blobStorage, err := storage.NewBlobStorage(
-				cfg.AzureStorageConnectionString,
-				cfg.AzureContainerName,
-			)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"failed to initialize Azure Blob Storage: %w",
-					err,
-				)
-			}
-			ctx, cancel := context.WithTimeout(
-				context.Background(),
-				10*time.Second,
-			)
-			defer cancel()
-
-			if err := blobStorage.EnsureContainer(ctx); err != nil {
-				return nil, fmt.Errorf(
-					"failed to ensure Azure container exists: %w",
-					err,
-				)
-			}
-
-			fileStorage = blobStorage
-		}
+		uploadDir := cfg.LocalUploadDIR
+		fileStorage = storage.NewDiskStorage(uploadDir)
 		emailer = email.NewSMTPMailer(
 			cfg.SMTPHost,
 			cfg.SMTPPort,
@@ -55,20 +30,17 @@ func Initialize(db *sqlx.DB, cfg *config.Config) (*Application, error) {
 			cfg.SMTPPass,
 		)
 	} else {
-		{
-			uploadDir := cfg.LocalUploadDIR
-			fileStorage = storage.NewDiskStorage(uploadDir)
+		uploadDir := cfg.LocalUploadDIR
+		fileStorage = storage.NewDiskStorage(uploadDir)
+
+		mailpit, err := email.NewMailPit(cfg.MailPitHost, cfg.MailPitPort)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to initialize MailPit: %w",
+				err,
+			)
 		}
-		{
-			mailpit, err := email.NewMailPit(cfg.MailPitHost, cfg.MailPitPort)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"failed to initialize MailPit: %w",
-					err,
-				)
-			}
-			emailer = mailpit
-		}
+		emailer = mailpit
 	}
 
 	repos := getRepositories(db)

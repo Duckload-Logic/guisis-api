@@ -84,3 +84,9 @@ func (h *Handler) PostSignificantNote(c *gin.Context) {
 		gin.H{"message": "Significant note saved successfully"},
 	)
 }
+
+func (h *Handler) DeleteSignificantNote(
+	c *gin.Context,
+) {
+
+}

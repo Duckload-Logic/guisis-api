@@ -29,7 +29,7 @@ type Service struct {
 	userService    *users.Service
 	noteService    *notes.Service
 	studentService *students.Service
-	classifier     classifier.ServiceInterface
+	classifier     *classifier.ClassifierClient
 }
 
 func NewService(
@@ -53,7 +53,7 @@ func NewService(
 		classifier: classifier.NewClient(
 			http.DefaultClient,
 			cfg.AIBaseUrl,
-			cfg.AiAPIKey,
+			cfg.AIAPIKey,
 		),
 	}
 }

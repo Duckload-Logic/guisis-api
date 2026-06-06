@@ -503,6 +503,7 @@ func (s *Service) SubmitExcuseSlip(
 			return nil
 		},
 	)
+
 	if err != nil {
 		audit.Dispatch(
 			ctx,
