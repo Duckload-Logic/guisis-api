@@ -20,11 +20,7 @@ func RegisterRoutes(
 			middleware.AuthMiddleware(redis),
 			h.GetMe,
 		)
-		authRoutes.GET(
-			"/logout",
-			middleware.AuthMiddleware(redis),
-			h.GetLogout,
-		)
+		authRoutes.GET("/logout", h.GetLogout)
 
 		// IDP OAuth 2.0 routes
 		authRoutes.GET("/idp/authorize", h.GetAuthorizeURL)
