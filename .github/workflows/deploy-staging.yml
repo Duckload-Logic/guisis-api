@@ -1,8 +1,8 @@
-name: Build and Deploy to Azure
+name: Build and Deploy Staging to Azure
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "dev" ]
 
 jobs:
   build-and-deploy:
@@ -24,7 +24,7 @@ jobs:
           file: Dockerfile
           target: prod
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/capstone-gin-api:latest
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/capstone-gin-api:staging
 
       - name: Login to Azure
         uses: azure/login@v1
