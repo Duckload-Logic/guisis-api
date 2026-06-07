@@ -12,6 +12,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
 )
 
 type Handler struct {
@@ -91,10 +92,6 @@ func (h *Handler) GetLogout(c *gin.Context) {
 	refreshToken, _ := c.Cookie(constants.RefreshTokenCookieName)
 	tokenType := c.GetString("tokenType")
 
-	logoutURL, _ := h.service.Logout(
-		c.Request.Context(), token, refreshToken, tokenType, h.cfg,
-	)
-
 	var uIDStr, uEmailStr string
 	if id, ok := c.Get("userID"); ok {
 		uIDStr, _ = id.(string)
@@ -102,6 +99,26 @@ func (h *Handler) GetLogout(c *gin.Context) {
 	if email, ok := c.Get("userEmail"); ok {
 		uEmailStr, _ = email.(string)
 	}
+
+	// Retrieve details from token if middleware did not run
+	if token != "" {
+		claims, err := tokens.NewService().ParseTokenUnverified(token)
+		if err == nil {
+			if uIDStr == "" {
+				uIDStr = claims.UserID
+			}
+			if uEmailStr == "" {
+				uEmailStr = claims.UserEmail
+			}
+			if tokenType == "" {
+				tokenType = claims.TokenType
+			}
+		}
+	}
+
+	logoutURL, _ := h.service.Logout(
+		c.Request.Context(), token, refreshToken, tokenType, h.cfg,
+	)
 
 	h.logger.Record(c.Request.Context(), nil, audit.LogEntry{
 		Level:     audit.LevelInfo,
@@ -127,8 +144,12 @@ func (h *Handler) GetLogout(c *gin.Context) {
 		h.cfg.IsProduction, true,
 	)
 
-	// Determine redirection target
-	redirectTarget := "/"
+	// Determine redirection target (fallback to frontend)
+	redirectTarget := "http://localhost:5173/"
+	if h.cfg.IsProduction {
+		redirectTarget = "https://guisis.dllbsit2027.com/"
+	}
+
 	if logoutURL != "" {
 		redirectTarget = logoutURL
 	}
