@@ -1484,12 +1484,12 @@ func (s *Service) GenerateIIR(
 
 	data := struct {
 		Profile              *ComprehensiveProfileDTO
-		DateToday            string
+		RecentDate           string
 		ShowSignificantNotes bool
 		SignificantNotes     []SignificantNote
 	}{
 		Profile:              profile,
-		DateToday:            dateStr,
+		RecentDate:           dateStr,
 		ShowSignificantNotes: isCounselor,
 		SignificantNotes:     notes,
 	}

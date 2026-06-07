@@ -10,20 +10,14 @@ import (
 	"time"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/datetime"
+	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/gotenberg"
 )
 
-// GotenbergClient defines the interface for converting HTML to PDF.
-type GotenbergClient interface {
-	ConvertHTML(ctx context.Context, htmlContent string) ([]byte, error)
-}
-
-// Service provides high-level PDF generation logic.
 type Service struct {
-	gotenberg GotenbergClient
+	gotenberg *gotenberg.Client
 }
 
-// NewService creates a new PDF service.
-func NewService(gotenberg GotenbergClient) *Service {
+func NewService(gotenberg *gotenberg.Client) *Service {
 	return &Service{
 		gotenberg: gotenberg,
 	}
@@ -82,15 +76,21 @@ func getTemplateFuncs() template.FuncMap {
 
 func getBasicHelpers() template.FuncMap {
 	return template.FuncMap{
-		"sub": func(a, b int) int { return a - b },
-		"add": func(a, b int) int { return a + b },
+		"sub": func(a, b int) int {
+			return a - b
+		},
+		"add": func(a, b int) int {
+			return a + b
+		},
 		"ptrInt": func(i *int) int {
 			if i == nil {
 				return 0
 			}
 			return *i
 		},
-		"makeSlice": func(args ...interface{}) []interface{} { return args },
+		"makeSlice": func(args ...interface{}) []interface{} {
+			return args
+		},
 		"dict": func(values ...interface{}) (map[string]interface{}, error) {
 			if len(values)%2 != 0 {
 				return nil, fmt.Errorf("invalid dict call")

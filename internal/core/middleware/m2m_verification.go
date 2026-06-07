@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,7 @@ func RequireVerifiedM2M(c *gin.Context) {
 	}
 
 	isVerified, ok := c.Get("isVerified")
+	log.Printf("IS_VERIFIED: %v", isVerified)
 	if vBool, isBool := isVerified.(bool); !ok || !isBool || !vBool {
 		c.AbortWithStatusJSON(
 			http.StatusForbidden,

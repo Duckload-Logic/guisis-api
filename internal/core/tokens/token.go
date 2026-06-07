@@ -24,24 +24,6 @@ func NewService() *Service {
 	return &Service{secret: []byte(secret)}
 }
 
-func (s *Service) GenerateToken(
-	userEmail string,
-	userID string,
-	roleIDs []int,
-	tokenType string,
-	expireSeconds int,
-) (string, *Claims, error) {
-	return s.GenerateM2MToken(
-		userEmail,
-		userID,
-		roleIDs,
-		tokenType,
-		"",
-		false,
-		expireSeconds,
-	)
-}
-
 func (s *Service) GenerateSessionToken(
 	userEmail string,
 	userID string,
@@ -81,6 +63,7 @@ func (s *Service) GenerateM2MToken(
 	tokenType string,
 	m2mClientID string,
 	hasPersonalInfoAccess bool,
+	isVerified bool,
 	expireSeconds int,
 ) (string, *Claims, error) {
 	claims := &Claims{
@@ -90,6 +73,7 @@ func (s *Service) GenerateM2MToken(
 		TokenType:             tokenType,
 		M2MClientID:           m2mClientID,
 		HasPersonalInfoAccess: hasPersonalInfoAccess,
+		IsVerified:            isVerified,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(
 				time.Duration(expireSeconds) * time.Second),

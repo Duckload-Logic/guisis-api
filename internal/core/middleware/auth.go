@@ -133,6 +133,8 @@ func setContextInfo(c *gin.Context, claims *tokens.Claims) {
 		c.Set("m2mClientID", claims.M2MClientID)
 		c.Set("isM2M", true)
 		c.Set("hasPersonalInfoAccess", claims.HasPersonalInfoAccess)
+		c.Set("isVerified", claims.IsVerified)
+		c.Set("clientName", claims.ClientName)
 	} else {
 		c.Set("userID", claims.UserID)
 		c.Set("userEmail", claims.UserEmail)
@@ -150,9 +152,5 @@ func setContextInfo(c *gin.Context, claims *tokens.Claims) {
 	}
 	if claims.IDPAccessToken != "" {
 		c.Set("idpAccessToken", claims.IDPAccessToken)
-	}
-	c.Set("isVerified", claims.IsVerified)
-	if claims.ClientName != "" {
-		c.Set("clientName", claims.ClientName)
 	}
 }

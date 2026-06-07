@@ -80,17 +80,17 @@ func (r *Repository) DeleteSignificantNote(
 		ctx,
 		r.db,
 		func(tx datastore.DB) (bool, error) {
-			query := fmt.Sprintf(`
-				DELETE FROM
-					significant_notes
-				WHERE
-					1 = 1 AND
-					id = %s
-			`)
+			query := `
+				DELETE FROM significant_notes
+				WHERE id = ?
+			`
 
 			_, err := tx.ExecContext(ctx, query, noteID)
 			if err != nil {
-				return false, fmt.Errorf("[NoteRepository] {DeleteNote}: ", err)
+				return false, fmt.Errorf(
+					"[NoteRepository] {DeleteNote}: %w",
+					err,
+				)
 			}
 
 			return true, nil

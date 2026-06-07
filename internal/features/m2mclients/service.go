@@ -237,6 +237,7 @@ func (s *Service) issueTokens(
 		"m2m",
 		client.ClientID,
 		client.HasPersonalInfoAccess,
+		client.IsVerified,
 		constants.M2MAccessTokenMaxAge,
 	)
 	if err != nil {
@@ -272,6 +273,7 @@ func (s *Service) issueTokens(
 		"m2m_refresh",
 		client.ClientID,
 		client.HasPersonalInfoAccess,
+		client.IsVerified,
 		constants.M2MRefreshTokenMaxAge,
 	)
 	if err != nil {
