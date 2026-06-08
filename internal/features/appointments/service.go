@@ -80,6 +80,37 @@ func (s *Service) CreateAppointment(
 		StatusID:   1,
 	}
 
+	if req.PreferredDate1 != "" {
+		appt.PrefDate1 = structs.StringToNullableString(
+			strings.Split(req.PreferredDate1, "T")[0],
+		)
+	}
+	if req.PreferredTimeSlot1 != nil && req.PreferredTimeSlot1.ID != 0 {
+		appt.PrefTimeSlotID1 = structs.Int64ToNullableInt64(
+			int64(req.PreferredTimeSlot1.ID),
+		)
+	}
+	if req.PreferredDate2 != "" {
+		appt.PrefDate2 = structs.StringToNullableString(
+			strings.Split(req.PreferredDate2, "T")[0],
+		)
+	}
+	if req.PreferredTimeSlot2 != nil && req.PreferredTimeSlot2.ID != 0 {
+		appt.PrefTimeSlotID2 = structs.Int64ToNullableInt64(
+			int64(req.PreferredTimeSlot2.ID),
+		)
+	}
+	if req.PreferredDate3 != "" {
+		appt.PrefDate3 = structs.StringToNullableString(
+			strings.Split(req.PreferredDate3, "T")[0],
+		)
+	}
+	if req.PreferredTimeSlot3 != nil && req.PreferredTimeSlot3.ID != 0 {
+		appt.PrefTimeSlotID3 = structs.Int64ToNullableInt64(
+			int64(req.PreferredTimeSlot3.ID),
+		)
+	}
+
 	// Default values for urgency level and score
 	appt.UrgencyLevel = "MEDIUM"
 	appt.UrgencyScore = 0.0
@@ -262,37 +293,7 @@ func (s *Service) GetAppointmentByID(
 		return nil, nil
 	}
 
-	dto := &AppointmentDTO{
-		ID: appt.ID,
-		User: users.UserResponse{
-			ID:         "",
-			FirstName:  appt.UserFirstName,
-			MiddleName: appt.UserMiddleName,
-			LastName:   appt.UserLastName,
-			Email:      appt.UserEmail,
-		},
-		IIRID:         appt.IIRID,
-		StudentNumber: appt.StudentNumber,
-		Reason:        appt.Reason,
-		AdminNotes:    appt.AdminNotes,
-		WhenDate:      appt.WhenDate,
-		TimeSlot: TimeSlot{
-			ID:   appt.TimeSlotID,
-			Time: appt.TimeSlotTime,
-		},
-		AppointmentCategory: AppointmentCategory{
-			ID:   appt.CategoryID,
-			Name: appt.CategoryName,
-		},
-		Status: AppointmentStatus{
-			ID:   appt.StatusID,
-			Name: appt.StatusName,
-		},
-		UrgencyLevel: appt.UrgencyLevel,
-		UrgencyScore: appt.UrgencyScore,
-		CreatedAt:    appt.CreatedAt,
-		UpdatedAt:    appt.UpdatedAt,
-	}
+	dto := s.mapToDTO(appt)
 
 	hasNote, _ := s.noteService.HasNoteForAppointment(ctx, id)
 	dto.HasSignificantNote = hasNote
@@ -378,42 +379,16 @@ func (s *Service) ListAppointments(
 
 	dtos := make([]AppointmentDTO, 0, len(appts))
 	for i := range appts {
-		dto := AppointmentDTO{
-			ID:     appts[i].ID,
-			UserID: appts[i].UserID,
-			User: users.UserResponse{
-				ID:         "",
-				FirstName:  appts[i].UserFirstName,
-				MiddleName: appts[i].UserMiddleName,
-				LastName:   appts[i].UserLastName,
-				Email:      appts[i].UserEmail,
-			},
-			Reason:     appts[i].Reason,
-			AdminNotes: appts[i].AdminNotes,
-			WhenDate:   appts[i].WhenDate,
-			TimeSlot: TimeSlot{
-				ID:   appts[i].TimeSlotID,
-				Time: appts[i].TimeSlotTime,
-			},
-			AppointmentCategory: AppointmentCategory{
-				ID:   appts[i].CategoryID,
-				Name: appts[i].CategoryName,
-			},
-			Status: AppointmentStatus{
-				ID:   appts[i].StatusID,
-				Name: appts[i].StatusName,
-			},
-			UrgencyLevel:  appts[i].UrgencyLevel,
-			UrgencyScore:  appts[i].UrgencyScore,
-			StudentCORURL: corMap[appts[i].UserID],
-			CreatedAt:     appts[i].CreatedAt,
-			UpdatedAt:     appts[i].UpdatedAt,
-		}
+		dto := s.mapToDTO(&appts[i])
+		dto.StudentCORURL = corMap[appts[i].UserID]
 
-		hasNote, _ := s.noteService.HasNoteForAppointment(ctx, appts[i].ID)
+		hasNote, _ := s.noteService.HasNoteForAppointment(
+			ctx,
+			appts[i].ID,
+		)
 		dto.HasSignificantNote = hasNote
 
-		dtos = append(dtos, dto)
+		dtos = append(dtos, *dto)
 	}
 
 	total, err := s.repo.GetTotalAppointmentsCount(
@@ -456,38 +431,15 @@ func (s *Service) GetAppointmentsByUserID(
 
 	dtos := make([]AppointmentDTO, 0, len(appts))
 	for i := range appts {
-		dto := AppointmentDTO{
-			ID: appts[i].ID,
-			User: users.UserResponse{
-				ID:         "",
-				FirstName:  appts[i].UserFirstName,
-				MiddleName: appts[i].UserMiddleName,
-				LastName:   appts[i].UserLastName,
-				Email:      appts[i].UserEmail,
-			},
-			Reason:     appts[i].Reason,
-			AdminNotes: appts[i].AdminNotes,
-			WhenDate:   appts[i].WhenDate,
-			TimeSlot: TimeSlot{
-				ID:   appts[i].TimeSlotID,
-				Time: appts[i].TimeSlotTime,
-			},
-			AppointmentCategory: AppointmentCategory{
-				ID:   appts[i].CategoryID,
-				Name: appts[i].CategoryName,
-			},
-			Status: AppointmentStatus{
-				ID:   appts[i].StatusID,
-				Name: appts[i].StatusName,
-			},
-			CreatedAt: appts[i].CreatedAt,
-			UpdatedAt: appts[i].UpdatedAt,
-		}
+		dto := s.mapToDTO(&appts[i])
 
-		hasNote, _ := s.noteService.HasNoteForAppointment(ctx, appts[i].ID)
+		hasNote, _ := s.noteService.HasNoteForAppointment(
+			ctx,
+			appts[i].ID,
+		)
 		dto.HasSignificantNote = hasNote
 
-		dtos = append(dtos, dto)
+		dtos = append(dtos, *dto)
 	}
 
 	total, err := s.repo.GetTotalAppointmentsCount(
@@ -533,38 +485,15 @@ func (s *Service) GetAppointmentsByIIRID(
 
 	dtos := make([]AppointmentDTO, 0, len(appts))
 	for i := range appts {
-		dto := AppointmentDTO{
-			ID: appts[i].ID,
-			User: users.UserResponse{
-				ID:         "",
-				FirstName:  appts[i].UserFirstName,
-				MiddleName: appts[i].UserMiddleName,
-				LastName:   appts[i].UserLastName,
-				Email:      appts[i].UserEmail,
-			},
-			Reason:     appts[i].Reason,
-			AdminNotes: appts[i].AdminNotes,
-			WhenDate:   appts[i].WhenDate,
-			TimeSlot: TimeSlot{
-				ID:   appts[i].TimeSlotID,
-				Time: appts[i].TimeSlotTime,
-			},
-			AppointmentCategory: AppointmentCategory{
-				ID:   appts[i].CategoryID,
-				Name: appts[i].CategoryName,
-			},
-			Status: AppointmentStatus{
-				ID:   appts[i].StatusID,
-				Name: appts[i].StatusName,
-			},
-			CreatedAt: appts[i].CreatedAt,
-			UpdatedAt: appts[i].UpdatedAt,
-		}
+		dto := s.mapToDTO(&appts[i])
 
-		hasNote, _ := s.noteService.HasNoteForAppointment(ctx, appts[i].ID)
+		hasNote, _ := s.noteService.HasNoteForAppointment(
+			ctx,
+			appts[i].ID,
+		)
 		dto.HasSignificantNote = hasNote
 
-		dtos = append(dtos, dto)
+		dtos = append(dtos, *dto)
 	}
 
 	total, err := s.repo.GetTotalAppointmentsCount(
@@ -787,14 +716,18 @@ func (s *Service) GetUserIDByAppointmentID(
 	return s.repo.GetUserIDByAppointmentID(ctx, id)
 }
 
-func (s *Service) mapToDTO(appt *AppointmentWithDetailsView) *AppointmentDTO {
+func (s *Service) mapToDTO(
+	appt *AppointmentWithDetailsView,
+) *AppointmentDTO {
 	if appt == nil {
 		return nil
 	}
 
-	return &AppointmentDTO{
-		ID: appt.ID,
+	dto := &AppointmentDTO{
+		ID:     appt.ID,
+		UserID: appt.UserID,
 		User: users.UserResponse{
+			ID:         appt.UserID,
 			FirstName:  appt.UserFirstName,
 			MiddleName: appt.UserMiddleName,
 			LastName:   appt.UserLastName,
@@ -822,4 +755,34 @@ func (s *Service) mapToDTO(appt *AppointmentWithDetailsView) *AppointmentDTO {
 		CreatedAt:    appt.CreatedAt,
 		UpdatedAt:    appt.UpdatedAt,
 	}
+
+	if appt.PrefDate1.Valid {
+		dto.PreferredDate1 = appt.PrefDate1.String
+	}
+	if appt.PrefTimeSlotID1.Valid {
+		dto.PreferredTimeSlot1 = &TimeSlot{
+			ID:   int(appt.PrefTimeSlotID1.Int64),
+			Time: appt.PrefTimeSlotTime1.String,
+		}
+	}
+	if appt.PrefDate2.Valid {
+		dto.PreferredDate2 = appt.PrefDate2.String
+	}
+	if appt.PrefTimeSlotID2.Valid {
+		dto.PreferredTimeSlot2 = &TimeSlot{
+			ID:   int(appt.PrefTimeSlotID2.Int64),
+			Time: appt.PrefTimeSlotTime2.String,
+		}
+	}
+	if appt.PrefDate3.Valid {
+		dto.PreferredDate3 = appt.PrefDate3.String
+	}
+	if appt.PrefTimeSlotID3.Valid {
+		dto.PreferredTimeSlot3 = &TimeSlot{
+			ID:   int(appt.PrefTimeSlotID3.Int64),
+			Time: appt.PrefTimeSlotTime3.String,
+		}
+	}
+
+	return dto
 }

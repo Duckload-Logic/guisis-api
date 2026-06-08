@@ -50,6 +50,12 @@ type Appointment struct {
 	StatusID     int       `db:"status_id" json:"statusId"`
 	UrgencyLevel string    `db:"urgency_level" json:"urgencyLevel"`
 	UrgencyScore float64   `db:"urgency_score" json:"urgencyScore"`
+	PrefDate1 structs.NullableString `db:"preferred_date_1"`
+	PrefTimeSlotID1 structs.NullableInt64 `db:"preferred_time_slot_id_1"`
+	PrefDate2 structs.NullableString `db:"preferred_date_2"`
+	PrefTimeSlotID2 structs.NullableInt64 `db:"preferred_time_slot_id_2"`
+	PrefDate3 structs.NullableString `db:"preferred_date_3"`
+	PrefTimeSlotID3 structs.NullableInt64 `db:"preferred_time_slot_id_3"`
 	CreatedAt    time.Time `db:"created_at" json:"createdAt"`
 	UpdatedAt    time.Time `db:"updated_at" json:"updatedAt"`
 }
@@ -77,6 +83,15 @@ type AppointmentWithDetailsView struct {
 	StatusName     string                 `db:"status_name"`
 	UrgencyLevel   string                 `db:"urgency_level"`
 	UrgencyScore   float64                `db:"urgency_score"`
+	PrefDate1 structs.NullableString `db:"preferred_date_1"`
+	PrefTimeSlotID1 structs.NullableInt64 `db:"preferred_time_slot_id_1"`
+	PrefTimeSlotTime1 structs.NullableString `db:"preferred_time_slot_time_1"`
+	PrefDate2 structs.NullableString `db:"preferred_date_2"`
+	PrefTimeSlotID2 structs.NullableInt64 `db:"preferred_time_slot_id_2"`
+	PrefTimeSlotTime2 structs.NullableString `db:"preferred_time_slot_time_2"`
+	PrefDate3 structs.NullableString `db:"preferred_date_3"`
+	PrefTimeSlotID3 structs.NullableInt64 `db:"preferred_time_slot_id_3"`
+	PrefTimeSlotTime3 structs.NullableString `db:"preferred_time_slot_time_3"`
 }
 
 // DailyStatusCount represents aggregated daily metrics.

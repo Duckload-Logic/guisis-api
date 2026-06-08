@@ -33,6 +33,12 @@ type AppointmentDTO struct {
 	Status              AppointmentStatus      `json:"status,omitempty"`
 	UrgencyLevel        string                 `json:"urgencyLevel,omitempty"`
 	UrgencyScore        float64                `json:"urgencyScore,omitempty"`
+	PreferredDate1      string                 `json:"preferredDate1,omitempty"`
+	PreferredTimeSlot1  *TimeSlot              `json:"preferredTimeSlot1,omitempty"`
+	PreferredDate2      string                 `json:"preferredDate2,omitempty"`
+	PreferredTimeSlot2  *TimeSlot              `json:"preferredTimeSlot2,omitempty"`
+	PreferredDate3      string                 `json:"preferredDate3,omitempty"`
+	PreferredTimeSlot3  *TimeSlot              `json:"preferredTimeSlot3,omitempty"`
 	HasSignificantNote  bool                   `json:"hasSignificantNote"`
 	StudentCORURL       string                 `json:"studentCorUrl,omitempty"`
 	CreatedAt           time.Time              `json:"createdAt,omitempty"`

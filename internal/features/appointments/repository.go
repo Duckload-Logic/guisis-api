@@ -41,12 +41,24 @@ const appointmentsBaseQuery = `
 		as2.id AS status_id,
 		as2.name AS status_name,
 		a.urgency_level AS urgency_level,
-		a.urgency_score AS urgency_score
+		a.urgency_score AS urgency_score,
+		DATE_FORMAT(a.preferred_date_1, '%Y-%m-%d') AS preferred_date_1,
+		a.preferred_time_slot_id_1 AS preferred_time_slot_id_1,
+		ts1.time AS preferred_time_slot_time_1,
+		DATE_FORMAT(a.preferred_date_2, '%Y-%m-%d') AS preferred_date_2,
+		a.preferred_time_slot_id_2 AS preferred_time_slot_id_2,
+		ts2.time AS preferred_time_slot_time_2,
+		DATE_FORMAT(a.preferred_date_3, '%Y-%m-%d') AS preferred_date_3,
+		a.preferred_time_slot_id_3 AS preferred_time_slot_id_3,
+		ts3.time AS preferred_time_slot_time_3
 	FROM appointments a
 	LEFT JOIN iir_records ir ON a.iir_id = ir.id
 	LEFT JOIN users u ON ir.user_id = u.id
 	LEFT JOIN student_personal_info spi ON ir.id = spi.iir_id
 	JOIN time_slots ts ON a.time_slot_id = ts.id
+	LEFT JOIN time_slots ts1 ON a.preferred_time_slot_id_1 = ts1.id
+	LEFT JOIN time_slots ts2 ON a.preferred_time_slot_id_2 = ts2.id
+	LEFT JOIN time_slots ts3 ON a.preferred_time_slot_id_3 = ts3.id
 	JOIN appointment_categories ac ON
 		a.appointment_category_id = ac.id
 	JOIN statuses as2 ON a.status_id = as2.id
@@ -490,11 +502,17 @@ func (r *Repository) CreateAppointment(
 		INSERT INTO appointments (
 			id, iir_id, reason, admin_notes, when_date,
 			time_slot_id, appointment_category_id, status_id,
-			urgency_level, urgency_score
+			urgency_level, urgency_score,
+			preferred_date_1, preferred_time_slot_id_1,
+			preferred_date_2, preferred_time_slot_id_2,
+			preferred_date_3, preferred_time_slot_id_3
 		) VALUES (
 			:id, :iir_id, :reason, :admin_notes, :when_date,
 			:time_slot_id, :appointment_category_id, :status_id,
-			:urgency_level, :urgency_score
+			:urgency_level, :urgency_score,
+			:preferred_date_1, :preferred_time_slot_id_1,
+			:preferred_date_2, :preferred_time_slot_id_2,
+			:preferred_date_3, :preferred_time_slot_id_3
 		)
 	`
 
