@@ -49,6 +49,9 @@ type Config struct {
 	VAPIDPublicKey  string
 	VAPIDPrivateKey string
 	VAPIDEmail      string
+
+	LightsailBucketName string
+	LightsailRegion     string
 }
 
 func LoadConfig() *Config {
@@ -115,6 +118,9 @@ func LoadConfig() *Config {
 		VAPIDPublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
 		VAPIDPrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
 		VAPIDEmail:      os.Getenv("VAPID_EMAIL"),
+
+		LightsailBucketName: os.Getenv("LIGHTSAIL_BUCKET_NAME"),
+		LightsailRegion:     os.Getenv("LIGHTSAIL_REGION"),
 	}
 
 	validateConfig(config)
@@ -173,7 +179,12 @@ func validateCoreConfig(config *Config) {
 
 func validateStorageConfig(config *Config) {
 	if config.IsProduction {
-
+		if config.LightsailBucketName == "" {
+			panic("LIGHTSAIL_BUCKET_NAME is required for production")
+		}
+		if config.LightsailRegion == "" {
+			panic("LIGHTSAIL_REGION is required for production")
+		}
 	} else {
 		if config.LocalUploadDIR == "" {
 			panic("UPLOAD_DIR is required for local storage")

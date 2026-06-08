@@ -21,8 +21,19 @@ func Initialize(db *sqlx.DB, cfg *config.Config) (*Application, error) {
 	var emailer email.Emailer
 
 	if cfg.IsProduction {
-		uploadDir := cfg.LocalUploadDIR
-		fileStorage = storage.NewDiskStorage(uploadDir)
+		var err error
+		fileStorage, err = storage.NewLightsailStorage(
+			context.Background(),
+			cfg.LightsailBucketName,
+			cfg.LightsailRegion,
+		)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to initialize Lightsail storage: %w",
+				err,
+			)
+		}
+
 		emailer = email.NewSMTPMailer(
 			cfg.SMTPHost,
 			cfg.SMTPPort,
