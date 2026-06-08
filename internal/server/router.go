@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -29,6 +30,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
+	"github.com/gin-contrib/timeout"
 	integrationDocs "github.com/olazo-johnalbert/duckload-api/docs/integrations"
 )
 
@@ -100,6 +102,17 @@ func NewRouter(
 
 	limiter := middleware.NewIPRateLimiter(5, 30)
 	g.Use(middleware.RateLimitMiddleware(limiter))
+
+	g.Use(
+		timeout.New(
+			timeout.WithTimeout(10*time.Second),
+			timeout.WithResponse(func(c *gin.Context) {
+				c.JSON(http.StatusGatewayTimeout, gin.H{
+					"error": "Request timed out",
+				})
+			}),
+		),
+	)
 
 	// Stricter limiter for sensitive auth routes
 	authLimiter := middleware.NewIPRateLimiter(1, 5)
