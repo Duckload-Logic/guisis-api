@@ -649,7 +649,7 @@ func (s *Service) PostIDPTokenExchange(
 				err,
 			)
 		}
-	} else {
+	} else if err != nil {
 		return "", "", "", "", "", fmt.Errorf(
 			"[AuthService] {Anchor Check}: %w",
 			err,
