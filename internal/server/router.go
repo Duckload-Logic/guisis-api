@@ -103,16 +103,40 @@ func NewRouter(
 	limiter := middleware.NewIPRateLimiter(5, 30)
 	g.Use(middleware.RateLimitMiddleware(limiter))
 
-	g.Use(
-		timeout.New(
-			timeout.WithTimeout(10*time.Second),
+	g.Use(func() gin.HandlerFunc {
+		shortTimeout := timeout.New(
+			timeout.WithTimeout(15*time.Second),
 			timeout.WithResponse(func(c *gin.Context) {
 				c.JSON(http.StatusGatewayTimeout, gin.H{
 					"error": "Request timed out",
 				})
 			}),
-		),
-	)
+		)
+		longTimeout := timeout.New(
+			timeout.WithTimeout(3*time.Minute),
+			timeout.WithResponse(func(c *gin.Context) {
+				c.JSON(http.StatusGatewayTimeout, gin.H{
+					"error": "Request timed out",
+				})
+			}),
+		)
+		return func(c *gin.Context) {
+			path := c.Request.URL.Path
+			method := c.Request.Method
+			isLong := strings.Contains(path, "/cors") ||
+				strings.Contains(path, "/cor") ||
+				strings.Contains(path, "/slips") ||
+				(strings.Contains(path, "/appointments") &&
+					(method == http.MethodPost ||
+						method == http.MethodPatch))
+
+			if isLong {
+				longTimeout(c)
+			} else {
+				shortTimeout(c)
+			}
+		}
+	}())
 
 	// Stricter limiter for sensitive auth routes
 	authLimiter := middleware.NewIPRateLimiter(1, 5)
