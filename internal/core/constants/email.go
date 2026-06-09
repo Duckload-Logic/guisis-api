@@ -6,6 +6,9 @@ import (
 )
 
 func FromEmail() string {
+	if from := os.Getenv("SMTP_FROM"); from != "" {
+		return from
+	}
 	sender := "noreply"
 	domain := os.Getenv("DOMAIN")
 	if domain == "" {
