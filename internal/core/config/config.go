@@ -179,12 +179,12 @@ func validateCoreConfig(config *Config) {
 
 func validateStorageConfig(config *Config) {
 	if config.IsProduction {
-		if config.LightsailBucketName == "" {
-			panic("LIGHTSAIL_BUCKET_NAME is required for production")
-		}
-		if config.LightsailRegion == "" {
-			panic("LIGHTSAIL_REGION is required for production")
-		}
+		// if config.LightsailBucketName == "" {
+		// 	panic("LIGHTSAIL_BUCKET_NAME is required for production")
+		// }
+		// if config.LightsailRegion == "" {
+		// 	panic("LIGHTSAIL_REGION is required for production")
+		// }
 	} else {
 		if config.LocalUploadDIR == "" {
 			panic("UPLOAD_DIR is required for local storage")
