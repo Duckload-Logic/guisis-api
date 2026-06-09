@@ -281,8 +281,7 @@ func (h *Handler) PostIDPToken(c *gin.Context) {
 	ipAddress := c.ClientIP()
 	userAgent := c.Request.UserAgent()
 
-	accessToken, refreshToken,
-		_, _, _, err := h.service.PostIDPTokenExchange(
+	accessToken, refreshToken, err := h.service.PostIDPTokenExchange(
 		c.Request.Context(),
 		code,
 		h.cfg,

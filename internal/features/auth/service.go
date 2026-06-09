@@ -559,11 +559,11 @@ func (s *Service) PostIDPTokenExchange(
 	code string,
 	cfg *config.Config,
 	ipAddress, userAgent string,
-) (string, string, string, string, string, error) {
+) (string, string, error) {
 	// Exchange authorization code for IDP tokens
 	idpTokenResp, err := s.idpClient.ExchangeCodeForToken(ctx, code, cfg)
 	if err != nil {
-		return "", "", "", "", "", fmt.Errorf(
+		return "", "", fmt.Errorf(
 			"[AuthService] {Token Exchange}: %w",
 			err,
 		)
@@ -572,7 +572,7 @@ func (s *Service) PostIDPTokenExchange(
 	// Fetch User Info from IDP
 	userInfo, err := s.GetIDPUserInfo(ctx, idpTokenResp.AccessToken, cfg)
 	if err != nil {
-		return "", "", "", "", "", fmt.Errorf(
+		return "", "", fmt.Errorf(
 			"[AuthService] {Fetch User Info}: %w",
 			err,
 		)
@@ -595,7 +595,7 @@ func (s *Service) PostIDPTokenExchange(
 	// Determine target roles from whitelist or defaults
 	var targetRoleIDs []int
 	if whitelistErr != nil {
-		return "", "", "", "", "", fmt.Errorf(
+		return "", "", fmt.Errorf(
 			"[AuthService] {Whitelist Check}: %w",
 			whitelistErr,
 		)
@@ -644,21 +644,16 @@ func (s *Service) PostIDPTokenExchange(
 			},
 		)
 		if err != nil {
-			return "", "", "", "", "", fmt.Errorf(
+			return "", "", fmt.Errorf(
 				"[AuthService] {Provision IDP User}: %w",
 				err,
 			)
 		}
 	} else if err != nil {
-		return "", "", "", "", "", fmt.Errorf(
+		return "", "", fmt.Errorf(
 			"[AuthService] {Anchor Check}: %w",
 			err,
 		)
-	}
-
-	roleName := "student"
-	if len(localUser.Roles) > 0 {
-		roleName = strings.ToLower(localUser.Roles[0].Name)
 	}
 
 	roleIDs := make([]int, len(localUser.Roles))
@@ -695,7 +690,7 @@ func (s *Service) PostIDPTokenExchange(
 			},
 		)
 	if err != nil {
-		return "", "", "", "", "", err
+		return "", "", err
 	}
 
 	appRefreshToken, refreshClaims, err := tokens.NewService().
@@ -713,7 +708,7 @@ func (s *Service) PostIDPTokenExchange(
 			},
 		)
 	if err != nil {
-		return "", "", "", "", "", err
+		return "", "", err
 	}
 
 	idpRefreshKey := sessions.NewJTI(refreshClaims.ID).ToIDPRefreshKey()
@@ -724,7 +719,7 @@ func (s *Service) PostIDPTokenExchange(
 		time.Duration(constants.RefreshTokenMaxAge)*time.Second,
 	)
 	if err != nil {
-		return "", "", "", "", "", err
+		return "", "", err
 	}
 
 	// Log successful login
@@ -742,8 +737,7 @@ func (s *Service) PostIDPTokenExchange(
 		UserAgent: structs.StringToNullableString(userAgent),
 	})
 
-	return appAccessToken, appRefreshToken, localUser.ID, userInfo.Email,
-		roleName, nil
+	return appAccessToken, appRefreshToken, nil
 }
 
 // GetIDPUserInfo fetches user information from the IDP
