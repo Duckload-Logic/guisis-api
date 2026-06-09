@@ -115,55 +115,58 @@ func Dispatch(
 
 	// Prepare and Send Email
 	if emailer != nil && params.Email != nil {
-		for _, e := range params.Email {
-			entry := EmailEntry{
-				To:           e.To,
-				Subject:      e.Subject,
-				TemplatePath: e.TemplatePath,
-				TemplateData: e.TemplateData,
-			}
+		bgCtx := context.Background()
+		go func() {
+			for _, e := range params.Email {
+				entry := EmailEntry{
+					To:           e.To,
+					Subject:      e.Subject,
+					TemplatePath: e.TemplatePath,
+					TemplateData: e.TemplateData,
+				}
 
-			err := emailer.Send(ctx, entry)
-			if err != nil {
-				log.Printf(
-					`[Audit:Dispatch] {Send Email}: %v`,
-					err,
-				)
-				if logger != nil {
-					logger.Record(ctx, params.Tx, LogEntry{
-						Level:    LevelError,
-						Category: CategorySystem,
-						Action:   ActionEmailSendFailed,
-						Message: fmt.Sprintf(
-							"SMTP Mailer failed to send email to %v: %v",
-							e.To,
-							err,
-						),
-						UserID:    structs.StringToNullableString(id),
-						UserEmail: structs.StringToNullableString(email),
-						IPAddress: structs.StringToNullableString(ip),
-						UserAgent: structs.StringToNullableString(ua),
-						TraceID:   structs.StringToNullableString(trace),
-					})
-				}
-			} else {
-				if logger != nil {
-					logger.Record(ctx, params.Tx, LogEntry{
-						Level:    LevelInfo,
-						Category: CategorySystem,
-						Action:   ActionEmailSendSuccess,
-						Message: fmt.Sprintf(
-							"Successfully sent email to %v",
-							e.To,
-						),
-						UserID:    structs.StringToNullableString(id),
-						UserEmail: structs.StringToNullableString(email),
-						IPAddress: structs.StringToNullableString(ip),
-						UserAgent: structs.StringToNullableString(ua),
-						TraceID:   structs.StringToNullableString(trace),
-					})
+				err := emailer.Send(bgCtx, entry)
+				if err != nil {
+					log.Printf(
+						"[Audit:Dispatch] {Send Email}: %v",
+						err,
+					)
+					if logger != nil {
+						logger.Record(bgCtx, nil, LogEntry{
+							Level:    LevelError,
+							Category: CategorySystem,
+							Action:   ActionEmailSendFailed,
+							Message: fmt.Sprintf(
+								"SMTP Mailer failed to send email to %v: %v",
+								e.To,
+								err,
+							),
+							UserID:    structs.StringToNullableString(id),
+							UserEmail: structs.StringToNullableString(email),
+							IPAddress: structs.StringToNullableString(ip),
+							UserAgent: structs.StringToNullableString(ua),
+							TraceID:   structs.StringToNullableString(trace),
+						})
+					}
+				} else {
+					if logger != nil {
+						logger.Record(bgCtx, nil, LogEntry{
+							Level:    LevelInfo,
+							Category: CategorySystem,
+							Action:   ActionEmailSendSuccess,
+							Message: fmt.Sprintf(
+								"Successfully sent email to %v",
+								e.To,
+							),
+							UserID:    structs.StringToNullableString(id),
+							UserEmail: structs.StringToNullableString(email),
+							IPAddress: structs.StringToNullableString(ip),
+							UserAgent: structs.StringToNullableString(ua),
+							TraceID:   structs.StringToNullableString(trace),
+						})
+					}
 				}
 			}
-		}
+		}()
 	}
 }
