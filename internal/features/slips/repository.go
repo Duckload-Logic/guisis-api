@@ -354,9 +354,19 @@ func (r *Repository) GetAll(
 	ctx context.Context,
 	req *ListSlipsRequest,
 ) ([]SlipWithDetailsView, error) {
-	query, args := r.applyFilters(slipsBaseQuery+" WHERE 1=1", nil, req, nil)
+	query, args := r.applyFilters(
+		slipsBaseQuery+" WHERE 1=1",
+		nil,
+		req,
+		nil,
+	)
 
-	query += orderSlipsCreatedDesc
+	orderCol, orderDir := sanitizeSort(req.OrderBy, req.SortOrder)
+	query += fmt.Sprintf(
+		" ORDER BY %s %s LIMIT ? OFFSET ?",
+		orderCol,
+		orderDir,
+	)
 	args = append(args, req.PageSize, req.GetOffset())
 
 	var slips []SlipWithDetailsView
@@ -380,7 +390,12 @@ func (r *Repository) GetByIIRID(
 		nil,
 	)
 
-	query += orderSlipsCreatedDesc
+	orderCol, orderDir := sanitizeSort(req.OrderBy, req.SortOrder)
+	query += fmt.Sprintf(
+		" ORDER BY %s %s LIMIT ? OFFSET ?",
+		orderCol,
+		orderDir,
+	)
 	args = append(args, req.PageSize, req.GetOffset())
 
 	var slips []SlipWithDetailsView
@@ -640,4 +655,27 @@ func (r *Repository) HasNoteForAdmissionSlip(
 		)
 	}
 	return count > 0, nil
+}
+
+func sanitizeSort(orderBy, sortOrder string) (string, string) {
+	allowed := map[string]string{
+		"dateNeeded":      "slp.date_needed",
+		"date_needed":     "slp.date_needed",
+		"dateOfAbsence":   "slp.date_of_absence",
+		"date_of_absence": "slp.date_of_absence",
+		"createdAt":       "slp.created_at",
+		"created_at":      "slp.created_at",
+	}
+
+	col, ok := allowed[orderBy]
+	if !ok {
+		col = "slp.date_needed"
+	}
+
+	dir := "ASC"
+	if strings.ToLower(sortOrder) == "desc" {
+		dir = "DESC"
+	}
+
+	return col, dir
 }

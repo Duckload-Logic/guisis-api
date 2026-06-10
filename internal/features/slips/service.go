@@ -189,7 +189,10 @@ func (s *Service) GetAllExcuseSlips(
 	ctx context.Context,
 	req ListSlipsRequest,
 ) (*ListSlipsResponse, error) {
-	req.SetDefaults("created_at")
+	req.SetDefaults("date_needed")
+	if req.SortBy != "" {
+		req.OrderBy = req.SortBy
+	}
 
 	slips, err := s.repo.GetAll(ctx, &req)
 	if err != nil {
@@ -252,7 +255,10 @@ func (s *Service) GetExcuseSlipsByIIRID(
 	iirID string,
 	req ListSlipsRequest,
 ) (*ListSlipsResponse, error) {
-	req.SetDefaults("created_at")
+	req.SetDefaults("date_needed")
+	if req.SortBy != "" {
+		req.OrderBy = req.SortBy
+	}
 
 	slips, err := s.repo.GetByIIRID(ctx, iirID, &req)
 	if err != nil {

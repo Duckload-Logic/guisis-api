@@ -12,6 +12,7 @@ type ListSlipsRequest struct {
 	StatusID  int    `form:"status_id"`
 	StartDate string `form:"start_date"`
 	EndDate   string `form:"end_date"`
+	SortBy    string `form:"sort_by"`
 }
 
 type ListSlipsResponse struct {
