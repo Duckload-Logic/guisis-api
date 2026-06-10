@@ -36,6 +36,20 @@ func NewHandler(
 
 // PostLogin handles traditional email/password login.
 func (h *Handler) PostLogin(c *gin.Context) {
+	if h.cfg.IsProduction {
+		fmt.Printf(
+			"[PostLogin] {Environment Check}: " +
+				"traditional login disabled in production\n",
+		)
+		response.SendError(
+			c,
+			"Traditional login is disabled in production",
+			http.StatusForbidden,
+			nil,
+		)
+		return
+	}
+
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		fmt.Printf("[PostLogin] {Binding Error}: %v\n", err)
