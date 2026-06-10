@@ -278,28 +278,6 @@ func (s *Service) UploadFiles(
 				EngineV:        "paddleocr-v4-cor",
 				CreatedAt:      time.Now(),
 			})
-		case "slips":
-			// ocrResp, err := s.ocrClient.ProcessDocument(
-			// 	ctx,
-			// 	fh.Filename,
-			// 	bytes.NewReader(data),
-			// )
-			// if err != nil {
-			// 	fmt.Printf("[FileService] {OCR Generic Error}: %v\n", err)
-			// } else if ocrResp != nil {
-			// 	for i := range ocrResp.Pages {
-			// 		ocrResp.Pages[i].Words = nil
-			// 	}
-
-			// 	marshaled, _ := json.Marshal(ocrResp)
-			// 	ocrResults = append(ocrResults, OCRResult{
-			// 		FileID:         fileID,
-			// 		RawText:        ocrResp.FullText,
-			// 		StructuredData: string(marshaled),
-			// 		EngineV:        "paddleocr-v4-generic",
-			// 		CreatedAt:      time.Now(),
-			// 	})
-			// }
 		}
 	}
 
@@ -316,6 +294,7 @@ func (s *Service) UploadFiles(
 		}
 		return nil
 	})
+
 	if err != nil {
 		// Cleanup uploaded files if DB transaction fails
 		for _, path := range uploadedBlobPaths {
