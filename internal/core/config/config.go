@@ -23,6 +23,7 @@ type Config struct {
 	LocalUploadDIR string
 
 	IsProduction bool
+	IsStaging    bool
 
 	IDPClientID     string
 	IDPClientSecret string
@@ -73,6 +74,7 @@ func LoadConfig() *Config {
 		LocalUploadDIR: os.Getenv("UPLOAD_DIR"),
 
 		IsProduction: os.Getenv("IS_PRODUCTION") == "true",
+		IsStaging:    os.Getenv("IS_STAGING") == "true",
 
 		IDPClientID:     os.Getenv("IDP_CLIENT_ID"),
 		IDPClientSecret: os.Getenv("IDP_CLIENT_SECRET"),
@@ -178,13 +180,13 @@ func validateCoreConfig(config *Config) {
 }
 
 func validateStorageConfig(config *Config) {
-	if config.IsProduction {
-		// if config.LightsailBucketName == "" {
-		// 	panic("LIGHTSAIL_BUCKET_NAME is required for production")
-		// }
-		// if config.LightsailRegion == "" {
-		// 	panic("LIGHTSAIL_REGION is required for production")
-		// }
+	if config.IsProduction || config.IsStaging {
+		if config.LightsailBucketName == "" {
+			panic("LIGHTSAIL_BUCKET_NAME is required for production")
+		}
+		if config.LightsailRegion == "" {
+			panic("LIGHTSAIL_REGION is required for production")
+		}
 	} else {
 		if config.LocalUploadDIR == "" {
 			panic("UPLOAD_DIR is required for local storage")
@@ -193,7 +195,7 @@ func validateStorageConfig(config *Config) {
 }
 
 func validateProviderConfig(config *Config) {
-	if config.IsProduction {
+	if config.IsProduction || config.IsStaging {
 		if config.SMTPHost == "" {
 			panic("SMTP_HOST is required for production")
 		}

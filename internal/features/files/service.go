@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/hash"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
@@ -27,17 +28,20 @@ type Service struct {
 	storage   storage.FileStorage
 	ocrClient *ocr.OCRClient
 	logger    audit.Logger
+	cfg       *config.Config
 }
 
 func NewService(
 	repo *Repository,
 	storage storage.FileStorage,
 	ocrClient *ocr.OCRClient,
+	cfg *config.Config,
 ) *Service {
 	return &Service{
 		repo:      repo,
 		storage:   storage,
 		ocrClient: ocrClient,
+		cfg:       cfg,
 	}
 }
 
@@ -111,7 +115,23 @@ func (s *Service) UploadFiles(
 			fmt.Sprintf("%s%d", prefix, time.Now().UnixNano()),
 			8,
 		)
-		blobPath := fmt.Sprintf("%s/%s/%s", prefix, folderHash, uniqueFileName)
+
+		var envPrefix string
+		if s.cfg.IsStaging {
+			envPrefix = "staging/"
+		} else if s.cfg.IsProduction {
+			envPrefix = "production/"
+		} else {
+			envPrefix = "development/"
+		}
+
+		blobPath := fmt.Sprintf(
+			"%s%s/%s/%s",
+			envPrefix,
+			prefix,
+			folderHash,
+			uniqueFileName,
+		)
 
 		src, err := fh.Open()
 		if err != nil {
@@ -195,10 +215,10 @@ func (s *Service) UploadFiles(
 					}
 
 					s.logger.Record(ctx, nil, audit.LogEntry{
-						Level:    logLevel,
-						Category: audit.CategorySystem,
-						Action:   logAction,
-						Message:  logMsg,
+						Level:     logLevel,
+						Category:  audit.CategorySystem,
+						Action:    logAction,
+						Message:   logMsg,
 						UserID:    structs.StringToNullableString(id),
 						UserEmail: structs.StringToNullableString(email),
 						IPAddress: structs.StringToNullableString(ip),

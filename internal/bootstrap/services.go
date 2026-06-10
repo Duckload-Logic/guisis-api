@@ -69,6 +69,7 @@ func getServices(
 		repos.FileRepo,
 		fileStorage,
 		ocrClient,
+		cfg,
 	)
 
 	userService := users.NewService(repos.UserRepo, sessionService, fileService)

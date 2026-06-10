@@ -36,7 +36,7 @@ func NewHandler(
 
 // PostLogin handles traditional email/password login.
 func (h *Handler) PostLogin(c *gin.Context) {
-	if h.cfg.IsProduction {
+	if h.cfg.IsProduction && !h.cfg.IsStaging {
 		fmt.Printf(
 			"[PostLogin] {Environment Check}: " +
 				"traditional login disabled in production\n",
