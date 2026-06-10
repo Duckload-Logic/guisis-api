@@ -4,10 +4,11 @@ import "github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 
 // PaginationRequest represents a standard paginated request.
 type PaginationRequest struct {
-	Page     int    `json:"page"      form:"page"`
-	PageSize int    `json:"page_size" form:"page_size"`
-	OrderBy  string `json:"order_by"  form:"order_by"`
-	Search   string `json:"search"    form:"search"`
+	Page      int    `json:"page"       form:"page"`
+	PageSize  int    `json:"page_size"  form:"page_size"`
+	OrderBy   string `json:"order_by"   form:"order_by"`
+	SortOrder string `json:"sort_order" form:"sort_order"`
+	Search    string `json:"search"     form:"search"`
 }
 
 // GetOffset calculates the SQL offset.
@@ -28,6 +29,9 @@ func (r *PaginationRequest) SetDefaults(defaultOrderBy string) {
 	}
 	if r.OrderBy == "" {
 		r.OrderBy = defaultOrderBy
+	}
+	if r.SortOrder == "" {
+		r.SortOrder = "desc"
 	}
 }
 

@@ -213,7 +213,7 @@ func (r *Repository) applyFilters(
 func (r *Repository) List(
 	ctx context.Context,
 	offset, limit int,
-	search, orderBy, statusIDs, startDate, endDate string,
+	search, orderBy, sortOrder, statusIDs, startDate, endDate string,
 ) ([]AppointmentWithDetailsView, error) {
 	query := appointmentsBaseQuery + " WHERE 1=1"
 	var args []interface{}
@@ -243,9 +243,11 @@ func (r *Repository) List(
 		)
 	}
 
+	orderCol, orderDir := sanitizeSort(orderBy, sortOrder)
 	query += fmt.Sprintf(
-		" ORDER BY a.%s DESC LIMIT %d OFFSET %d",
-		orderBy,
+		" ORDER BY a.%s %s LIMIT %d OFFSET %d",
+		orderCol,
+		orderDir,
 		limit,
 		offset,
 	)
@@ -385,7 +387,7 @@ func (r *Repository) ListByUserID(
 	ctx context.Context,
 	userID string,
 	offset, limit int,
-	orderBy string,
+	orderBy, sortOrder string,
 	statusID, startDate, endDate string,
 ) ([]AppointmentWithDetailsView, error) {
 	query, args := r.applyFilters(
@@ -397,9 +399,11 @@ func (r *Repository) ListByUserID(
 		nil,
 	)
 
+	orderCol, orderDir := sanitizeSort(orderBy, sortOrder)
 	query += fmt.Sprintf(
-		" ORDER BY a.%s DESC LIMIT %d OFFSET %d",
-		orderBy,
+		" ORDER BY a.%s %s LIMIT %d OFFSET %d",
+		orderCol,
+		orderDir,
 		limit,
 		offset,
 	)
@@ -416,7 +420,7 @@ func (r *Repository) ListByIIRID(
 	ctx context.Context,
 	iirID string,
 	offset, limit int,
-	orderBy string,
+	orderBy, sortOrder string,
 	statusID, startDate, endDate string,
 ) ([]AppointmentWithDetailsView, error) {
 	query, args := r.applyFilters(
@@ -428,9 +432,11 @@ func (r *Repository) ListByIIRID(
 		nil,
 	)
 
+	orderCol, orderDir := sanitizeSort(orderBy, sortOrder)
 	query += fmt.Sprintf(
-		" ORDER BY a.%s DESC LIMIT %d OFFSET %d",
-		orderBy,
+		" ORDER BY a.%s %s LIMIT %d OFFSET %d",
+		orderCol,
+		orderDir,
 		limit,
 		offset,
 	)
@@ -573,4 +579,27 @@ func (r *Repository) UpdateAppointment(
 
 	_, err := tx.ExecContext(ctx, query, args...)
 	return err
+}
+
+func sanitizeSort(orderBy, sortOrder string) (string, string) {
+	allowed := map[string]string{
+		"whenDate":      "when_date",
+		"when_date":     "when_date",
+		"createdAt":     "created_at",
+		"created_at":    "created_at",
+		"urgencyScore":  "urgency_score",
+		"urgency_score": "urgency_score",
+	}
+
+	col, ok := allowed[orderBy]
+	if !ok {
+		col = "created_at"
+	}
+
+	dir := "DESC"
+	if strings.ToLower(sortOrder) == "asc" {
+		dir = "ASC"
+	}
+
+	return col, dir
 }
