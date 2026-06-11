@@ -131,33 +131,10 @@ func (s *Service) GetUrgentSlips(
 	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, userIDs)
 
 	var slipDTOs []SlipDTO
-	for s := range slips {
-		slipDTOs = append(slipDTOs, SlipDTO{
-			ID:     slips[s].ID,
-			UserID: slips[s].UserID,
-			IIRID:  slips[s].IIRID,
-			User: users.UserResponse{
-				FirstName:  slips[s].UserFirstName,
-				MiddleName: slips[s].UserMiddleName,
-				LastName:   slips[s].UserLastName,
-				Email:      slips[s].UserEmail,
-			},
-			Reason:        slips[s].Reason,
-			DateOfAbsence: slips[s].DateOfAbsence,
-			DateNeeded:    slips[s].DateNeeded,
-			AdminNotes:    slips[s].AdminNotes,
-			Category: SlipCategory{
-				ID:   slips[s].CategoryID,
-				Name: slips[s].CategoryName,
-			},
-			Status: SlipStatus{
-				ID:   slips[s].StatusID,
-				Name: slips[s].StatusName,
-			},
-			StudentCORURL: corMap[slips[s].UserID],
-			CreatedAt:     slips[s].CreatedAt,
-			UpdatedAt:     slips[s].UpdatedAt,
-		})
+	for i := range slips {
+		dto := s.mapToDTO(&slips[i])
+		dto.StudentCORURL = corMap[slips[i].UserID]
+		slipDTOs = append(slipDTOs, *dto)
 	}
 
 	req.StatusID = 1
@@ -209,34 +186,10 @@ func (s *Service) GetAllExcuseSlips(
 	corMap, _ := s.studentService.GetLatestCORsByUserIDs(ctx, userIDs)
 
 	var slipDTOs []SlipDTO
-	for s := range slips {
-		slipDTOs = append(slipDTOs, SlipDTO{
-			ID:     slips[s].ID,
-			UserID: slips[s].UserID,
-			IIRID:  slips[s].IIRID,
-			User: users.UserResponse{
-				FirstName:  slips[s].UserFirstName,
-				MiddleName: slips[s].UserMiddleName,
-				LastName:   slips[s].UserLastName,
-				Email:      slips[s].UserEmail,
-			},
-			StudentNumber: slips[s].StudentNumber,
-			Reason:        slips[s].Reason,
-			DateOfAbsence: slips[s].DateOfAbsence,
-			DateNeeded:    slips[s].DateNeeded,
-			AdminNotes:    slips[s].AdminNotes,
-			Category: SlipCategory{
-				ID:   slips[s].CategoryID,
-				Name: slips[s].CategoryName,
-			},
-			Status: SlipStatus{
-				ID:   slips[s].StatusID,
-				Name: slips[s].StatusName,
-			},
-			StudentCORURL: corMap[slips[s].UserID],
-			CreatedAt:     slips[s].CreatedAt,
-			UpdatedAt:     slips[s].UpdatedAt,
-		})
+	for i := range slips {
+		dto := s.mapToDTO(&slips[i])
+		dto.StudentCORURL = corMap[slips[i].UserID]
+		slipDTOs = append(slipDTOs, *dto)
 	}
 
 	total, err := s.repo.GetTotalSlipsCount(ctx, &req, nil)
@@ -266,33 +219,9 @@ func (s *Service) GetExcuseSlipsByIIRID(
 	}
 
 	var slipDTOs []SlipDTO
-	for s := range slips {
-		slipDTOs = append(slipDTOs, SlipDTO{
-			ID:    slips[s].ID,
-			IIRID: slips[s].IIRID,
-			User: users.UserResponse{
-				ID:         "",
-				FirstName:  slips[s].UserFirstName,
-				MiddleName: slips[s].UserMiddleName,
-				LastName:   slips[s].UserLastName,
-				Email:      slips[s].UserEmail,
-			},
-			StudentNumber: slips[s].StudentNumber,
-			Reason:        slips[s].Reason,
-			DateOfAbsence: slips[s].DateOfAbsence,
-			DateNeeded:    slips[s].DateNeeded,
-			AdminNotes:    slips[s].AdminNotes,
-			Category: SlipCategory{
-				ID:   slips[s].CategoryID,
-				Name: slips[s].CategoryName,
-			},
-			Status: SlipStatus{
-				ID:   slips[s].StatusID,
-				Name: slips[s].StatusName,
-			},
-			CreatedAt: slips[s].CreatedAt,
-			UpdatedAt: slips[s].UpdatedAt,
-		})
+	for i := range slips {
+		dto := s.mapToDTO(&slips[i])
+		slipDTOs = append(slipDTOs, *dto)
 	}
 
 	total, err := s.repo.GetTotalSlipsCount(ctx, &req, &iirID)
