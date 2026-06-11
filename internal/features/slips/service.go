@@ -651,7 +651,7 @@ func (s *Service) UpdateExcuseSlip(
 	req CreateSlipRequest,
 	files []*multipart.FileHeader,
 	parentIdFiles []*multipart.FileHeader,
-) (*Slip, error) {
+) (*SlipDTO, error) {
 	// Fetch existing slip and validate ownership/status
 	existingSlip, err := s.repo.GetSlipByID(ctx, slipID)
 	if err != nil {
@@ -835,12 +835,16 @@ func (s *Service) UpdateExcuseSlip(
 	)
 
 	// Fetch fully populated updated slip from DB
-	fullUpdatedSlip, err := s.repo.GetSlipByID(ctx, slipID)
+	fullUpdatedSlip, err := s.repo.GetSlipByIDWithDetails(
+		ctx,
+		s.repo.GetDB(),
+		slipID,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	return fullUpdatedSlip, nil
+	return s.mapToDTO(fullUpdatedSlip), nil
 }
 
 // DownloadAttachment streams the attachment from Azure Blob Storage.
