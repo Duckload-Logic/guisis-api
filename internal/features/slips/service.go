@@ -821,10 +821,15 @@ func (s *Service) DownloadAttachment(
 	blobPath := strings.TrimPrefix(attachment.FileURL, "/uploads/")
 	blobPath = strings.TrimPrefix(blobPath, "/")
 
+	cleanPath := blobPath
+	for _, env := range []string{"development/", "staging/", "production/"} {
+		cleanPath = strings.TrimPrefix(cleanPath, env)
+	}
+
 	// Security: Path Traversal Protection (Jail Check)
 	if strings.Contains(blobPath, "..") ||
-		!(strings.HasPrefix(blobPath, "slips/") ||
-			strings.HasPrefix(blobPath, "cors/")) {
+		!(strings.HasPrefix(cleanPath, "slips/") ||
+			strings.HasPrefix(cleanPath, "cors/")) {
 		return nil, fmt.Errorf("security: invalid file path detected")
 	}
 
