@@ -1175,8 +1175,9 @@ func (s *Service) mapToDTO(slip *SlipWithDetailsView) *SlipDTO {
 			ID:   slip.StatusID,
 			Name: slip.StatusName,
 		},
-		CreatedAt: slip.CreatedAt,
-		UpdatedAt: slip.UpdatedAt,
+		IsVerified: slip.IsVerified.Bool,
+		CreatedAt:  slip.CreatedAt,
+		UpdatedAt:  slip.UpdatedAt,
 	}
 
 	if slip.TicketCode.Valid {

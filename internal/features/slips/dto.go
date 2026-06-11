@@ -35,6 +35,7 @@ type SlipDTO struct {
 	StudentCORURL      string                 `json:"studentCorUrl,omitempty"`
 	Ticket             *TicketDTO             `json:"ticket,omitempty"`
 	HasSignificantNote bool                   `json:"hasSignificantNote"`
+	IsVerified         bool                   `json:"isVerified"`
 	CreatedAt          time.Time              `json:"createdAt,omitempty"`
 	UpdatedAt          time.Time              `json:"updatedAt,omitempty"`
 }
