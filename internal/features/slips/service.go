@@ -761,6 +761,56 @@ func (s *Service) UpdateExcuseSlip(
 	}
 
 	studentUserID, _ := s.repo.GetUserIDBySlipID(ctx, slipID)
+	counselorIDs, _ := s.userService.GetUserIDsByRole(
+		ctx,
+		int(constants.AdminRoleID),
+	)
+
+	notifications := []audit.NotificationParams{
+		{
+			ReceiverID: structs.StringToNullableString(studentUserID),
+			Title:      "Slip Updated",
+			Message: fmt.Sprintf(
+				"Your slip #%s has been updated",
+				slipID,
+			),
+			Type: constants.SlipEntityType,
+		},
+	}
+
+	userID := audit.ExtractUserID(ctx)
+	student, _ := s.userService.GetUserByID(ctx, userID)
+	studentName := "A student"
+	if student != nil {
+		studentName = fmt.Sprintf(
+			"%s %s",
+			student.FirstName,
+			student.LastName,
+		)
+	}
+
+	for _, cid := range counselorIDs {
+		notifications = append(
+			notifications,
+			audit.NotificationParams{
+				ReceiverID: structs.StringToNullableString(cid),
+				TargetID: structs.StringToNullableString(
+					slipID,
+				),
+				TargetType: structs.StringToNullableString(
+					constants.SlipEntityType,
+				),
+				Title: "Admission Slip Resubmitted",
+				Message: fmt.Sprintf(
+					"%s resubmitted slip #%s for review.",
+					studentName,
+					slipID,
+				),
+				Type: constants.SlipEntityType,
+			},
+		)
+	}
+
 	audit.Dispatch(
 		ctx,
 		s.logService,
@@ -771,36 +821,26 @@ func (s *Service) UpdateExcuseSlip(
 				Level:    audit.LevelInfo,
 				Category: audit.CategoryAudit,
 				Action:   audit.ActionSlipUpdated,
-				Message:  fmt.Sprintf("Excuse slip #%s updated", slipID),
+				Message: fmt.Sprintf(
+					"Excuse slip #%s updated",
+					slipID,
+				),
 				Metadata: &audit.LogMetadata{
 					EntityType: constants.SlipEntityType,
 					EntityID:   slipID,
 				},
 			},
-			Notifications: []audit.NotificationParams{
-				// Notification para sa Student
-				{
-					ReceiverID: structs.StringToNullableString(studentUserID),
-					Title:      "Slip Updated",
-					Message: fmt.Sprintf(
-						"Your slip #%s has been updated",
-						slipID,
-					),
-					Type: constants.SlipEntityType,
-				},
-				// Notification para sa Counselor (if needed)
-				{
-					ReceiverID: structs.StringToNullableString(
-						audit.ExtractUserID(ctx),
-					),
-					Title:   "New Slip Update",
-					Message: fmt.Sprintf("Student updated slip #%s", slipID),
-					Type:    constants.SlipEntityType,
-				},
-			},
-		})
+			Notifications: notifications,
+		},
+	)
 
-	return updatedSlip, nil
+	// Fetch fully populated updated slip from DB
+	fullUpdatedSlip, err := s.repo.GetSlipByID(ctx, slipID)
+	if err != nil {
+		return nil, err
+	}
+
+	return fullUpdatedSlip, nil
 }
 
 // DownloadAttachment streams the attachment from Azure Blob Storage.
