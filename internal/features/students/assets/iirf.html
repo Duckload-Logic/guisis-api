@@ -548,7 +548,7 @@
                 <th style="width: 15%;">HONORS RECEIVED/ SPECIAL AWARDS</th>
             </tr>
             {{$levels := iterate 5}}
-            {{$levelNames := makeSlice "Pre-Elementary" "Elementary" "High School" "Vocational" "College"}}
+            {{$levelNames := makeSlice "Pre-Elementary" "Elementary" "Junior High School" "Senior HighSchool" "Vocational" "College"}}
             {{$schools := .School}}
             {{range $index := $levels}}
             {{$levelName := index $levelNames $index}}
