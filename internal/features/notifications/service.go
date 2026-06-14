@@ -153,6 +153,13 @@ func (s *Service) MarkAllAsTouched(
 	return s.repo.MarkAllAsTouched(ctx, nil, userID)
 }
 
+func (s *Service) MarkAllAsRead(
+	ctx context.Context,
+	userID string,
+) error {
+	return s.repo.MarkAllAsRead(ctx, nil, userID)
+}
+
 func (s *Service) DeleteOldNotifications(
 	ctx context.Context,
 	days int,

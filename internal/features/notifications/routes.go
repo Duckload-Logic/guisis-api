@@ -29,6 +29,7 @@ func RegisterRoutes(
 		userRoutes.GET("/me/stream", h.GetNotificationsStream)
 
 		userRoutes.PATCH("/:id/read", h.PatchNotificationRead)
+		userRoutes.PATCH("/me/read", h.PatchNotificationsRead)
 		userRoutes.PATCH("/me/touched", h.PatchNotificationsTouched)
 
 		userRoutes.POST("/push/subscribe", h.PostPushSubscription)

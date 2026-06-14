@@ -142,6 +142,30 @@ func (h *Handler) PatchNotificationsTouched(c *gin.Context) {
 	)
 }
 
+func (h *Handler) PatchNotificationsRead(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+
+	err := h.service.MarkAllAsRead(c.Request.Context(), userID)
+	if err != nil {
+		fmt.Printf(
+			"[PatchNotificationsRead] {MarkAllAsRead}: %s\n",
+			err.Error(),
+		)
+		response.SendError(
+			c,
+			"Failed to mark notifications as read",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(
+		c,
+		gin.H{"message": "Notifications marked as read"},
+	)
+}
+
 type pushSubscribeRequest struct {
 	Endpoint  string `json:"endpoint"  binding:"required"`
 	P256dhKey string `json:"p256dhKey" binding:"required"`
