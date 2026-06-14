@@ -32,8 +32,14 @@ func (s *Service) Send(
 	ctx context.Context,
 	notif audit.NotificationEntry,
 ) error {
+	notificationID := uuid.New().String()
+	notif.ID = notificationID
+	notif.IsRead = false
+	notif.IsTouched = false
+	notif.CreatedAt = time.Now()
+
 	err := s.repo.Create(ctx, nil, Notification{
-		ID:         uuid.New().String(),
+		ID:         notificationID,
 		ReceiverID: notif.ReceiverID,
 		ActorID:    notif.ActorID,
 		TargetID:   notif.TargetID,
@@ -41,6 +47,8 @@ func (s *Service) Send(
 		Title:      notif.Title,
 		Message:    notif.Message,
 		Type:       notif.Type,
+		IsRead:     notif.IsRead,
+		IsTouched:  notif.IsTouched,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to send notification: %w", err)
@@ -109,14 +117,36 @@ func (s *Service) Broadcast(
 func (s *Service) GetUserNotifications(
 	ctx context.Context,
 	userID string,
-) ([]audit.NotificationEntry, error) {
-	models, err := s.repo.GetByUserID(ctx, userID)
+	req ListNotificationsRequest,
+) (ListNotificationsResponse, error) {
+	models, err := s.repo.GetByUserID(
+		ctx,
+		userID,
+		req.UnreadOnly,
+		req.PageSize,
+		req.GetOffset(),
+	)
 	if err != nil {
-		return nil, fmt.Errorf(
+		return ListNotificationsResponse{}, fmt.Errorf(
 			"failed to fetch notifications for user %s: %w",
 			userID,
 			err,
 		)
+	}
+
+	total, err := s.repo.CountByUserID(ctx, userID, req.UnreadOnly)
+	if err != nil {
+		return ListNotificationsResponse{}, err
+	}
+
+	unreadCount, err := s.repo.CountUnreadByUserID(ctx, userID)
+	if err != nil {
+		return ListNotificationsResponse{}, err
+	}
+
+	untouchedCount, err := s.repo.CountUntouchedByUserID(ctx, userID)
+	if err != nil {
+		return ListNotificationsResponse{}, err
 	}
 
 	dtos := make([]audit.NotificationEntry, 0, len(models))
@@ -135,7 +165,21 @@ func (s *Service) GetUserNotifications(
 			CreatedAt:  m.CreatedAt,
 		})
 	}
-	return dtos, nil
+
+	totalPages := 0
+	if req.PageSize > 0 {
+		totalPages = (total + req.PageSize - 1) / req.PageSize
+	}
+
+	return ListNotificationsResponse{
+		Notifications:  dtos,
+		Total:          total,
+		Page:           req.Page,
+		PageSize:       req.PageSize,
+		TotalPages:     totalPages,
+		UnreadCount:    unreadCount,
+		UntouchedCount: untouchedCount,
+	}, nil
 }
 
 func (s *Service) MarkAsRead(
@@ -240,4 +284,3 @@ func (s *Service) sendWebPush(
 		}(sub)
 	}
 }
-
