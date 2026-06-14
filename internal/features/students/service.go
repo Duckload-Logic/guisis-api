@@ -75,6 +75,14 @@ var (
 	ErrCOROwnerMismatch = errors.New("uploaded COR does not belong to the user")
 )
 
+type ValidationError struct {
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
+
 // SubmitCOR uploads a Certificate of Registration and links it to the student.
 func (s *Service) SubmitCOR(
 	ctx context.Context,
@@ -1011,6 +1019,94 @@ func (s *Service) saveComprehensiveProfile(
 	iirID := req.IIRID
 	if iirID == "" {
 		iirID = uuid.New().String()
+	}
+
+	// Validate Lookup IDs exist in reference tables
+	if ok, err := s.repo.ValidateGenderExists(
+		ctx, tx, req.Student.Gender.ID,
+	); err != nil {
+		return "", fmt.Errorf(
+			"[StudentService] {saveComprehensiveProfile}: %w", err,
+		)
+	} else if !ok {
+		return "", &ValidationError{
+			Message: fmt.Sprintf(
+				"invalid gender ID: %d", req.Student.Gender.ID,
+			),
+		}
+	}
+
+	if ok, err := s.repo.ValidateCivilStatusExists(
+		ctx, tx, req.Student.CivilStatus.ID,
+	); err != nil {
+		return "", fmt.Errorf(
+			"[StudentService] {saveComprehensiveProfile}: %w", err,
+		)
+	} else if !ok {
+		return "", &ValidationError{
+			Message: fmt.Sprintf(
+				"invalid civil status ID: %d",
+				req.Student.CivilStatus.ID,
+			),
+		}
+	}
+
+	if ok, err := s.repo.ValidateReligionExists(
+		ctx, tx, req.Student.Religion.ID,
+	); err != nil {
+		return "", fmt.Errorf(
+			"[StudentService] {saveComprehensiveProfile}: %w", err,
+		)
+	} else if !ok {
+		return "", &ValidationError{
+			Message: fmt.Sprintf(
+				"invalid religion ID: %d", req.Student.Religion.ID,
+			),
+		}
+	}
+
+	if ok, err := s.repo.ValidateCourseExists(
+		ctx, tx, req.Student.Course.ID,
+	); err != nil {
+		return "", fmt.Errorf(
+			"[StudentService] {saveComprehensiveProfile}: %w", err,
+		)
+	} else if !ok {
+		return "", &ValidationError{
+			Message: fmt.Sprintf(
+				"invalid course ID: %d", req.Student.Course.ID,
+			),
+		}
+	}
+
+	if ok, err := s.repo.ValidateParentalStatusExists(
+		ctx, tx, req.Family.ParentalStatus.ID,
+	); err != nil {
+		return "", fmt.Errorf(
+			"[StudentService] {saveComprehensiveProfile}: %w", err,
+		)
+	} else if !ok {
+		return "", &ValidationError{
+			Message: fmt.Sprintf(
+				"invalid parental status ID: %d",
+				req.Family.ParentalStatus.ID,
+			),
+		}
+	}
+
+	if ok, err := s.repo.ValidateNatureOfResidenceExists(
+		ctx, tx, req.Family.NatureOfResidence.ID,
+	); err != nil {
+		return "", fmt.Errorf(
+			"[StudentService] {saveComprehensiveProfile}: %w", err,
+		)
+	} else if !ok {
+		return "", &ValidationError{
+			Message: fmt.Sprintf(
+				"invalid nature of residence ID: %d",
+				req.Family.NatureOfResidence.ID,
+			),
+		}
 	}
 
 	// Validate Critical Dates

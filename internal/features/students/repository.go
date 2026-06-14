@@ -1577,3 +1577,73 @@ func (r *Repository) DeleteOrphanedAddresses(
 	_, err := tx.ExecContext(ctx, query)
 	return err
 }
+
+func (r *Repository) ValidateGenderExists(
+	ctx context.Context,
+	tx datastore.DB,
+	id int,
+) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM genders WHERE id = ?)"
+	err := tx.GetContext(ctx, &exists, query, id)
+	return exists, err
+}
+
+func (r *Repository) ValidateCivilStatusExists(
+	ctx context.Context,
+	tx datastore.DB,
+	id int,
+) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM civil_statuses WHERE id = ?)"
+	err := tx.GetContext(ctx, &exists, query, id)
+	return exists, err
+}
+
+func (r *Repository) ValidateReligionExists(
+	ctx context.Context,
+	tx datastore.DB,
+	id int,
+) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM religions WHERE id = ?)"
+	err := tx.GetContext(ctx, &exists, query, id)
+	return exists, err
+}
+
+func (r *Repository) ValidateCourseExists(
+	ctx context.Context,
+	tx datastore.DB,
+	id int,
+) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM courses WHERE id = ?)"
+	err := tx.GetContext(ctx, &exists, query, id)
+	return exists, err
+}
+
+func (r *Repository) ValidateParentalStatusExists(
+	ctx context.Context,
+	tx datastore.DB,
+	id int,
+) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM parental_status_types WHERE id = ?)"
+	err := tx.GetContext(ctx, &exists, query, id)
+	return exists, err
+}
+
+func (r *Repository) ValidateNatureOfResidenceExists(
+	ctx context.Context,
+	tx datastore.DB,
+	id int,
+) (bool, error) {
+	var exists bool
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM nature_of_residence_types WHERE id = ?
+		)
+	`
+	err := tx.GetContext(ctx, &exists, query, id)
+	return exists, err
+}

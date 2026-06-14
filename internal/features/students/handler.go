@@ -739,6 +739,11 @@ func (h *Handler) PostStudentIIR(c *gin.Context) {
 	iirID, err := h.service.SubmitStudentIIR(c.Request.Context(), userID, req)
 	if err != nil {
 		log.Printf("[PostStudentIIR] {Service Call}: %s", err.Error())
+		var valErr *ValidationError
+		if errors.As(err, &valErr) {
+			response.SendFail(c, gin.H{"error": valErr.Message})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to submit student IIR",
@@ -771,6 +776,11 @@ func (h *Handler) PatchStudentIIR(c *gin.Context) {
 	_, err := h.service.UpdateStudentIIR(c.Request.Context(), iirID, req)
 	if err != nil {
 		log.Printf("[PatchStudentIIR] {Service Call}: %s", err.Error())
+		var valErr *ValidationError
+		if errors.As(err, &valErr) {
+			response.SendFail(c, gin.H{"error": valErr.Message})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to update student IIR",
