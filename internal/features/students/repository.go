@@ -1570,7 +1570,7 @@ func (r *Repository) DeleteOrphanedAddresses(
 	tx datastore.DB,
 ) error {
 	query := `
-		DELETE FROM addresses 
+		DELETE FROM addresses
 		WHERE id NOT IN (SELECT address_id FROM student_addresses)
 		  AND id NOT IN (SELECT address_id FROM emergency_contacts)
 	`
@@ -1595,7 +1595,7 @@ func (r *Repository) ValidateCivilStatusExists(
 	id int,
 ) (bool, error) {
 	var exists bool
-	query := "SELECT EXISTS(SELECT 1 FROM civil_statuses WHERE id = ?)"
+	query := "SELECT EXISTS(SELECT 1 FROM civil_status_types WHERE id = ?)"
 	err := tx.GetContext(ctx, &exists, query, id)
 	return exists, err
 }
