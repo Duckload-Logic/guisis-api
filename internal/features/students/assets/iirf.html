@@ -547,8 +547,15 @@
                 <th style="width: 10%;">DATES OF ATTENDANCE</th>
                 <th style="width: 15%;">HONORS RECEIVED/ SPECIAL AWARDS</th>
             </tr>
-            {{$levels := iterate 5}}
-            {{$levelNames := makeSlice "Pre-Elementary" "Elementary" "Junior High School" "Senior HighSchool" "Vocational" "College"}}
+            {{$levels := iterate 6}}
+            {{$levelNames := makeSlice
+                "Pre-Elementary"
+                "Elementary"
+                "Junior High School"
+                "Senior High School"
+                "Vocational"
+                "College"
+            }}
             {{$schools := .School}}
             {{range $index := $levels}}
             {{$levelName := index $levelNames $index}}
