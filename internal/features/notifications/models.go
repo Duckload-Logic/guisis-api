@@ -17,6 +17,7 @@ type Notification struct {
 	Message    string                 `db:"message"     json:"message"`
 	Type       string                 `db:"type"        json:"type"`
 	IsRead     bool                   `db:"is_read"     json:"isRead"`
+	IsTouched  bool                   `db:"is_touched"  json:"isTouched"`
 	CreatedAt  time.Time              `db:"created_at"  json:"createdAt"`
 	UpdatedAt  time.Time              `db:"updated_at"  json:"updatedAt"`
 }

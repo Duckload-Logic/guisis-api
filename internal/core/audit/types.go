@@ -150,6 +150,7 @@ type NotificationEntry struct {
 	Message    string                 `json:"message"`
 	Type       string                 `json:"type"`
 	IsRead     bool                   `json:"isRead"`
+	IsTouched  bool                   `json:"isTouched"`
 	CreatedAt  time.Time              `json:"createdAt"`
 }
 

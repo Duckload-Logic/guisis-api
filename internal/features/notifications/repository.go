@@ -28,7 +28,9 @@ func (r *Repository) GetByUserID(
 	userID string,
 ) ([]Notification, error) {
 	query := `
-		SELECT id, receiver_id, actor_id, target_id, target_type, title, message, type, is_read, created_at, updated_at
+		SELECT id, receiver_id, actor_id, target_id, target_type,
+			title, message, type, is_read, is_touched,
+			created_at, updated_at
 		FROM notifications
 		WHERE receiver_id = ?
 		ORDER BY created_at DESC
@@ -79,6 +81,32 @@ func (r *Repository) MarkAsRead(
 	return nil
 }
 
+func (r *Repository) MarkAllAsTouched(
+	ctx context.Context,
+	tx datastore.DB,
+	userID string,
+) error {
+	if tx == nil {
+		tx = r.db
+	}
+
+	query := `
+		UPDATE notifications
+		SET is_touched = TRUE
+		WHERE receiver_id = ? AND is_touched = FALSE
+	`
+	_, err := tx.ExecContext(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to mark notifications as touched for user %s: %w",
+			userID,
+			err,
+		)
+	}
+
+	return nil
+}
+
 func (r *Repository) Create(
 	ctx context.Context,
 	tx datastore.DB,
@@ -86,9 +114,11 @@ func (r *Repository) Create(
 ) error {
 	query := `
         INSERT INTO notifications (
-			id, receiver_id, actor_id, target_id, target_type, title, message, type, is_read, updated_at
+			id, receiver_id, actor_id, target_id, target_type,
+			title, message, type, is_read, is_touched, updated_at
 		) VALUES (
-			:id, :receiver_id, :actor_id, :target_id, :target_type, :title, :message, :type, :is_read, NOW()
+			:id, :receiver_id, :actor_id, :target_id, :target_type,
+			:title, :message, :type, :is_read, :is_touched, NOW()
 		)`
 
 	if tx == nil {

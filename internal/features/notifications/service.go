@@ -131,6 +131,7 @@ func (s *Service) GetUserNotifications(
 			Message:    m.Message,
 			Type:       m.Type,
 			IsRead:     m.IsRead,
+			IsTouched:  m.IsTouched,
 			CreatedAt:  m.CreatedAt,
 		})
 	}
@@ -143,6 +144,13 @@ func (s *Service) MarkAsRead(
 	userID string,
 ) error {
 	return s.repo.MarkAsRead(ctx, nil, id, userID)
+}
+
+func (s *Service) MarkAllAsTouched(
+	ctx context.Context,
+	userID string,
+) error {
+	return s.repo.MarkAllAsTouched(ctx, nil, userID)
 }
 
 func (s *Service) DeleteOldNotifications(
