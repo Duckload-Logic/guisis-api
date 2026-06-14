@@ -3,6 +3,7 @@ package notifications
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
@@ -26,18 +27,29 @@ func (r *Repository) WithTransaction(
 func (r *Repository) GetByUserID(
 	ctx context.Context,
 	userID string,
+	unreadOnly bool,
+	limit int,
+	offset int,
 ) ([]Notification, error) {
-	query := `
+	query := strings.Builder{}
+	query.WriteString(`
 		SELECT id, receiver_id, actor_id, target_id, target_type,
 			title, message, type, is_read, is_touched,
 			created_at, updated_at
 		FROM notifications
 		WHERE receiver_id = ?
-		ORDER BY created_at DESC
-	`
+	`)
+
+	args := []interface{}{userID}
+	if unreadOnly {
+		query.WriteString(" AND is_read = FALSE")
+	}
+
+	query.WriteString(" ORDER BY created_at DESC LIMIT ? OFFSET ?")
+	args = append(args, limit, offset)
 
 	var results []Notification
-	err := r.db.SelectContext(ctx, &results, query, userID)
+	err := r.db.SelectContext(ctx, &results, query.String(), args...)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"failed to get notifications for user %s: %w",
@@ -47,6 +59,82 @@ func (r *Repository) GetByUserID(
 	}
 
 	return results, nil
+}
+
+func (r *Repository) CountByUserID(
+	ctx context.Context,
+	userID string,
+	unreadOnly bool,
+) (int, error) {
+	query := strings.Builder{}
+	query.WriteString(`
+		SELECT COUNT(*)
+		FROM notifications
+		WHERE receiver_id = ?
+	`)
+
+	args := []interface{}{userID}
+	if unreadOnly {
+		query.WriteString(" AND is_read = FALSE")
+	}
+
+	var total int
+	err := r.db.GetContext(ctx, &total, query.String(), args...)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"failed to count notifications for user %s: %w",
+			userID,
+			err,
+		)
+	}
+
+	return total, nil
+}
+
+func (r *Repository) CountUnreadByUserID(
+	ctx context.Context,
+	userID string,
+) (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM notifications
+		WHERE receiver_id = ? AND is_read = FALSE
+	`
+
+	var total int
+	err := r.db.GetContext(ctx, &total, query, userID)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"failed to count unread notifications for user %s: %w",
+			userID,
+			err,
+		)
+	}
+
+	return total, nil
+}
+
+func (r *Repository) CountUntouchedByUserID(
+	ctx context.Context,
+	userID string,
+) (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM notifications
+		WHERE receiver_id = ? AND is_touched = FALSE
+	`
+
+	var total int
+	err := r.db.GetContext(ctx, &total, query, userID)
+	if err != nil {
+		return 0, fmt.Errorf(
+			"failed to count untouched notifications for user %s: %w",
+			userID,
+			err,
+		)
+	}
+
+	return total, nil
 }
 
 func (r *Repository) MarkAsRead(
@@ -61,7 +149,7 @@ func (r *Repository) MarkAsRead(
 
 	query := `
 		UPDATE notifications
-		SET is_read = TRUE
+		SET is_read = TRUE, is_touched = TRUE
 		WHERE id = ? AND receiver_id = ?
 	`
 	res, err := tx.ExecContext(ctx, query, id, userID)
@@ -118,8 +206,8 @@ func (r *Repository) MarkAllAsRead(
 
 	query := `
 		UPDATE notifications
-		SET is_read = TRUE
-		WHERE receiver_id = ? AND is_read = FALSE
+		SET is_read = TRUE, is_touched = TRUE
+		WHERE receiver_id = ? AND (is_read = FALSE OR is_touched = FALSE)
 	`
 	_, err := tx.ExecContext(ctx, query, userID)
 	if err != nil {
@@ -253,4 +341,3 @@ func (r *Repository) DeletePushSubscription(
 	}
 	return nil
 }
-
