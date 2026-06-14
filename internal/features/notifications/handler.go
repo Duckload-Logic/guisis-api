@@ -22,9 +22,22 @@ func NewHandler(service *Service) *Handler {
 func (h *Handler) GetNotifications(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 
-	notifications, err := h.service.GetUserNotifications(
+	var req ListNotificationsRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		response.SendError(
+			c,
+			"Invalid notification query parameters",
+			http.StatusBadRequest,
+			nil,
+		)
+		return
+	}
+	req.SetDefaults("created_at")
+
+	data, err := h.service.GetUserNotifications(
 		c.Request.Context(),
 		userID,
+		req,
 	)
 	if err != nil {
 		fmt.Printf("[GetNotifications] {Fetch Notifications}: %v\n", err)
@@ -35,14 +48,6 @@ func (h *Handler) GetNotifications(c *gin.Context) {
 			nil,
 		)
 		return
-	}
-
-	data := ListNotificationsResponse{
-		Notifications: notifications,
-		Total:         len(notifications),
-		Page:          1,
-		PageSize:      len(notifications),
-		TotalPages:    1,
 	}
 
 	response.SendSuccess(c, data)
@@ -263,4 +268,3 @@ func (h *Handler) DeletePushSubscription(c *gin.Context) {
 		gin.H{"message": "Push subscription deleted successfully"},
 	)
 }
-
