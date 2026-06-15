@@ -118,7 +118,9 @@ func (r *Repository) UpdateSlip(
 ) error {
 	query := `
 		UPDATE admission_slips
-		SET reason = ?, date_of_absence = ?, date_needed = ?, category_id = ?, status_id = ?, updated_at = NOW()
+		SET reason = ?, date_of_absence = ?, date_needed = ?,
+			category_id = ?, status_id = ?, admin_notes = ?,
+			updated_at = NOW()
 		WHERE id = ?
 	`
 	_, err := tx.ExecContext(
@@ -129,6 +131,7 @@ func (r *Repository) UpdateSlip(
 		slip.DateNeeded,
 		slip.CategoryID,
 		slip.StatusID,
+		slip.AdminNotes,
 		slip.ID,
 	)
 	if err != nil {
