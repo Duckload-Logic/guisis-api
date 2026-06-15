@@ -243,11 +243,10 @@ func (r *Repository) List(
 		)
 	}
 
-	orderCol, orderDir := sanitizeSort(orderBy, sortOrder)
+	orderClause := buildAppointmentOrderClause(orderBy, sortOrder)
 	query += fmt.Sprintf(
-		" ORDER BY a.%s %s LIMIT %d OFFSET %d",
-		orderCol,
-		orderDir,
+		" ORDER BY %s LIMIT %d OFFSET %d",
+		orderClause,
 		limit,
 		offset,
 	)
@@ -399,11 +398,10 @@ func (r *Repository) ListByUserID(
 		nil,
 	)
 
-	orderCol, orderDir := sanitizeSort(orderBy, sortOrder)
+	orderClause := buildAppointmentOrderClause(orderBy, sortOrder)
 	query += fmt.Sprintf(
-		" ORDER BY a.%s %s LIMIT %d OFFSET %d",
-		orderCol,
-		orderDir,
+		" ORDER BY %s LIMIT %d OFFSET %d",
+		orderClause,
 		limit,
 		offset,
 	)
@@ -432,11 +430,10 @@ func (r *Repository) ListByIIRID(
 		nil,
 	)
 
-	orderCol, orderDir := sanitizeSort(orderBy, sortOrder)
+	orderClause := buildAppointmentOrderClause(orderBy, sortOrder)
 	query += fmt.Sprintf(
-		" ORDER BY a.%s %s LIMIT %d OFFSET %d",
-		orderCol,
-		orderDir,
+		" ORDER BY %s LIMIT %d OFFSET %d",
+		orderClause,
 		limit,
 		offset,
 	)
@@ -581,25 +578,36 @@ func (r *Repository) UpdateAppointment(
 	return err
 }
 
-func sanitizeSort(orderBy, sortOrder string) (string, string) {
-	allowed := map[string]string{
-		"whenDate":      "when_date",
-		"when_date":     "when_date",
-		"createdAt":     "created_at",
-		"created_at":    "created_at",
-		"urgencyScore":  "urgency_score",
-		"urgency_score": "urgency_score",
-	}
-
-	col, ok := allowed[orderBy]
-	if !ok {
-		col = "created_at"
-	}
-
+func buildAppointmentOrderClause(orderBy, sortOrder string) string {
 	dir := "DESC"
 	if strings.ToLower(sortOrder) == "asc" {
 		dir = "ASC"
 	}
 
-	return col, dir
+	urgencyRank := `CASE UPPER(a.urgency_level)
+		WHEN 'CRITICAL' THEN 4
+		WHEN 'HIGH' THEN 3
+		WHEN 'MEDIUM' THEN 2
+		WHEN 'LOW' THEN 1
+		ELSE 0
+	END`
+
+	switch orderBy {
+	case "whenDate", "when_date":
+		return fmt.Sprintf(
+			"a.when_date %s, ts.time %s, a.created_at DESC",
+			dir,
+			dir,
+		)
+	case "createdAt", "created_at":
+		return fmt.Sprintf("a.created_at %s", dir)
+	case "urgencyLevel", "urgency_level", "urgencyScore", "urgency_score":
+		return fmt.Sprintf(
+			"%s %s, a.when_date ASC, ts.time ASC, a.created_at DESC",
+			urgencyRank,
+			dir,
+		)
+	default:
+		return "a.created_at DESC"
+	}
 }
