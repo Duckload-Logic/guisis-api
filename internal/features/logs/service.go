@@ -145,17 +145,15 @@ func (s *Service) notifySuperadmins(ctx context.Context, entry audit.LogEntry) {
 
 func (s *Service) RecordSecurity(
 	ctx context.Context,
-	action, message string,
-	userEmail, userID, ipAddress, userAgent structs.NullableString,
+	action, message, userEmail, ipAddress, userAgent string,
 ) {
 	s.Record(ctx, nil, audit.LogEntry{
 		Category:  audit.CategorySecurity,
 		Action:    action,
 		Message:   message,
-		UserID:    userID,
-		UserEmail: userEmail,
-		IPAddress: ipAddress,
-		UserAgent: userAgent,
+		UserEmail: structs.StringToNullableString(userEmail),
+		IPAddress: structs.StringToNullableString(ipAddress),
+		UserAgent: structs.StringToNullableString(userAgent),
 	})
 }
 
