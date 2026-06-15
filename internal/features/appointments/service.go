@@ -394,6 +394,7 @@ func (s *Service) ListAppointments(
 
 	total, err := s.repo.GetTotalAppointmentsCount(
 		ctx,
+		req.Search,
 		req.StatusID,
 		req.StartDate,
 		req.EndDate,
@@ -446,6 +447,7 @@ func (s *Service) GetAppointmentsByUserID(
 
 	total, err := s.repo.GetTotalAppointmentsCount(
 		ctx,
+		"",
 		req.StatusID,
 		req.StartDate,
 		req.EndDate,
@@ -501,6 +503,7 @@ func (s *Service) GetAppointmentsByIIRID(
 
 	total, err := s.repo.GetTotalAppointmentsCount(
 		ctx,
+		"",
 		req.StatusID,
 		req.StartDate,
 		req.EndDate,

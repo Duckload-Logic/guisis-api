@@ -157,12 +157,18 @@ func (r *Repository) GetDailyStatusCount(
 
 func (r *Repository) GetTotalAppointmentsCount(
 	ctx context.Context,
-	statusID, startDate, endDate string,
+	search, statusID, startDate, endDate string,
 	iirID *string,
 ) (int, error) {
+	baseQuery := `SELECT COUNT(*) FROM appointments a
+		LEFT JOIN iir_records ir ON a.iir_id = ir.id
+		LEFT JOIN users u ON ir.user_id = u.id
+		LEFT JOIN student_personal_info spi ON ir.id = spi.iir_id
+		WHERE 1=1`
 	query, args := r.applyFilters(
-		"SELECT COUNT(*) FROM appointments a WHERE 1=1",
+		baseQuery,
 		nil,
+		search,
 		statusID,
 		startDate,
 		endDate,
@@ -183,7 +189,7 @@ func (r *Repository) GetTotalAppointmentsCount(
 func (r *Repository) applyFilters(
 	query string,
 	args []interface{},
-	statusID, startDate, endDate string,
+	search, statusID, startDate, endDate string,
 	iirID *string,
 ) (string, []interface{}) {
 	if args == nil {
@@ -206,6 +212,16 @@ func (r *Repository) applyFilters(
 		query += " AND a.iir_id = ?"
 		args = append(args, *iirID)
 	}
+	if search != "" {
+		query += ` AND (u.first_name LIKE ? OR
+			u.middle_name LIKE ? OR u.last_name LIKE ? OR
+			u.email LIKE ? OR spi.student_number LIKE ?)`
+		searchTerm := "%" + search + "%"
+		args = append(
+			args,
+			searchTerm, searchTerm, searchTerm, searchTerm, searchTerm,
+		)
+	}
 
 	return query, args
 }
@@ -226,22 +242,12 @@ func (r *Repository) List(
 	query, args = r.applyFilters(
 		query,
 		args,
+		search,
 		"", // statusIDs handled separately with IN clause
 		startDate,
 		endDate,
 		nil,
 	)
-
-	if search != "" {
-		query += ` AND (u.first_name LIKE ? OR
-			u.middle_name LIKE ? OR u.last_name LIKE ? OR
-			u.email LIKE ?)`
-		searchTerm := "%" + search + "%"
-		args = append(
-			args,
-			searchTerm, searchTerm, searchTerm, searchTerm,
-		)
-	}
 
 	orderClause := buildAppointmentOrderClause(orderBy, sortOrder)
 	query += fmt.Sprintf(
@@ -392,6 +398,7 @@ func (r *Repository) ListByUserID(
 	query, args := r.applyFilters(
 		appointmentsBaseQuery+" WHERE ir.user_id = ?",
 		[]interface{}{userID},
+		"",
 		statusID,
 		startDate,
 		endDate,
@@ -424,6 +431,7 @@ func (r *Repository) ListByIIRID(
 	query, args := r.applyFilters(
 		appointmentsBaseQuery+" WHERE a.iir_id = ?",
 		[]interface{}{iirID},
+		"",
 		statusID,
 		startDate,
 		endDate,
