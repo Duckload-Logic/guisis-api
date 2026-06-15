@@ -635,11 +635,20 @@ func (s *Service) UpdateExcuseSlip(
 		return nil, fmt.Errorf("date needed cannot be in the past")
 	}
 
-	// Delete old attachments from both slip records and files table
+	// Delete old attachments NOT in KeepFileIDs
 	oldAttachments, err := s.repo.GetSlipAttachments(ctx, slipID)
 	if err == nil {
 		for _, att := range oldAttachments {
-			_ = s.filesService.DeleteFile(ctx, att.FileID)
+			keep := false
+			for _, keepID := range req.KeepFileIDs {
+				if att.FileID == keepID {
+					keep = true
+					break
+				}
+			}
+			if !keep {
+				_ = s.filesService.DeleteFile(ctx, att.FileID)
+			}
 		}
 	}
 
@@ -703,7 +712,22 @@ func (s *Service) UpdateExcuseSlip(
 					SlipID:         structs.StringToNullableString(slipID),
 					AttachmentType: "OTHER",
 				}
-				if err := s.repo.SaveSlipAttachment(ctx, tx, attachment); err != nil {
+				if err := s.repo.SaveSlipAttachment(
+					ctx, tx, attachment,
+				); err != nil {
+					return err
+				}
+			}
+			// Save kept attachments
+			for _, keepID := range req.KeepFileIDs {
+				attachment := &SlipAttachment{
+					FileID:         keepID,
+					SlipID:         structs.StringToNullableString(slipID),
+					AttachmentType: "OTHER",
+				}
+				if err := s.repo.SaveSlipAttachment(
+					ctx, tx, attachment,
+				); err != nil {
 					return err
 				}
 			}

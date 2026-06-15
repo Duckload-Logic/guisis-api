@@ -47,10 +47,11 @@ type AttachmentDTO struct {
 }
 
 type CreateSlipRequest struct {
-	Reason        string `json:"reason"        form:"reason"        binding:"required"`
-	DateOfAbsence string `json:"dateOfAbsence" form:"dateOfAbsence" binding:"required"`
-	DateNeeded    string `json:"dateNeeded"    form:"dateNeeded"    binding:"required"`
-	CategoryID    int    `json:"categoryId"    form:"categoryId"    binding:"required"`
+	Reason        string   `json:"reason"        form:"reason"        binding:"required"`
+	DateOfAbsence string   `json:"dateOfAbsence" form:"dateOfAbsence" binding:"required"`
+	DateNeeded    string   `json:"dateNeeded"    form:"dateNeeded"    binding:"required"`
+	CategoryID    int      `json:"categoryId"    form:"categoryId"    binding:"required"`
+	KeepFileIDs   []string `json:"keepFileIds"   form:"keepFileIds"`
 }
 
 type UpdateStatusRequest struct {
