@@ -698,40 +698,92 @@ func (s *Service) UpdateAppointment(
 
 	// Fetch student UserID for notification
 	studentUserID, _ := s.repo.GetUserIDByAppointmentID(ctx, id)
-	_, _, _, adminEmail, _, _ := audit.ExtractMeta(ctx)
+	actorUserID, _, _, adminEmail, _, _ := audit.ExtractMeta(ctx)
 
-	notifications := []audit.NotificationParams{
-		{
+	var notifications []audit.NotificationParams
+	if actorUserID == studentUserID &&
+		strings.ToLower(newAppt.StatusName) == "cancelled" {
+		counselorIDs, _ := s.userService.GetUserIDsByRole(
+			ctx,
+			int(constants.AdminRoleID),
+		)
+		studentName := fmt.Sprintf(
+			"%s %s",
+			newAppt.UserFirstName,
+			newAppt.UserLastName,
+		)
+		for _, cid := range counselorIDs {
+			notifications = append(notifications, audit.NotificationParams{
+				ReceiverID: structs.StringToNullableString(cid),
+				TargetID:   structs.StringToNullableString(newAppt.ID),
+				TargetType: structs.StringToNullableString(
+					constants.AppointmentEntityType,
+				),
+				Title: "Appointment Cancelled by Student",
+				Message: fmt.Sprintf(
+					"Appointment scheduled on %s at %s has "+
+						"been cancelled by %s.",
+					datetime.FormatDate(newAppt.WhenDate),
+					datetime.FormatTime(newAppt.TimeSlotTime),
+					studentName,
+				),
+				Type: constants.AppointmentEntityType,
+			})
+		}
+		// Confirm to student
+		notifications = append(notifications, audit.NotificationParams{
 			ReceiverID: structs.StringToNullableString(studentUserID),
 			TargetID:   structs.StringToNullableString(newAppt.ID),
 			TargetType: structs.StringToNullableString(
 				constants.AppointmentEntityType,
 			),
-			Title: fmt.Sprintf("Appointment Status Updated By %s", adminEmail),
+			Title: "Appointment Cancelled Successfully",
 			Message: fmt.Sprintf(
-				"Appointment scheduled on %s at %s has been updated to '%s'",
+				"You have cancelled your appointment scheduled "+
+					"on %s at %s.",
 				datetime.FormatDate(newAppt.WhenDate),
 				datetime.FormatTime(newAppt.TimeSlotTime),
-				newAppt.StatusName,
 			),
 			Type: constants.AppointmentEntityType,
-		},
-		{
-			TargetID: structs.StringToNullableString(oldAppt.ID),
-			TargetType: structs.StringToNullableString(
-				constants.AppointmentEntityType,
-			),
-			Title: "Appointment Updated Successfully",
-			Message: fmt.Sprintf(
-				"You have successfully updated the status of "+
-					"appointment #%s scheduled on %s at %s to '%s'.",
-				structs.TruncateString(oldAppt.ID, 7),
-				datetime.FormatDate(newAppt.WhenDate),
-				datetime.FormatTime(newAppt.TimeSlotTime),
-				newAppt.StatusName,
-			),
-			Type: constants.AppointmentEntityType,
-		},
+		})
+	} else {
+		notifications = []audit.NotificationParams{
+			{
+				ReceiverID: structs.StringToNullableString(studentUserID),
+				TargetID:   structs.StringToNullableString(newAppt.ID),
+				TargetType: structs.StringToNullableString(
+					constants.AppointmentEntityType,
+				),
+				Title: fmt.Sprintf(
+					"Appointment Status Updated By %s",
+					adminEmail,
+				),
+				Message: fmt.Sprintf(
+					"Appointment scheduled on %s at %s has "+
+						"been updated to '%s'",
+					datetime.FormatDate(newAppt.WhenDate),
+					datetime.FormatTime(newAppt.TimeSlotTime),
+					newAppt.StatusName,
+				),
+				Type: constants.AppointmentEntityType,
+			},
+			{
+				TargetID: structs.StringToNullableString(oldAppt.ID),
+				TargetType: structs.StringToNullableString(
+					constants.AppointmentEntityType,
+				),
+				Title: "Appointment Updated Successfully",
+				Message: fmt.Sprintf(
+					"You have successfully updated the status of "+
+						"appointment #%s scheduled on %s at %s to '%s'.",
+					structs.TruncateString(oldAppt.ID, 7),
+					datetime.FormatDate(newAppt.WhenDate),
+					datetime.FormatTime(newAppt.TimeSlotTime),
+					newAppt.StatusName,
+				),
+				Type: constants.AppointmentEntityType,
+			},
+		}
 	}
 
 	audit.Dispatch(
