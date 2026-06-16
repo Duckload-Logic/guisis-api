@@ -104,7 +104,7 @@ services:
                 - |
                     python -c "
                     import urllib.request as u
-                    u.urlopen('http://localhost:8000/api/v1/health')
+                    u.urlopen('http://localhost:8000/health')
                     "
             interval: 30s
             timeout: 10s
