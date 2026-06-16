@@ -1,11 +1,14 @@
 package slips
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
+	"net/url"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -249,12 +252,20 @@ func (s *Service) GetSlipAttachments(
 
 	var attachmentDTOs []AttachmentDTO
 	for a := range attachments {
-		// Keep FileURL as the URL path (e.g., /slips/{hash}/{filename})
-		// Don't convert it to filesystem path - the frontend needs the URL path
+		slipID := ""
+		if attachments[a].SlipID.Valid {
+			slipID = attachments[a].SlipID.String
+		}
+
 		attachmentDTOs = append(attachmentDTOs, AttachmentDTO{
-			ID:       attachments[a].FileID,
-			FileName: attachments[a].FileName,
-			FileURL:  attachments[a].FileURL,
+			ID:             attachments[a].FileID,
+			SlipID:         slipID,
+			FileName:       attachments[a].FileName,
+			FileURL:        attachments[a].FileURL,
+			FileType:       attachments[a].FileType,
+			FileSize:       attachments[a].FileSize,
+			MimeType:       attachments[a].MimeType,
+			AttachmentType: attachments[a].AttachmentType,
 		})
 	}
 
@@ -851,13 +862,18 @@ func (s *Service) UpdateExcuseSlip(
 	return s.mapToDTO(fullUpdatedSlip), nil
 }
 
-// DownloadAttachment streams the attachment from Azure Blob Storage.
+// DownloadAttachment streams an attachment after validating that it belongs to the slip.
 func (s *Service) DownloadAttachment(
 	ctx context.Context,
+	slipID string,
 	attachmentID string,
-	writer io.Writer,
+	writer http.ResponseWriter,
 ) (*SlipAttachment, error) {
-	attachment, err := s.repo.GetAttachmentByID(ctx, attachmentID)
+	attachment, err := s.repo.GetAttachmentByIDAndSlipID(
+		ctx,
+		slipID,
+		attachmentID,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -865,27 +881,86 @@ func (s *Service) DownloadAttachment(
 		return nil, fmt.Errorf("attachment not found")
 	}
 
-	// Convert URL path "/uploads/slips/hash/file" to blob path "slips/hash/file"
-	blobPath := strings.TrimPrefix(attachment.FileURL, "/uploads/")
-	blobPath = strings.TrimPrefix(blobPath, "/")
-
-	cleanPath := blobPath
-	for _, env := range []string{"development/", "staging/", "production/"} {
-		cleanPath = strings.TrimPrefix(cleanPath, env)
+	blobPath, err := normalizeAttachmentBlobPath(attachment.FileURL)
+	if err != nil {
+		return nil, err
 	}
 
-	// Security: Path Traversal Protection (Jail Check)
-	if strings.Contains(blobPath, "..") ||
-		!(strings.HasPrefix(cleanPath, "slips/") ||
-			strings.HasPrefix(cleanPath, "cors/")) {
-		return nil, fmt.Errorf("security: invalid file path detected")
+	var fileBuffer bytes.Buffer
+	if err := s.fileStorage.Download(ctx, blobPath, &fileBuffer); err != nil {
+		return nil, fmt.Errorf("attachment file not found in storage: %w", err)
 	}
 
-	if err := s.fileStorage.Download(ctx, blobPath, writer); err != nil {
-		return nil, fmt.Errorf("failed to download file: %w", err)
+	if fileBuffer.Len() == 0 {
+		return nil, fmt.Errorf("attachment file is empty in storage")
+	}
+
+	fileName := sanitizeDownloadFileName(attachment.FileName)
+	contentType := attachment.MimeType
+	if contentType == "" {
+		contentType = mime.TypeByExtension(path.Ext(fileName))
+	}
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+
+	writer.Header().Set("Content-Type", contentType)
+	writer.Header().Set("X-Content-Type-Options", "nosniff")
+	writer.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+	writer.Header().Set("Pragma", "no-cache")
+	writer.Header().Set("Expires", "0")
+	writer.Header().Set(
+		"Content-Disposition",
+		mime.FormatMediaType("attachment", map[string]string{
+			"filename": fileName,
+		}),
+	)
+	writer.Header().Set("Content-Length", fmt.Sprintf("%d", fileBuffer.Len()))
+
+	if _, err := writer.Write(fileBuffer.Bytes()); err != nil {
+		return nil, fmt.Errorf("failed to write attachment response: %w", err)
 	}
 
 	return attachment, nil
+}
+
+func normalizeAttachmentBlobPath(fileURL string) (string, error) {
+	raw := strings.TrimSpace(strings.ReplaceAll(fileURL, "\\", "/"))
+	if raw == "" {
+		return "", fmt.Errorf("security: invalid file path detected")
+	}
+
+	if parsed, err := url.Parse(raw); err == nil && parsed.Path != "" {
+		raw = parsed.Path
+	}
+
+	raw = strings.TrimPrefix(raw, "/")
+	raw = strings.TrimPrefix(raw, "uploads/")
+
+	for _, env := range []string{"development/", "staging/", "production/"} {
+		raw = strings.TrimPrefix(raw, env)
+		raw = strings.TrimPrefix(raw, "uploads/")
+	}
+
+	cleanPath := path.Clean(raw)
+	if cleanPath == "." ||
+		strings.HasPrefix(cleanPath, "../") ||
+		strings.Contains(cleanPath, "/../") ||
+		!(strings.HasPrefix(cleanPath, "slips/") ||
+			strings.HasPrefix(cleanPath, "cors/")) {
+		return "", fmt.Errorf("security: invalid file path detected")
+	}
+
+	return cleanPath, nil
+}
+
+func sanitizeDownloadFileName(fileName string) string {
+	cleanName := path.Base(strings.ReplaceAll(fileName, "\\", "/"))
+	if cleanName == "." || cleanName == "/" || cleanName == "" {
+		return "attachment"
+	}
+
+	return cleanName
 }
 
 func (s *Service) UpdateExcuseSlipStatus(
