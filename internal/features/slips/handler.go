@@ -496,7 +496,8 @@ func (h *Handler) PatchSlip(c *gin.Context) {
 		parentIdFiles = append(parentIdFiles, f...)
 	}
 
-	if len(files) == 0 && len(parentIdFiles) == 0 {
+	if len(files) == 0 && len(parentIdFiles) == 0 &&
+		len(req.KeepFileIDs) == 0 {
 		response.SendFail(c, gin.H{"error": "At least one file required"})
 		return
 	}

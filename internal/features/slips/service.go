@@ -635,11 +635,20 @@ func (s *Service) UpdateExcuseSlip(
 		return nil, fmt.Errorf("date needed cannot be in the past")
 	}
 
-	// Delete old attachments from both slip records and files table
+	// Delete old attachments NOT in KeepFileIDs
 	oldAttachments, err := s.repo.GetSlipAttachments(ctx, slipID)
 	if err == nil {
 		for _, att := range oldAttachments {
-			_ = s.filesService.DeleteFile(ctx, att.FileID)
+			keep := false
+			for _, keepID := range req.KeepFileIDs {
+				if att.FileID == keepID {
+					keep = true
+					break
+				}
+			}
+			if !keep {
+				_ = s.filesService.DeleteFile(ctx, att.FileID)
+			}
 		}
 	}
 
@@ -647,6 +656,28 @@ func (s *Service) UpdateExcuseSlip(
 	uploadedFiles, err := s.filesService.UploadFiles(ctx, allFiles, "slips")
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload files: %w", err)
+	}
+
+	existingNotes := ""
+	if existingSlip.AdminNotes.Valid {
+		existingNotes = existingSlip.AdminNotes.String
+	}
+
+	updatedNotes := existingNotes
+	if existingSlip.StatusID != 1 {
+		formattedTime := time.Now().Format("2006-01-02 15:04:05")
+		newLogEntry := fmt.Sprintf(
+			"[%s] STATUS: PENDING\n"+
+				"Remarks: Student updated/resubmitted the slip.",
+			formattedTime,
+		)
+		if existingNotes != "" {
+			updatedNotes = newLogEntry +
+				"\n\n------------------------------\n\n" +
+				existingNotes
+		} else {
+			updatedNotes = newLogEntry
+		}
 	}
 
 	// Update database in transaction
@@ -658,6 +689,9 @@ func (s *Service) UpdateExcuseSlip(
 		DateNeeded:    req.DateNeeded,
 		CategoryID:    req.CategoryID,
 		StatusID:      1, // Reset to Pending
+		AdminNotes: structs.StringToNullableString(
+			updatedNotes,
+		),
 	}
 
 	err = s.repo.WithTransaction(
@@ -678,7 +712,22 @@ func (s *Service) UpdateExcuseSlip(
 					SlipID:         structs.StringToNullableString(slipID),
 					AttachmentType: "OTHER",
 				}
-				if err := s.repo.SaveSlipAttachment(ctx, tx, attachment); err != nil {
+				if err := s.repo.SaveSlipAttachment(
+					ctx, tx, attachment,
+				); err != nil {
+					return err
+				}
+			}
+			// Save kept attachments
+			for _, keepID := range req.KeepFileIDs {
+				attachment := &SlipAttachment{
+					FileID:         keepID,
+					SlipID:         structs.StringToNullableString(slipID),
+					AttachmentType: "OTHER",
+				}
+				if err := s.repo.SaveSlipAttachment(
+					ctx, tx, attachment,
+				); err != nil {
 					return err
 				}
 			}
@@ -835,12 +884,50 @@ func (s *Service) UpdateExcuseSlipStatus(
 	}
 
 	// Fetch old state for audit trail
-	oldSlip, _ := s.repo.GetSlipByIDWithDetails(ctx, s.repo.GetDB(), id)
+	oldSlip, _ := s.repo.GetSlipByIDWithDetails(
+		ctx,
+		s.repo.GetDB(),
+		id,
+	)
+
+	existingNotes := ""
+	if oldSlip != nil && oldSlip.AdminNotes.Valid {
+		existingNotes = oldSlip.AdminNotes.String
+	}
+
+	formattedTime := time.Now().Format("2006-01-02 15:04:05")
+	newLogEntry := fmt.Sprintf(
+		"[%s] STATUS: %s",
+		formattedTime,
+		newStatus,
+	)
+	trimmedNotes := strings.TrimSpace(adminNotes)
+	if trimmedNotes != "" {
+		newLogEntry = fmt.Sprintf(
+			"[%s] STATUS: %s\nRemarks: %s",
+			formattedTime,
+			newStatus,
+			trimmedNotes,
+		)
+	}
+
+	updatedNotes := newLogEntry
+	if existingNotes != "" {
+		updatedNotes = newLogEntry +
+			"\n\n------------------------------\n\n" +
+			existingNotes
+	}
 
 	return s.repo.WithTransaction(
 		ctx,
 		func(tx datastore.DB) error {
-			err := s.repo.UpdateStatus(ctx, tx, id, newStatus, adminNotes)
+			err := s.repo.UpdateStatus(
+				ctx,
+				tx,
+				id,
+				newStatus,
+				updatedNotes,
+			)
 			if err != nil {
 				audit.Dispatch(
 					ctx,
