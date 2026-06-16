@@ -479,10 +479,15 @@ func (r *Repository) GetSlipAttachments(
 			sa.admission_slip_id,
 			sa.attachment_type,
 			f.file_name,
-			f.file_url
+			f.file_url,
+			f.file_type,
+			f.file_size,
+			f.mime_type
 		FROM slip_attachments sa
 		JOIN files f ON sa.file_id = f.id
 		WHERE sa.admission_slip_id = ?
+		  AND f.deleted_at IS NULL
+		ORDER BY f.created_at ASC
 	`
 	err := r.db.SelectContext(ctx, &attachments, query, slipID)
 	if err != nil {
@@ -492,8 +497,9 @@ func (r *Repository) GetSlipAttachments(
 	return attachments, nil
 }
 
-func (r *Repository) GetAttachmentByID(
+func (r *Repository) GetAttachmentByIDAndSlipID(
 	ctx context.Context,
+	slipID string,
 	attachmentID string,
 ) (*SlipAttachment, error) {
 	var attachment SlipAttachment
@@ -503,12 +509,17 @@ func (r *Repository) GetAttachmentByID(
 			sa.admission_slip_id,
 			sa.attachment_type,
 			f.file_name,
-			f.file_url
+			f.file_url,
+			f.file_type,
+			f.file_size,
+			f.mime_type
 		FROM slip_attachments sa
 		JOIN files f ON sa.file_id = f.id
-		WHERE sa.file_id = ?
+		WHERE sa.admission_slip_id = ?
+		  AND sa.file_id = ?
+		  AND f.deleted_at IS NULL
 	`
-	err := r.db.GetContext(ctx, &attachment, query, attachmentID)
+	err := r.db.GetContext(ctx, &attachment, query, slipID, attachmentID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
