@@ -1,5 +1,6 @@
 services:
     api:
+        container_name: capstone-api
         build:
             context: .
             target: prod
@@ -7,10 +8,17 @@ services:
             - "127.0.0.1:8080:${WEBSITES_PORT}"
         env_file:
             - .env
+        deploy:
+            resources:
+                limits:
+                    cpus: "0.25"
+                    memory: 200M
         depends_on:
             redis:
                 condition: service_healthy
             mysql:
+                condition: service_healthy
+            ai:
                 condition: service_healthy
         networks:
             - app-network
@@ -23,8 +31,8 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: "0.25"
-                    memory: 256M
+                    cpus: "0.15"
+                    memory: 48M
         healthcheck:
             test: ["CMD", "redis-cli", "ping"]
             interval: 5s
@@ -39,11 +47,15 @@ services:
     mysql:
         image: mysql:8.0
         container_name: capstone-mysql
+        command: >
+            --performance-schema=OFF
+            --innodb-buffer-pool-size=128M
+            --max-connections=64
         deploy:
             resources:
                 limits:
-                    cpus: "1.0"
-                    memory: 1024M
+                    cpus: "0.75"
+                    memory: 512M
         environment:
             MYSQL_ROOT_PASSWORD: ${DB_PASS}
             MYSQL_DATABASE: ${DB_NAME}
@@ -65,13 +77,40 @@ services:
             - mysql-data:/var/lib/mysql
 
     gotenberg:
-        image: gotenberg/gotenberg:8
+        image: gotenberg/gotenberg:8-chromium
         container_name: capstone-gotenberg
         deploy:
             resources:
                 limits:
-                    cpus: "0.5"
+                    cpus: "0.35"
                     memory: 512M
+        restart: always
+        networks:
+            - app-network
+
+    ai:
+        build:
+            context: ../guisis-ai
+            dockerfile: Dockerfile
+        container_name: capstone-ai
+        deploy:
+            resources:
+                limits:
+                    cpus: "0.25"
+                    memory: 256M
+        healthcheck:
+            test:
+                - "CMD-SHELL"
+                - |
+                    python -c "
+                    import urllib.request as u
+                    u.urlopen('http://localhost:8000/api/v1/health')
+                    "
+            interval: 30s
+            timeout: 10s
+            retries: 5
+        env_file:
+            - .env
         restart: always
         networks:
             - app-network

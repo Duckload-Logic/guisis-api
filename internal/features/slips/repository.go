@@ -118,7 +118,9 @@ func (r *Repository) UpdateSlip(
 ) error {
 	query := `
 		UPDATE admission_slips
-		SET reason = ?, date_of_absence = ?, date_needed = ?, category_id = ?, status_id = ?, updated_at = NOW()
+		SET reason = ?, date_of_absence = ?, date_needed = ?,
+			category_id = ?, status_id = ?, admin_notes = ?,
+			updated_at = NOW()
 		WHERE id = ?
 	`
 	_, err := tx.ExecContext(
@@ -129,6 +131,7 @@ func (r *Repository) UpdateSlip(
 		slip.DateNeeded,
 		slip.CategoryID,
 		slip.StatusID,
+		slip.AdminNotes,
 		slip.ID,
 	)
 	if err != nil {
@@ -235,9 +238,18 @@ func (r *Repository) applyFilters(
 				slp.reason LIKE ?
 				OR u.first_name LIKE ?
 				OR u.last_name LIKE ?
+				OR u.email LIKE ?
+				OR spi.student_number LIKE ?
 			)`
 		searchTerm := "%" + req.Search + "%"
-		args = append(args, searchTerm, searchTerm, searchTerm)
+		args = append(
+			args,
+			searchTerm,
+			searchTerm,
+			searchTerm,
+			searchTerm,
+			searchTerm,
+		)
 	}
 
 	if iirID != nil {
@@ -257,6 +269,7 @@ func (r *Repository) GetTotalSlipsCount(
 		`SELECT COUNT(*) FROM admission_slips slp
 		 JOIN iir_records ir ON slp.iir_id = ir.id
 		 JOIN users u ON ir.user_id = u.id
+		 JOIN student_personal_info spi ON ir.id = spi.iir_id
 		 WHERE 1=1`,
 		nil,
 		req,

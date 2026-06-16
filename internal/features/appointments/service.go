@@ -394,6 +394,7 @@ func (s *Service) ListAppointments(
 
 	total, err := s.repo.GetTotalAppointmentsCount(
 		ctx,
+		req.Search,
 		req.StatusID,
 		req.StartDate,
 		req.EndDate,
@@ -446,6 +447,7 @@ func (s *Service) GetAppointmentsByUserID(
 
 	total, err := s.repo.GetTotalAppointmentsCount(
 		ctx,
+		"",
 		req.StatusID,
 		req.StartDate,
 		req.EndDate,
@@ -501,6 +503,7 @@ func (s *Service) GetAppointmentsByIIRID(
 
 	total, err := s.repo.GetTotalAppointmentsCount(
 		ctx,
+		"",
 		req.StatusID,
 		req.StartDate,
 		req.EndDate,
@@ -555,19 +558,111 @@ func (s *Service) UpdateAppointment(
 	req AppointmentDTO,
 ) error {
 	// Fetch old state for audit trail
-	oldAppt, _ := s.repo.GetAppointment(ctx, s.repo.GetDB(), id)
+	oldAppt, err := s.repo.GetAppointment(
+		ctx,
+		s.repo.GetDB(),
+		id,
+	)
+	if err != nil {
+		return err
+	}
+	if oldAppt == nil {
+		return fmt.Errorf("appointment not found")
+	}
+
+	reqDateOnly := strings.Split(req.WhenDate, "T")[0]
+	statusChanged := req.Status.ID != oldAppt.StatusID
+	scheduleChanged := (reqDateOnly != oldAppt.WhenDate) ||
+		(req.TimeSlot.ID != oldAppt.TimeSlotID)
+
+	// Enforce remarks for reschedule
+	if scheduleChanged &&
+		strings.TrimSpace(req.AdminNotes.String) == "" {
+		return fmt.Errorf(
+			"counselor remarks/reason for reschedule is required",
+		)
+	}
+
+	existingNotes := ""
+	if oldAppt.AdminNotes.Valid {
+		existingNotes = oldAppt.AdminNotes.String
+	}
+
+	formattedTime := time.Now().Format("2006-01-02 15:04:05")
+	newLogEntry := ""
+
+	if scheduleChanged {
+		newTimeSlot, err := s.repo.GetTimeSlotByID(ctx, req.TimeSlot.ID)
+		if err != nil {
+			return err
+		}
+		newTimeSlotTime := ""
+		if newTimeSlot != nil {
+			newTimeSlotTime = datetime.FormatTime(newTimeSlot.Time)
+		}
+		newDateFormatted := datetime.FormatDate(reqDateOnly)
+		oldDateFormatted := datetime.FormatDate(oldAppt.WhenDate)
+		oldTimeFormatted := datetime.FormatTime(oldAppt.TimeSlotTime)
+
+		newLogEntry = fmt.Sprintf(
+			"[%s] STATUS: RESCHEDULED\n"+
+				"Remarks: %s\n"+
+				"Rescheduled from %s at %s to %s at %s.",
+			formattedTime,
+			strings.TrimSpace(req.AdminNotes.String),
+			oldDateFormatted,
+			oldTimeFormatted,
+			newDateFormatted,
+			newTimeSlotTime,
+		)
+	} else if statusChanged {
+		newStatus, err := s.repo.GetStatusByID(ctx, req.Status.ID)
+		if err != nil {
+			return err
+		}
+		newStatusName := ""
+		if newStatus != nil {
+			newStatusName = newStatus.Name
+		}
+
+		newLogEntry = fmt.Sprintf(
+			"[%s] STATUS: %s",
+			formattedTime,
+			strings.ToUpper(newStatusName),
+		)
+		trimmedNotes := strings.TrimSpace(req.AdminNotes.String)
+		if trimmedNotes != "" {
+			newLogEntry = fmt.Sprintf(
+				"[%s] STATUS: %s\nRemarks: %s",
+				formattedTime,
+				strings.ToUpper(newStatusName),
+				trimmedNotes,
+			)
+		}
+	}
+
+	updatedNotes := existingNotes
+	if newLogEntry != "" {
+		if existingNotes != "" {
+			updatedNotes = newLogEntry +
+				"\n\n------------------------------\n\n" +
+				existingNotes
+		} else {
+			updatedNotes = newLogEntry
+		}
+	}
 
 	appt := Appointment{
 		ID:         id,
 		StatusID:   req.Status.ID,
 		Reason:     req.Reason,
-		AdminNotes: req.AdminNotes,
-		WhenDate:   strings.Split(req.WhenDate, "T")[0],
+		AdminNotes: structs.StringToNullableString(updatedNotes),
+		WhenDate:   reqDateOnly,
 		TimeSlotID: req.TimeSlot.ID,
 		CategoryID: req.AppointmentCategory.ID,
 	}
 
-	err := s.repo.WithTransaction(
+	err = s.repo.WithTransaction(
 		ctx,
 		func(tx datastore.DB) error {
 			return s.repo.UpdateAppointment(ctx, tx, appt)
@@ -603,40 +698,92 @@ func (s *Service) UpdateAppointment(
 
 	// Fetch student UserID for notification
 	studentUserID, _ := s.repo.GetUserIDByAppointmentID(ctx, id)
-	_, _, _, adminEmail, _, _ := audit.ExtractMeta(ctx)
+	actorUserID, _, _, adminEmail, _, _ := audit.ExtractMeta(ctx)
 
-	notifications := []audit.NotificationParams{
-		{
+	var notifications []audit.NotificationParams
+	if actorUserID == studentUserID &&
+		strings.ToLower(newAppt.StatusName) == "cancelled" {
+		counselorIDs, _ := s.userService.GetUserIDsByRole(
+			ctx,
+			int(constants.AdminRoleID),
+		)
+		studentName := fmt.Sprintf(
+			"%s %s",
+			newAppt.UserFirstName,
+			newAppt.UserLastName,
+		)
+		for _, cid := range counselorIDs {
+			notifications = append(notifications, audit.NotificationParams{
+				ReceiverID: structs.StringToNullableString(cid),
+				TargetID:   structs.StringToNullableString(newAppt.ID),
+				TargetType: structs.StringToNullableString(
+					constants.AppointmentEntityType,
+				),
+				Title: "Appointment Cancelled by Student",
+				Message: fmt.Sprintf(
+					"Appointment scheduled on %s at %s has "+
+						"been cancelled by %s.",
+					datetime.FormatDate(newAppt.WhenDate),
+					datetime.FormatTime(newAppt.TimeSlotTime),
+					studentName,
+				),
+				Type: constants.AppointmentEntityType,
+			})
+		}
+		// Confirm to student
+		notifications = append(notifications, audit.NotificationParams{
 			ReceiverID: structs.StringToNullableString(studentUserID),
 			TargetID:   structs.StringToNullableString(newAppt.ID),
 			TargetType: structs.StringToNullableString(
 				constants.AppointmentEntityType,
 			),
-			Title: fmt.Sprintf("Appointment Status Updated By %s", adminEmail),
+			Title: "Appointment Cancelled Successfully",
 			Message: fmt.Sprintf(
-				"Appointment scheduled on %s at %s has been updated to '%s'",
+				"You have cancelled your appointment scheduled "+
+					"on %s at %s.",
 				datetime.FormatDate(newAppt.WhenDate),
 				datetime.FormatTime(newAppt.TimeSlotTime),
-				newAppt.StatusName,
 			),
 			Type: constants.AppointmentEntityType,
-		},
-		{
-			TargetID: structs.StringToNullableString(oldAppt.ID),
-			TargetType: structs.StringToNullableString(
-				constants.AppointmentEntityType,
-			),
-			Title: "Appointment Updated Successfully",
-			Message: fmt.Sprintf(
-				"You have successfully updated the status of "+
-					"appointment #%s scheduled on %s at %s to '%s'.",
-				structs.TruncateString(oldAppt.ID, 7),
-				datetime.FormatDate(newAppt.WhenDate),
-				datetime.FormatTime(newAppt.TimeSlotTime),
-				newAppt.StatusName,
-			),
-			Type: constants.AppointmentEntityType,
-		},
+		})
+	} else {
+		notifications = []audit.NotificationParams{
+			{
+				ReceiverID: structs.StringToNullableString(studentUserID),
+				TargetID:   structs.StringToNullableString(newAppt.ID),
+				TargetType: structs.StringToNullableString(
+					constants.AppointmentEntityType,
+				),
+				Title: fmt.Sprintf(
+					"Appointment Status Updated By %s",
+					adminEmail,
+				),
+				Message: fmt.Sprintf(
+					"Appointment scheduled on %s at %s has "+
+						"been updated to '%s'",
+					datetime.FormatDate(newAppt.WhenDate),
+					datetime.FormatTime(newAppt.TimeSlotTime),
+					newAppt.StatusName,
+				),
+				Type: constants.AppointmentEntityType,
+			},
+			{
+				TargetID: structs.StringToNullableString(oldAppt.ID),
+				TargetType: structs.StringToNullableString(
+					constants.AppointmentEntityType,
+				),
+				Title: "Appointment Updated Successfully",
+				Message: fmt.Sprintf(
+					"You have successfully updated the status of "+
+						"appointment #%s scheduled on %s at %s to '%s'.",
+					structs.TruncateString(oldAppt.ID, 7),
+					datetime.FormatDate(newAppt.WhenDate),
+					datetime.FormatTime(newAppt.TimeSlotTime),
+					newAppt.StatusName,
+				),
+				Type: constants.AppointmentEntityType,
+			},
+		}
 	}
 
 	audit.Dispatch(

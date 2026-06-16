@@ -157,12 +157,18 @@ func (r *Repository) GetDailyStatusCount(
 
 func (r *Repository) GetTotalAppointmentsCount(
 	ctx context.Context,
-	statusID, startDate, endDate string,
+	search, statusID, startDate, endDate string,
 	iirID *string,
 ) (int, error) {
+	baseQuery := `SELECT COUNT(*) FROM appointments a
+		LEFT JOIN iir_records ir ON a.iir_id = ir.id
+		LEFT JOIN users u ON ir.user_id = u.id
+		LEFT JOIN student_personal_info spi ON ir.id = spi.iir_id
+		WHERE 1=1`
 	query, args := r.applyFilters(
-		"SELECT COUNT(*) FROM appointments a WHERE 1=1",
+		baseQuery,
 		nil,
+		search,
 		statusID,
 		startDate,
 		endDate,
@@ -183,7 +189,7 @@ func (r *Repository) GetTotalAppointmentsCount(
 func (r *Repository) applyFilters(
 	query string,
 	args []interface{},
-	statusID, startDate, endDate string,
+	search, statusID, startDate, endDate string,
 	iirID *string,
 ) (string, []interface{}) {
 	if args == nil {
@@ -206,6 +212,16 @@ func (r *Repository) applyFilters(
 		query += " AND a.iir_id = ?"
 		args = append(args, *iirID)
 	}
+	if search != "" {
+		query += ` AND (u.first_name LIKE ? OR
+			u.middle_name LIKE ? OR u.last_name LIKE ? OR
+			u.email LIKE ? OR spi.student_number LIKE ?)`
+		searchTerm := "%" + search + "%"
+		args = append(
+			args,
+			searchTerm, searchTerm, searchTerm, searchTerm, searchTerm,
+		)
+	}
 
 	return query, args
 }
@@ -226,28 +242,17 @@ func (r *Repository) List(
 	query, args = r.applyFilters(
 		query,
 		args,
+		search,
 		"", // statusIDs handled separately with IN clause
 		startDate,
 		endDate,
 		nil,
 	)
 
-	if search != "" {
-		query += ` AND (u.first_name LIKE ? OR
-			u.middle_name LIKE ? OR u.last_name LIKE ? OR
-			u.email LIKE ?)`
-		searchTerm := "%" + search + "%"
-		args = append(
-			args,
-			searchTerm, searchTerm, searchTerm, searchTerm,
-		)
-	}
-
-	orderCol, orderDir := sanitizeSort(orderBy, sortOrder)
+	orderClause := buildAppointmentOrderClause(orderBy, sortOrder)
 	query += fmt.Sprintf(
-		" ORDER BY a.%s %s LIMIT %d OFFSET %d",
-		orderCol,
-		orderDir,
+		" ORDER BY %s LIMIT %d OFFSET %d",
+		orderClause,
 		limit,
 		offset,
 	)
@@ -393,17 +398,17 @@ func (r *Repository) ListByUserID(
 	query, args := r.applyFilters(
 		appointmentsBaseQuery+" WHERE ir.user_id = ?",
 		[]interface{}{userID},
+		"",
 		statusID,
 		startDate,
 		endDate,
 		nil,
 	)
 
-	orderCol, orderDir := sanitizeSort(orderBy, sortOrder)
+	orderClause := buildAppointmentOrderClause(orderBy, sortOrder)
 	query += fmt.Sprintf(
-		" ORDER BY a.%s %s LIMIT %d OFFSET %d",
-		orderCol,
-		orderDir,
+		" ORDER BY %s LIMIT %d OFFSET %d",
+		orderClause,
 		limit,
 		offset,
 	)
@@ -426,17 +431,17 @@ func (r *Repository) ListByIIRID(
 	query, args := r.applyFilters(
 		appointmentsBaseQuery+" WHERE a.iir_id = ?",
 		[]interface{}{iirID},
+		"",
 		statusID,
 		startDate,
 		endDate,
 		nil,
 	)
 
-	orderCol, orderDir := sanitizeSort(orderBy, sortOrder)
+	orderClause := buildAppointmentOrderClause(orderBy, sortOrder)
 	query += fmt.Sprintf(
-		" ORDER BY a.%s %s LIMIT %d OFFSET %d",
-		orderCol,
-		orderDir,
+		" ORDER BY %s LIMIT %d OFFSET %d",
+		orderClause,
 		limit,
 		offset,
 	)
@@ -581,25 +586,36 @@ func (r *Repository) UpdateAppointment(
 	return err
 }
 
-func sanitizeSort(orderBy, sortOrder string) (string, string) {
-	allowed := map[string]string{
-		"whenDate":      "when_date",
-		"when_date":     "when_date",
-		"createdAt":     "created_at",
-		"created_at":    "created_at",
-		"urgencyScore":  "urgency_score",
-		"urgency_score": "urgency_score",
-	}
-
-	col, ok := allowed[orderBy]
-	if !ok {
-		col = "created_at"
-	}
-
+func buildAppointmentOrderClause(orderBy, sortOrder string) string {
 	dir := "DESC"
 	if strings.ToLower(sortOrder) == "asc" {
 		dir = "ASC"
 	}
 
-	return col, dir
+	urgencyRank := `CASE UPPER(a.urgency_level)
+		WHEN 'CRITICAL' THEN 4
+		WHEN 'HIGH' THEN 3
+		WHEN 'MEDIUM' THEN 2
+		WHEN 'LOW' THEN 1
+		ELSE 0
+	END`
+
+	switch orderBy {
+	case "whenDate", "when_date":
+		return fmt.Sprintf(
+			"a.when_date %s, ts.time %s, a.created_at DESC",
+			dir,
+			dir,
+		)
+	case "createdAt", "created_at":
+		return fmt.Sprintf("a.created_at %s", dir)
+	case "urgencyLevel", "urgency_level", "urgencyScore", "urgency_score":
+		return fmt.Sprintf(
+			"%s %s, a.when_date ASC, ts.time ASC, a.created_at DESC",
+			urgencyRank,
+			dir,
+		)
+	default:
+		return "a.created_at DESC"
+	}
 }
