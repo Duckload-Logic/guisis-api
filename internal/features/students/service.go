@@ -1000,12 +1000,15 @@ func (s *Service) validateDate(dateStr string, fieldName string) error {
 	if dateStr == "" {
 		return fmt.Errorf("%s is required", fieldName)
 	}
-	_, err := time.Parse("2006-01-02", dateStr)
+	t, err := time.Parse("2006-01-02", dateStr)
 	if err != nil {
 		return fmt.Errorf(
 			"invalid date format for %s: must be YYYY-MM-DD",
 			fieldName,
 		)
+	}
+	if t.After(time.Now()) {
+		return fmt.Errorf("%s cannot be in the future", fieldName)
 	}
 	return nil
 }
@@ -1114,10 +1117,9 @@ func (s *Service) saveComprehensiveProfile(
 		req.Student.DateOfBirth,
 		"Student Date of Birth",
 	); err != nil {
-		return "", fmt.Errorf(
-			"[StudentService] {saveComprehensiveProfile}: %w",
-			err,
-		)
+		return "", &ValidationError{
+			Message: err.Error(),
+		}
 	}
 
 	// 1. IIR Record Header
@@ -1391,10 +1393,9 @@ func (s *Service) saveComprehensiveProfile(
 				rpDTO.DateOfBirth,
 				"Related Person Date of Birth",
 			); err != nil {
-				return "", fmt.Errorf(
-					"[StudentService] {saveComprehensiveProfile}: %w",
-					err,
-				)
+				return "", &ValidationError{
+					Message: err.Error(),
+				}
 			}
 		} else {
 			// If it's mandatory in DB, we MUST provide a valid date.
