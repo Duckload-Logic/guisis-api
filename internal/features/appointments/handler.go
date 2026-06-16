@@ -138,6 +138,16 @@ func (h *Handler) PostAppointment(c *gin.Context) {
 		return
 	}
 
+	if req.WhenDate == "" ||
+		req.TimeSlot.ID == 0 ||
+		req.AppointmentCategory.ID == 0 {
+		response.SendFail(
+			c,
+			gin.H{"error": "Missing required fields"},
+		)
+		return
+	}
+
 	appt, err := h.service.CreateAppointment(
 		c.Request.Context(), iirID, req, h.cfg,
 	)
