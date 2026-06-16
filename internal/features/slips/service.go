@@ -394,6 +394,18 @@ func (s *Service) SubmitExcuseSlip(
 		return nil, fmt.Errorf("date needed cannot be in the past")
 	}
 
+	// Check for duplicate active slip
+	exists, err := s.repo.HasActiveSlipForDate(ctx, iirID, dateOfAbsence, "")
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, fmt.Errorf(
+			"an active excuse slip already exists for this absence date",
+		)
+	}
+
+
 	// Unified File Implementation: Use files features
 	uploadedFiles, err := s.filesService.UploadFiles(ctx, allFiles, "slips")
 	if err != nil {
@@ -634,6 +646,20 @@ func (s *Service) UpdateExcuseSlip(
 	if parsedDateNeeded.Before(today) {
 		return nil, fmt.Errorf("date needed cannot be in the past")
 	}
+
+	// Check for duplicate active slip (excluding this current slip)
+	exists, err := s.repo.HasActiveSlipForDate(
+		ctx, iirID, dateOfAbsence, slipID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, fmt.Errorf(
+			"an active excuse slip already exists for this absence date",
+		)
+	}
+
 
 	// Delete old attachments NOT in KeepFileIDs
 	oldAttachments, err := s.repo.GetSlipAttachments(ctx, slipID)

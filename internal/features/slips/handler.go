@@ -112,7 +112,8 @@ func (h *Handler) PostSlip(c *gin.Context) {
 			strings.Contains(errStr, "absence date") ||
 			strings.Contains(errStr, "limit") ||
 			strings.Contains(errStr, "offline") ||
-			strings.Contains(errStr, "OCR") {
+			strings.Contains(errStr, "OCR") ||
+			strings.Contains(errStr, "already exists") {
 			response.SendFail(c, gin.H{"error": errStr})
 			return
 		}
@@ -515,7 +516,8 @@ func (h *Handler) PatchSlip(c *gin.Context) {
 			strings.Contains(errStr, "limit") ||
 			strings.Contains(errStr, "offline") ||
 			strings.Contains(errStr, "OCR") ||
-			strings.Contains(errStr, "access denied") {
+			strings.Contains(errStr, "access denied") ||
+			strings.Contains(errStr, "already exists") {
 			response.SendFail(c, gin.H{"error": errStr})
 			return
 		}

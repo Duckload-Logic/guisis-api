@@ -670,6 +670,43 @@ func (r *Repository) HasNoteForAdmissionSlip(
 	return count > 0, nil
 }
 
+// HasActiveSlipForDate checks if an active slip exists for a date.
+func (r *Repository) HasActiveSlipForDate(
+	ctx context.Context,
+	iirID string,
+	dateOfAbsence string,
+	excludeSlipID string,
+) (bool, error) {
+	var count int
+	var query string
+	var args []interface{}
+
+	if excludeSlipID != "" {
+		query = `
+			SELECT COUNT(*)
+			FROM admission_slips
+			WHERE iir_id = ? AND date_of_absence = ?
+			  AND status_id IN (1, 8, 9) AND id != ?
+		`
+		args = []interface{}{iirID, dateOfAbsence, excludeSlipID}
+	} else {
+		query = `
+			SELECT COUNT(*)
+			FROM admission_slips
+			WHERE iir_id = ? AND date_of_absence = ?
+			  AND status_id IN (1, 8, 9)
+		`
+		args = []interface{}{iirID, dateOfAbsence}
+	}
+
+	err := r.db.GetContext(ctx, &count, query, args...)
+	if err != nil {
+		return false, fmt.Errorf("failed to check active slip: %w", err)
+	}
+	return count > 0, nil
+}
+
+
 func sanitizeSort(orderBy, sortOrder string) (string, string) {
 	allowed := map[string]string{
 		"dateNeeded":      "slp.date_needed",
