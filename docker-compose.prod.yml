@@ -110,7 +110,7 @@ services:
             timeout: 10s
             retries: 5
         env_file:
-            - ../guisis-ai/src/.env
+            - .env
         restart: always
         networks:
             - app-network
