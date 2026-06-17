@@ -83,7 +83,7 @@ services:
             resources:
                 limits:
                     cpus: "0.35"
-                    memory: 512M
+                    memory: 300M
         restart: always
         networks:
             - app-network
@@ -96,8 +96,8 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: "0.25"
-                    memory: 256M
+                    cpus: "0.50"
+                    memory: 900M
         healthcheck:
             test:
                 - "CMD-SHELL"
