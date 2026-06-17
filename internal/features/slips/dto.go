@@ -41,9 +41,14 @@ type SlipDTO struct {
 }
 
 type AttachmentDTO struct {
-	ID       string `json:"id"`
-	FileName string `json:"fileName"`
-	FileURL  string `json:"fileUrl"`
+	ID             string `json:"id"`
+	SlipID         string `json:"slipId,omitempty"`
+	FileName       string `json:"fileName"`
+	FileURL        string `json:"fileUrl"`
+	FileType       string `json:"fileType,omitempty"`
+	FileSize       int64  `json:"fileSize,omitempty"`
+	MimeType       string `json:"mimeType,omitempty"`
+	AttachmentType string `json:"attachmentType,omitempty"`
 }
 
 type CreateSlipRequest struct {

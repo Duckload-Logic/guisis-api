@@ -1,144 +1,157 @@
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>M2M Client Approved</title>
-		<style>
-			body {
-				font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-				background-color: #f4f4f9;
-				margin: 0;
-				padding: 0;
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				height: 100vh;
-			}
-			.container {
-				position: relative;
-				background-color: #ffffff;
-				padding: 40px;
-				border-radius: 12px;
-				box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-				max-width: 400px;
-				width: 100%;
-				text-align: center;
-				overflow: hidden;
-			}
-			.logo {
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				gap: 10px;
-				font-size: 28px;
-				font-weight: 700;
-				color: #2c3e50;
-				margin-bottom: 20px;
-			}
-			.title {
-				font-size: 24px;
-				font-weight: 600;
-				color: #2c3e50;
-				margin-bottom: 10px;
-			}
-			.subtitle {
-				color: #6c757d;
-				margin-bottom: 30px;
-				font-size: 14px;
-			}
-			.info-box {
-				background-color: #e9ecef;
-				padding: 20px;
-				border-radius: 8px;
-				margin: 20px 0;
-				text-align: left;
-			}
-			.info-item {
-				margin: 10px 0;
-				font-size: 14px;
-			}
-			.info-label {
-				font-weight: 600;
-				color: #2c3e50;
-				min-width: 120px;
-				display: inline-block;
-			}
-			.info-value {
-				color: #6c757d;
-			}
-			.footer {
-				margin-top: 30px;
-				padding-top: 20px;
-				border-top: 1px solid #e9ecef;
-				color: #95a5a6;
-				font-size: 12px;
-			}
-			.footer a {
-				color: #3498db;
-				text-decoration: none;
-				font-weight: 500;
-			}
-		</style>
-	</head>
-	<body>
-		<div class="container">
-			<div
-				style="
-					position: absolute;
-					top: 0;
-					left: 0;
-					width: 100%;
-					height: 8px;
-					background-color: #26a269;
-				"
-			></div>
-			<div class="header">
-				<div class="logo">
-					<img
-						src="https://guisis.dllbsit2027.com/logo.svg"
-						width="50"
-						height="50"
-					/>
-					PUPT GuiSIS
-				</div>
-			</div>
-			<div class="title">M2M Client {{.Status}}</div>
-			<div class="subtitle">
-				Your M2M client request has been {{.Status}}.
-			</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>M2M Client Approved</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f4f9;
+        margin: 0;
+        padding: 0;
+        width: 100% !important;
+      }
+      .container {
+        position: relative;
+        background-color: #ffffff;
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        width: 100%;
+        margin: 0 auto;
+        text-align: center;
+        overflow: hidden;
+      }
+      .logo {
+        display: block;
+        text-align: center;
+        font-size: 28px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 20px;
+      }
+      .logo img {
+        display: block;
+        margin: 0 auto 8px auto;
+      }
+      .title {
+        font-size: 24px;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 10px;
+      }
+      .subtitle {
+        color: #6c757d;
+        margin-bottom: 30px;
+        font-size: 14px;
+      }
+      .info-box {
+        background-color: #e9ecef;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 20px 0;
+        text-align: left;
+      }
+      .info-item {
+        margin: 10px 0;
+        font-size: 14px;
+      }
+      .info-label {
+        font-weight: 600;
+        color: #2c3e50;
+        min-width: 120px;
+        display: inline-block;
+      }
+      .info-value {
+        color: #6c757d;
+      }
+      .footer {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e9ecef;
+        color: #95a5a6;
+        font-size: 12px;
+      }
+      .footer a {
+        color: #3498db;
+        text-decoration: none;
+        font-weight: 500;
+      }
+    </style>
+  </head>
+  <body>
+    <table
+      role="presentation"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      border="0"
+      style="background-color: #f4f4f9"
+    >
+      <tr>
+        <td align="center" style="padding: 24px 12px">
+          <div class="container">
+            <div
+              style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 8px;
+                background-color: #26a269;
+              "
+            ></div>
+            <div class="header">
+              <div class="logo">
+                <img
+                  src="https://guisis.dllbsit2027.com/logo.svg"
+                  width="50"
+                  height="50"
+                />
+                <span>PUPT GuiSIS</span>
+              </div>
+            </div>
+            <div class="title">M2M Client {{.Status}}</div>
+            <div class="subtitle">
+              Your M2M client request has been {{.Status}}.
+            </div>
 
-			<div class="info-box">
-				<div class="info-item">
-					<span class="info-label">Client Name:</span>
-					<span class="info-value">{{.ClientName}}</span>
-				</div>
-				<div class="info-item">
-					<span class="info-label">Client ID:</span>
-					<span class="info-value">{{.ClientID}}</span>
-				</div>
-				<div class="info-item">
-					<span class="info-label">Status:</span>
-					<span class="info-value">{{.Status}}</span>
-				</div>
-			</div>
+            <div class="info-box">
+              <div class="info-item">
+                <span class="info-label">Client Name:</span>
+                <span class="info-value">{{.ClientName}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Client ID:</span>
+                <span class="info-value">{{.ClientID}}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Status:</span>
+                <span class="info-value">{{.Status}}</span>
+              </div>
+            </div>
 
-			{{ if eq .Status "Approved" }}
-			<p style="font-size: 14px; color: #6c757d; text-align: left">
-				You can now use your client credentials to authenticate with the
-				GuiSIS API.
-			</p>
-			{{ else }}
-			<p style="font-size: 14px; color: #6c757d; text-align: left">
-				Your M2M client request has been declined. Please contact the
-				system administrator for more information.
-			</p>
-			{{ end }}
+            {{ if eq .Status "Approved" }}
+            <p style="font-size: 14px; color: #6c757d; text-align: left">
+              You can now use your client credentials to authenticate with the
+              GuiSIS API.
+            </p>
+            {{ else }}
+            <p style="font-size: 14px; color: #6c757d; text-align: left">
+              Your M2M client request has been declined. Please contact the
+              system administrator for more information.
+            </p>
+            {{ end }}
 
-			<div class="footer">
-				If you did not request this client, please contact the system
-				administrator immediately.
-			</div>
-		</div>
-	</body>
+            <div class="footer">
+              If you did not request this client, please contact the system
+              administrator immediately.
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>

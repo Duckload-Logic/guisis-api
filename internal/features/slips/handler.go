@@ -112,7 +112,8 @@ func (h *Handler) PostSlip(c *gin.Context) {
 			strings.Contains(errStr, "absence date") ||
 			strings.Contains(errStr, "limit") ||
 			strings.Contains(errStr, "offline") ||
-			strings.Contains(errStr, "OCR") {
+			strings.Contains(errStr, "OCR") ||
+			strings.Contains(errStr, "already exists") {
 			response.SendFail(c, gin.H{"error": errStr})
 			return
 		}
@@ -419,12 +420,18 @@ func (h *Handler) GetSlipAttachments(c *gin.Context) {
 // @Failure      500  {object} map[string]string
 // @Router       /slips/id/{id}/attachments/{attachmentId} [get]
 func (h *Handler) GetSlipAttachmentContent(c *gin.Context) {
+	slipIDParam := c.Param("slipID")
 	attachmentIDParam := c.Param("attachmentId")
-	attachment, err := h.service.DownloadAttachment(
-		c.Request.Context(), attachmentIDParam, c.Writer,
+
+	_, err := h.service.DownloadAttachment(
+		c.Request.Context(),
+		slipIDParam,
+		attachmentIDParam,
+		c.Writer,
 	)
 	if err != nil {
-		if strings.Contains(err.Error(), "attachment not found") {
+		errText := strings.ToLower(err.Error())
+		if strings.Contains(errText, "attachment not found") {
 			response.SendFail(
 				c,
 				gin.H{"error": "Attachment not found"},
@@ -432,6 +439,34 @@ func (h *Handler) GetSlipAttachmentContent(c *gin.Context) {
 			)
 			return
 		}
+		if strings.Contains(errText, "security: invalid file path") {
+			response.SendFail(
+				c,
+				gin.H{"error": "Invalid attachment path"},
+				http.StatusBadRequest,
+			)
+			return
+		}
+		if strings.Contains(errText, "not found in storage") ||
+			strings.Contains(errText, "no such file") ||
+			strings.Contains(errText, "nosuchkey") ||
+			strings.Contains(errText, "failed to open file") {
+			response.SendFail(
+				c,
+				gin.H{"error": "Attachment file is missing from storage"},
+				http.StatusNotFound,
+			)
+			return
+		}
+		if strings.Contains(errText, "file is empty") {
+			response.SendFail(
+				c,
+				gin.H{"error": "Attachment file is empty"},
+				http.StatusUnprocessableEntity,
+			)
+			return
+		}
+
 		fmt.Printf("[GetSlipAttachmentContent] {Download}: %v\n", err)
 		response.SendError(
 			c,
@@ -441,15 +476,6 @@ func (h *Handler) GetSlipAttachmentContent(c *gin.Context) {
 		)
 		return
 	}
-
-	c.Header("Cache-Control", "no-store, no-cache, must-revalidate")
-	c.Header("Pragma", "no-cache")
-	c.Header("Expires", "0")
-
-	c.Header(
-		"Content-Disposition",
-		fmt.Sprintf("attachment; filename=%q", attachment.FileName),
-	)
 }
 
 // PatchSlipStatus godoc
@@ -515,7 +541,8 @@ func (h *Handler) PatchSlip(c *gin.Context) {
 			strings.Contains(errStr, "limit") ||
 			strings.Contains(errStr, "offline") ||
 			strings.Contains(errStr, "OCR") ||
-			strings.Contains(errStr, "access denied") {
+			strings.Contains(errStr, "access denied") ||
+			strings.Contains(errStr, "already exists") {
 			response.SendFail(c, gin.H{"error": errStr})
 			return
 		}
