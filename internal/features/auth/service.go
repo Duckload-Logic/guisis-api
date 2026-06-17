@@ -606,7 +606,9 @@ func (s *Service) PostIDPTokenExchange(
 	}
 
 	if err == sql.ErrNoRows {
-		targetRoleIDs = []int{int(constants.StudentRoleID)}
+		if len(targetRoleIDs) == 0 {
+			targetRoleIDs = []int{int(constants.StudentRoleID)}
+		}
 
 		// JIT Provisioning (First Login Only)
 		roles := make([]users.Role, len(targetRoleIDs))
