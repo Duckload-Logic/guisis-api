@@ -114,6 +114,8 @@ services:
         dns:
             - 8.8.8.8
             - 1.1.1.1
+        volumes:
+            - hf-cache:/root/.cache/huggingface
         restart: always
         networks:
             - app-network
@@ -125,3 +127,4 @@ networks:
 volumes:
     redis-data:
     mysql-data:
+    hf-cache:
