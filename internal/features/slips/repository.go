@@ -479,10 +479,15 @@ func (r *Repository) GetSlipAttachments(
 			sa.admission_slip_id,
 			sa.attachment_type,
 			f.file_name,
-			f.file_url
+			f.file_url,
+			f.file_type,
+			f.file_size,
+			f.mime_type
 		FROM slip_attachments sa
 		JOIN files f ON sa.file_id = f.id
 		WHERE sa.admission_slip_id = ?
+		  AND f.deleted_at IS NULL
+		ORDER BY f.created_at ASC
 	`
 	err := r.db.SelectContext(ctx, &attachments, query, slipID)
 	if err != nil {
@@ -492,8 +497,9 @@ func (r *Repository) GetSlipAttachments(
 	return attachments, nil
 }
 
-func (r *Repository) GetAttachmentByID(
+func (r *Repository) GetAttachmentByIDAndSlipID(
 	ctx context.Context,
+	slipID string,
 	attachmentID string,
 ) (*SlipAttachment, error) {
 	var attachment SlipAttachment
@@ -503,12 +509,17 @@ func (r *Repository) GetAttachmentByID(
 			sa.admission_slip_id,
 			sa.attachment_type,
 			f.file_name,
-			f.file_url
+			f.file_url,
+			f.file_type,
+			f.file_size,
+			f.mime_type
 		FROM slip_attachments sa
 		JOIN files f ON sa.file_id = f.id
-		WHERE sa.file_id = ?
+		WHERE sa.admission_slip_id = ?
+		  AND sa.file_id = ?
+		  AND f.deleted_at IS NULL
 	`
-	err := r.db.GetContext(ctx, &attachment, query, attachmentID)
+	err := r.db.GetContext(ctx, &attachment, query, slipID, attachmentID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -669,6 +680,43 @@ func (r *Repository) HasNoteForAdmissionSlip(
 	}
 	return count > 0, nil
 }
+
+// HasActiveSlipForDate checks if an active slip exists for a date.
+func (r *Repository) HasActiveSlipForDate(
+	ctx context.Context,
+	iirID string,
+	dateOfAbsence string,
+	excludeSlipID string,
+) (bool, error) {
+	var count int
+	var query string
+	var args []interface{}
+
+	if excludeSlipID != "" {
+		query = `
+			SELECT COUNT(*)
+			FROM admission_slips
+			WHERE iir_id = ? AND date_of_absence = ?
+			  AND status_id IN (1, 8, 9) AND id != ?
+		`
+		args = []interface{}{iirID, dateOfAbsence, excludeSlipID}
+	} else {
+		query = `
+			SELECT COUNT(*)
+			FROM admission_slips
+			WHERE iir_id = ? AND date_of_absence = ?
+			  AND status_id IN (1, 8, 9)
+		`
+		args = []interface{}{iirID, dateOfAbsence}
+	}
+
+	err := r.db.GetContext(ctx, &count, query, args...)
+	if err != nil {
+		return false, fmt.Errorf("failed to check active slip: %w", err)
+	}
+	return count > 0, nil
+}
+
 
 func sanitizeSort(orderBy, sortOrder string) (string, string) {
 	allowed := map[string]string{

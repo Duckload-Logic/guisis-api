@@ -82,8 +82,8 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: "0.35"
-                    memory: 512M
+                    # cpus: "0.35"
+                    memory: 300M
         restart: always
         networks:
             - app-network
@@ -96,8 +96,8 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: "0.25"
-                    memory: 256M
+                    # cpus: "0.50"
+                    memory: 900M
         healthcheck:
             test:
                 - "CMD-SHELL"
@@ -110,7 +110,12 @@ services:
             timeout: 10s
             retries: 5
         env_file:
-            - .env
+            - ../guisis-ai/src/.env
+        dns:
+            - 8.8.8.8
+            - 1.1.1.1
+        volumes:
+            - hf-cache:/root/.cache/huggingface
         restart: always
         networks:
             - app-network
@@ -122,3 +127,4 @@ networks:
 volumes:
     redis-data:
     mysql-data:
+    hf-cache:

@@ -73,6 +73,9 @@ type SlipAttachment struct {
 	AttachmentType string                 `db:"attachment_type"   json:"attachmentType"`
 	FileName       string                 `db:"file_name"         json:"fileName"`
 	FileURL        string                 `db:"file_url"          json:"fileUrl"`
+	FileType       string                 `db:"file_type"         json:"fileType"`
+	FileSize       int64                  `db:"file_size"         json:"fileSize"`
+	MimeType       string                 `db:"mime_type"         json:"mimeType"`
 }
 
 // AdmissionTicket represents the physical verification ticket for on-site approval.
