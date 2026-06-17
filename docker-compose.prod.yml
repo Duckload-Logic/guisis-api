@@ -82,7 +82,7 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: "0.35"
+                    # cpus: "0.35"
                     memory: 300M
         restart: always
         networks:
@@ -96,7 +96,7 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: "0.50"
+                    # cpus: "0.50"
                     memory: 900M
         healthcheck:
             test:
