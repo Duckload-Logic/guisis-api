@@ -111,6 +111,9 @@ services:
             retries: 5
         env_file:
             - ../guisis-ai/.env
+        dns:
+            - 8.8.8.8
+            - 1.1.1.1
         restart: always
         networks:
             - app-network
