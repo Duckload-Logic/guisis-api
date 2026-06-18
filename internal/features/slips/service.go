@@ -934,20 +934,38 @@ func normalizeAttachmentBlobPath(fileURL string) (string, error) {
 		raw = parsed.Path
 	}
 
+	// Strip the leading slash and /uploads/ prefix only.
+	// The env prefix (development/, staging/, production/) is
+	// intentionally kept — it is part of the blob key used
+	// by both DiskStorage and LightsailStorage.
 	raw = strings.TrimPrefix(raw, "/")
 	raw = strings.TrimPrefix(raw, "uploads/")
 
-	for _, env := range []string{"development/", "staging/", "production/"} {
-		raw = strings.TrimPrefix(raw, env)
-		raw = strings.TrimPrefix(raw, "uploads/")
+	cleanPath := path.Clean(raw)
+
+	// Allow paths that include an optional env prefix followed
+	// by slips/ or cors/.
+	validPrefix := false
+	for _, env := range []string{
+		"development/", "staging/", "production/",
+	} {
+		if strings.HasPrefix(cleanPath, env+"slips/") ||
+			strings.HasPrefix(cleanPath, env+"cors/") {
+			validPrefix = true
+			break
+		}
+	}
+	// Also allow bare slips/ or cors/ for backward-compat
+	// with any rows written without an env prefix.
+	if strings.HasPrefix(cleanPath, "slips/") ||
+		strings.HasPrefix(cleanPath, "cors/") {
+		validPrefix = true
 	}
 
-	cleanPath := path.Clean(raw)
 	if cleanPath == "." ||
 		strings.HasPrefix(cleanPath, "../") ||
 		strings.Contains(cleanPath, "/../") ||
-		!(strings.HasPrefix(cleanPath, "slips/") ||
-			strings.HasPrefix(cleanPath, "cors/")) {
+		!validPrefix {
 		return "", fmt.Errorf("security: invalid file path detected")
 	}
 

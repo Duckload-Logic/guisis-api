@@ -7,11 +7,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"database/sql"
 
 	"github.com/google/uuid"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
@@ -340,14 +344,27 @@ func (s *Service) DownloadFile(
 	writer io.Writer,
 ) (string, error) {
 	file, err := s.repo.GetFileByURL(ctx, fileURL)
-	if err != nil {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return "", fmt.Errorf("[FileService] {DownloadFile Meta}: %w", err)
 	}
 
-	blobPath := strings.TrimPrefix(file.FileURL, "/uploads/")
+	blobPath := strings.TrimPrefix(fileURL, "/uploads/")
+	if file != nil && file.FileURL != "" {
+		blobPath = strings.TrimPrefix(file.FileURL, "/uploads/")
+	}
+
 	if err := s.storage.Download(ctx, blobPath, writer); err != nil {
 		return "", fmt.Errorf("[FileService] {DownloadFile Storage}: %w", err)
 	}
 
-	return file.MimeType, nil
+	if file != nil && file.MimeType != "" {
+		return file.MimeType, nil
+	}
+
+	mimeType := mime.TypeByExtension(path.Ext(blobPath))
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+
+	return mimeType, nil
 }
