@@ -105,15 +105,12 @@ func SetupTestDB(t *testing.T) *sqlx.DB {
 		t.Fatalf("failed to connect to clean test database: %v", err)
 	}
 
-	// Find project root to load files
-	root, err := findProjectRoot()
+	// Find and read local_schema.sql
+	schemaPath, err := findFile("local_schema.sql")
 	if err != nil {
 		db.Close()
-		t.Fatalf("failed to find project root: %v", err)
+		t.Fatalf("failed to find schema file: %v", err)
 	}
-
-	// Load and run local_schema.sql
-	schemaPath := filepath.Join(root, "local_schema.sql")
 	schemaContent, err := os.ReadFile(schemaPath)
 	if err != nil {
 		db.Close()
@@ -133,14 +130,13 @@ func SetupTestDB(t *testing.T) *sqlx.DB {
 		t.Fatalf("failed to execute schema SQL: %v", err)
 	}
 
-	// Load and run seed SQL
-	seedPath := filepath.Join(
-		root,
-		"guisis-api",
-		"scripts",
-		"seeds",
-		"000001_seed_init.up.sql",
-	)
+	// Find and read seed SQL
+	seedRel := filepath.Join("scripts", "seeds", "000001_seed_init.up.sql")
+	seedPath, err := findFile(seedRel)
+	if err != nil {
+		db.Close()
+		t.Fatalf("failed to find seed file: %v", err)
+	}
 	seedContent, err := os.ReadFile(seedPath)
 	if err != nil {
 		db.Close()
@@ -187,16 +183,22 @@ func SetupTestDB(t *testing.T) *sqlx.DB {
 	return db
 }
 
-func findProjectRoot() (string, error) {
+func findFile(filename string) (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
 
 	for i := 0; i < 10; i++ {
-		path := filepath.Join(dir, "local_schema.sql")
+		// Try direct join
+		path := filepath.Join(dir, filename)
 		if _, err := os.Stat(path); err == nil {
-			return dir, nil
+			return path, nil
+		}
+		// Try inside a "guisis-api" subdirectory if in parent dir
+		pathSub := filepath.Join(dir, "guisis-api", filename)
+		if _, err := os.Stat(pathSub); err == nil {
+			return pathSub, nil
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
@@ -204,7 +206,7 @@ func findProjectRoot() (string, error) {
 		}
 		dir = parent
 	}
-	return "", fmt.Errorf("project root (local_schema.sql) not found")
+	return "", fmt.Errorf("file %s not found", filename)
 }
 
 func loadEnvDSN() string {
