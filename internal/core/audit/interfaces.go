@@ -31,7 +31,6 @@ type Notifier interface {
 
 type Emailer interface {
 	Send(ctx context.Context, email EmailEntry) error
-	SendOTP(ctx context.Context, to, otp string) error
 }
 
 // UserGetter defines the interface for fetching user IDs by role.

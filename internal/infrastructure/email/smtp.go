@@ -73,14 +73,3 @@ func (s *SMTPMailer) Send(
 
 	return nil
 }
-
-func (s *SMTPMailer) SendOTP(ctx context.Context, to, otp string) error {
-	return s.Send(ctx, audit.EmailEntry{
-		To:      []string{to},
-		Subject: "Your Verification Code",
-		Body: fmt.Sprintf(
-			"<h1>Verification Code</h1><p>Your code is: <b>%s</b></p>",
-			otp,
-		),
-	})
-}
