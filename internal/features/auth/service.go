@@ -227,8 +227,7 @@ func (s *Service) AuthenticateUser(
 	for i, r := range user.Roles {
 		roleIDs[i] = r.ID
 	}
-
-	token, _, err := tokens.NewService().GenerateSessionToken(
+	token, accessClaims, err := tokens.NewService().GenerateSessionToken(
 		user.Email,
 		user.ID,
 		roleIDs,
@@ -241,28 +240,47 @@ func (s *Service) AuthenticateUser(
 		},
 	)
 	if err != nil {
-		return "", "", "", fmt.Errorf("failed to generate session: %v", err)
-	}
-
-	// Generate refresh token
-	refreshToken, _, err := tokens.NewService().GenerateSessionToken(
-		user.Email,
-		user.ID,
-		roleIDs,
-		string(constants.AuthTypeNative),
-		constants.RefreshTokenMaxAge,
-		func(c *tokens.Claims) {
-			c.IsVerified = user.IsActive
-			c.IIRID = iirID
-			c.CORID = corID
-		},
-	)
-	if err != nil {
 		return "", "", "", fmt.Errorf(
-			"failed to generate refresh token: %v", err,
+			"failed to generate session: %v",
+			err,
 		)
 	}
 
+	// Generate refresh token
+	refreshToken, refreshClaims, err := tokens.NewService().
+		GenerateSessionToken(
+			user.Email,
+			user.ID,
+			roleIDs,
+			string(constants.AuthTypeNative),
+			constants.RefreshTokenMaxAge,
+			func(c *tokens.Claims) {
+				c.IsVerified = user.IsActive
+				c.IIRID = iirID
+				c.CORID = corID
+			},
+		)
+	if err != nil {
+		return "", "", "", fmt.Errorf(
+			"failed to generate refresh token: %v",
+			err,
+		)
+	}
+
+	// Whitelist the session in Redis
+	err = s.sessionService.WhitelistSession(
+		ctx,
+		user.ID,
+		accessClaims.ID,
+		refreshClaims.ID,
+		constants.RefreshTokenMaxAge,
+	)
+	if err != nil {
+		return "", "", "", fmt.Errorf(
+			"failed to whitelist session: %w",
+			err,
+		)
+	}
 	// Log successful login
 	s.logger.Record(ctx, nil, audit.LogEntry{
 		Level:     audit.LevelInfo,
@@ -290,26 +308,19 @@ func (s *Service) RefreshToken(
 	if err != nil {
 		return "", "", fmt.Errorf("invalid refresh token: %v", err)
 	}
-
-	// 2. Check if the refresh token JTI is blacklisted
-	refreshJTI := sessions.NewJTI(claims.ID)
-	val, err := s.redis.Get(ctx, refreshJTI.ToSessionKey())
-	if err == nil && val == "revoked" {
+	// 2. Check if the refresh token JTI is whitelisted
+	whitelist, err := s.sessionService.GetWhitelistedSession(
+		ctx,
+		claims.UserID,
+	)
+	if err != nil || len(whitelist) == 0 {
 		return "", "", fmt.Errorf("refresh token has been revoked")
 	}
 
-	// 3. Check if user sessions were globally revoked
-	userRevKey := fmt.Sprintf("revoked:user:%s", claims.UserID)
-	revTimeStr, err := s.redis.Get(ctx, userRevKey)
-	if err == nil && revTimeStr != "" {
-		var revTime int64
-		if _, err := fmt.Sscanf(revTimeStr, "%d", &revTime); err == nil {
-			if claims.IssuedAt != nil && claims.IssuedAt.Time.Unix() < revTime {
-				return "", "", fmt.Errorf("user sessions have been revoked")
-			}
-		}
+	whitelistedRefreshJTI := whitelist[constants.RedisSessionRefreshJTIField]
+	if whitelistedRefreshJTI != claims.ID {
+		return "", "", fmt.Errorf("refresh token has been revoked")
 	}
-
 	var iirID, corID string
 	_ = s.repo.GetDB().QueryRowContext(ctx, `
 		SELECT id FROM iir_records WHERE user_id = ?
@@ -335,8 +346,7 @@ func (s *Service) RefreshToken(
 			return "", "", fmt.Errorf("[AuthService] {IDP Refresh}: %w", err)
 		}
 
-		// Generate NEW App Tokens
-		newAppAccessToken, _, err := tokens.NewService().
+		newAppAccessToken, newAppAccessClaims, err := tokens.NewService().
 			GenerateSessionToken(
 				claims.UserEmail,
 				claims.UserID,
@@ -372,6 +382,18 @@ func (s *Service) RefreshToken(
 			return "", "", err
 		}
 
+		// Whitelist the new session in Redis
+		err = s.sessionService.WhitelistSession(
+			ctx,
+			claims.UserID,
+			newAppAccessClaims.ID,
+			refreshClaims.ID,
+			constants.RefreshTokenMaxAge,
+		)
+		if err != nil {
+			return "", "", err
+		}
+
 		// Update Redis: IDP Refresh linked to NEW App Refresh Token's ID
 		newIdpRefreshKey := sessions.NewJTI(refreshClaims.ID).ToIDPRefreshKey()
 		idpRefreshTokenToStore := tokenResp.RefreshToken
@@ -388,15 +410,13 @@ func (s *Service) RefreshToken(
 			return "", "", err
 		}
 
-		// Clean up OLD keys: blacklist the old refresh token, delete old IDP refresh key
-		_ = s.sessionService.DeleteToken(ctx, refreshJTI)
 		_ = s.redis.Del(ctx, idpRefreshKey)
 
 		return newAppAccessToken, newAppRefreshToken, nil
 	}
 
 	// Native flow
-	newToken, _, err := tokens.NewService().GenerateSessionToken(
+	newToken, newAccessClaims, err := tokens.NewService().GenerateSessionToken(
 		claims.UserEmail,
 		claims.UserID,
 		claims.RoleIDs,
@@ -412,7 +432,7 @@ func (s *Service) RefreshToken(
 		return "", "", err
 	}
 
-	newRefreshToken, _, err := tokens.NewService().
+	newRefreshToken, newRefreshClaims, err := tokens.NewService().
 		GenerateSessionToken(
 			claims.UserEmail,
 			claims.UserID,
@@ -429,8 +449,17 @@ func (s *Service) RefreshToken(
 		return "", "", err
 	}
 
-	// Clean up OLD refresh token (blacklist it)
-	_ = s.sessionService.DeleteToken(ctx, refreshJTI)
+	// Whitelist the new session in Redis
+	err = s.sessionService.WhitelistSession(
+		ctx,
+		claims.UserID,
+		newAccessClaims.ID,
+		newRefreshClaims.ID,
+		constants.RefreshTokenMaxAge,
+	)
+	if err != nil {
+		return "", "", err
+	}
 
 	return newToken, newRefreshToken, nil
 }
@@ -676,8 +705,7 @@ func (s *Service) PostIDPTokenExchange(
 			break
 		}
 	}
-
-	appAccessToken, _, err := tokens.NewService().
+	appAccessToken, accessClaims, err := tokens.NewService().
 		GenerateSessionToken(
 			userInfo.Email,
 			localUser.ID,
@@ -713,6 +741,18 @@ func (s *Service) PostIDPTokenExchange(
 		return "", "", err
 	}
 
+	// Whitelist the session in Redis
+	err = s.sessionService.WhitelistSession(
+		ctx,
+		localUser.ID,
+		accessClaims.ID,
+		refreshClaims.ID,
+		constants.RefreshTokenMaxAge,
+	)
+	if err != nil {
+		return "", "", err
+	}
+
 	idpRefreshKey := sessions.NewJTI(refreshClaims.ID).ToIDPRefreshKey()
 	err = s.redis.Set(
 		ctx,
@@ -723,7 +763,6 @@ func (s *Service) PostIDPTokenExchange(
 	if err != nil {
 		return "", "", err
 	}
-
 	// Log successful login
 	s.logger.Record(ctx, nil, audit.LogEntry{
 		Level:    audit.LevelInfo,
