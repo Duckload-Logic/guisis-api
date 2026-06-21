@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
@@ -124,9 +123,8 @@ func TestAuthAndRoleMiddlewares(t *testing.T) {
 	if w5.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d", w5.Code)
 	}
-
-	// Test Case 6: JTI Revocation (using Redis)
-	t.Run("Redis Revocation", func(t *testing.T) {
+	// Test Case 6: Session Whitelisting and Revocation (using Redis)
+	t.Run("Redis Whitelist and Revocation", func(t *testing.T) {
 		redisClient := setupTestRedis(t)
 
 		// Setup route that uses Redis session check
@@ -136,30 +134,54 @@ func TestAuthAndRoleMiddlewares(t *testing.T) {
 			c.JSON(http.StatusOK, gin.H{"status": "ok"})
 		})
 
-		// Blacklist the student JTI
-		jti := sessions.NewJTI(studentClaims.ID)
 		ctx := context.Background()
-		err := redisClient.Set(
+		sessionSvc := sessions.NewService(redisClient)
+
+		// Whitelist the session
+		err := sessionSvc.WhitelistSession(
 			ctx,
-			jti.ToSessionKey(),
-			"revoked",
-			10*time.Second,
+			"student-id",
+			studentClaims.ID,
+			"refresh-jti-placeholder",
+			60,
 		)
 		if err != nil {
-			t.Fatalf("failed to set revoked session in redis: %v", err)
+			t.Fatalf("failed to whitelist session: %v", err)
 		}
-		defer redisClient.Del(ctx, jti.ToSessionKey())
+		defer sessionSvc.RevokeUserSession(ctx, "student-id")
 
-		req6 := httptest.NewRequest("GET", "/test", nil)
-		req6.Header.Set("Authorization", "Bearer "+studentToken)
-		w6 := httptest.NewRecorder()
-		rRev.ServeHTTP(w6, req6)
-		if w6.Code != http.StatusUnauthorized {
-			t.Errorf("expected 401 for revoked session, got %d", w6.Code)
+		// 1. Verify access succeeds when whitelisted
+		reqValid := httptest.NewRequest("GET", "/test", nil)
+		reqValid.Header.Set("Authorization", "Bearer "+studentToken)
+		wValid := httptest.NewRecorder()
+		rRev.ServeHTTP(wValid, reqValid)
+		if wValid.Code != http.StatusOK {
+			t.Errorf(
+				"expected 200 for whitelisted session, got %d",
+				wValid.Code,
+			)
+		}
+
+		// 2. Revoke the whitelist key
+		err = sessionSvc.RevokeUserSession(ctx, "student-id")
+		if err != nil {
+			t.Fatalf("failed to revoke session: %v", err)
+		}
+
+		// 3. Verify access is rejected when revoked
+		reqRevoked := httptest.NewRequest("GET", "/test", nil)
+		reqRevoked.Header.Set("Authorization", "Bearer "+studentToken)
+		wRevoked := httptest.NewRecorder()
+		rRev.ServeHTTP(wRevoked, reqRevoked)
+		if wRevoked.Code != http.StatusUnauthorized {
+			t.Errorf(
+				"expected 401 for revoked session, got %d",
+				wRevoked.Code,
+			)
 		}
 
 		var resp map[string]string
-		_ = json.Unmarshal(w6.Body.Bytes(), &resp)
+		_ = json.Unmarshal(wRevoked.Body.Bytes(), &resp)
 		if resp["error"] != "Session has been revoked or logged out" {
 			t.Errorf("unexpected error message: %s", resp["error"])
 		}

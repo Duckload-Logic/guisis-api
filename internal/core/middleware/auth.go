@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
@@ -64,11 +64,22 @@ func validateSession(
 	redis *datastore.RedisClient,
 	claims *tokens.Claims,
 ) bool {
-	jti := sessions.NewJTI(claims.ID)
+	if claims.M2MClientID != "" {
+		return true
+	}
 
-	// Check if token JTI is individually blacklisted
-	val, err := redis.Get(c.Request.Context(), jti.ToSessionKey())
-	if err == nil && val == "revoked" {
+	key := fmt.Sprintf(
+		"%s%s",
+		constants.RedisUserSessionKeyPrefix,
+		claims.UserID,
+	)
+
+	fields, err := redis.HGetAll(c.Request.Context(), key)
+	if err != nil {
+		log.Printf(
+			"[AuthMiddleware] {Session Validate}: Redis error: %v",
+			err,
+		)
 		c.AbortWithStatusJSON(
 			http.StatusUnauthorized,
 			gin.H{"error": "Session has been revoked or logged out"},
@@ -76,20 +87,21 @@ func validateSession(
 		return false
 	}
 
-	// 2. Check if user sessions were globally revoked
-	userRevKey := fmt.Sprintf("revoked:user:%s", claims.UserID)
-	revTimeStr, err := redis.Get(c.Request.Context(), userRevKey)
-	if err == nil && revTimeStr != "" {
-		var revTime int64
-		if _, err := fmt.Sscanf(revTimeStr, "%d", &revTime); err == nil {
-			if claims.IssuedAt != nil && claims.IssuedAt.Time.Unix() < revTime {
-				c.AbortWithStatusJSON(
-					http.StatusUnauthorized,
-					gin.H{"error": "Session has been revoked or logged out"},
-				)
-				return false
-			}
-		}
+	if len(fields) == 0 {
+		c.AbortWithStatusJSON(
+			http.StatusUnauthorized,
+			gin.H{"error": "Session has been revoked or logged out"},
+		)
+		return false
+	}
+
+	whitelistedJTI := fields[constants.RedisSessionAccessJTIField]
+	if whitelistedJTI != claims.ID {
+		c.AbortWithStatusJSON(
+			http.StatusUnauthorized,
+			gin.H{"error": "Session has been revoked or logged out"},
+		)
+		return false
 	}
 
 	return true
