@@ -102,3 +102,18 @@ func (r *RedisClient) Keys(
 ) ([]string, error) {
 	return r.Client.Keys(ctx, pattern).Result()
 }
+
+func (r *RedisClient) HSet(
+	ctx context.Context,
+	key string,
+	values ...interface{},
+) error {
+	return r.Client.HSet(ctx, key, values...).Err()
+}
+
+func (r *RedisClient) HGetAll(
+	ctx context.Context,
+	key string,
+) (map[string]string, error) {
+	return r.Client.HGetAll(ctx, key).Result()
+}
