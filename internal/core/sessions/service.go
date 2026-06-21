@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
 
@@ -91,52 +92,94 @@ func (s *Service) StoreUserToken(
 
 	return nil
 }
+// WhitelistSession stores active JTIs in a Redis hash.
+func (s *Service) WhitelistSession(
+	ctx context.Context,
+	userID string,
+	accessJTI string,
+	refreshJTI string,
+	expireSeconds int,
+) error {
+	key := fmt.Sprintf("%s%s", constants.RedisUserSessionKeyPrefix, userID)
 
-// DeleteUserToken marks a session token as revoked in Redis (denylist).
+	err := s.redis.HSet(
+		ctx,
+		key,
+		constants.RedisSessionAccessJTIField,
+		accessJTI,
+		constants.RedisSessionRefreshJTIField,
+		refreshJTI,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to store whitelist session: %w", err)
+	}
+
+	err = s.redis.Expire(ctx, key, time.Duration(expireSeconds)*time.Second)
+	if err != nil {
+		return fmt.Errorf("failed to set whitelist expiration: %w", err)
+	}
+
+	return nil
+}
+
+// RevokeUserSession deletes the whitelist key for a user.
+func (s *Service) RevokeUserSession(
+	ctx context.Context,
+	userID string,
+) error {
+	key := fmt.Sprintf("%s%s", constants.RedisUserSessionKeyPrefix, userID)
+	return s.redis.Del(ctx, key)
+}
+
+// GetWhitelistedSession retrieves the whitelisted session for a user.
+func (s *Service) GetWhitelistedSession(
+	ctx context.Context,
+	userID string,
+) (map[string]string, error) {
+	key := fmt.Sprintf("%s%s", constants.RedisUserSessionKeyPrefix, userID)
+	return s.redis.HGetAll(ctx, key)
+}
+
+// DeleteUserToken deletes the user's whitelisted session from Redis.
 func (s *Service) DeleteUserToken(
 	ctx context.Context,
 	userID string,
 	jti JTIDTO,
 ) error {
-	key := jti.ToSessionKey()
-	return s.redis.Set(ctx, key, "revoked", 24*time.Hour)
+	return s.RevokeUserSession(ctx, userID)
 }
 
-// ListUserSessions returns all active session data for a user.
+// ListUserSessions returns the whitelisted session data for a user.
 func (s *Service) ListUserSessions(
 	ctx context.Context,
 	userID string,
 ) ([]map[string]string, error) {
-	userKey := ToUserSessionsKey(userID)
-	jtis, err := s.redis.SMembers(ctx, userKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list user sessions: %w", err)
+	sessionData, err := s.GetWhitelistedSession(ctx, userID)
+	if err != nil || len(sessionData) == 0 {
+		return []map[string]string{}, nil
 	}
 
-	sessions := make([]map[string]string, 0, len(jtis))
-	for _, jtiVal := range jtis {
-		jti := NewJTI(jtiVal)
-		data, err := s.GetToken(ctx, jti)
-		if err != nil {
-			// Session might have expired individually, clean up the set
-			s.redis.SRem(ctx, userKey, jtiVal)
-			continue
-		}
-		// Add JTI to the data map for the frontend
-		data["jti"] = jtiVal
-		sessions = append(sessions, data)
+	res := []map[string]string{
+		{
+			"jti":    sessionData[constants.RedisSessionAccessJTIField],
+			"type":   "access",
+			"status": "active",
+			"userID": userID,
+		},
+		{
+			"jti":    sessionData[constants.RedisSessionRefreshJTIField],
+			"type":   "refresh",
+			"status": "active",
+			"userID": userID,
+		},
 	}
-
-	return sessions, nil
+	return res, nil
 }
 
-// RevokeAllUserSessions invalidates all active sessions for a user by setting
-// a user-level revocation timestamp in Redis.
+// RevokeAllUserSessions invalidates all active sessions for a user.
 func (s *Service) RevokeAllUserSessions(
 	ctx context.Context,
 	userID string,
 ) error {
-	key := fmt.Sprintf("revoked:user:%s", userID)
-	now := time.Now().Unix()
-	return s.redis.Set(ctx, key, fmt.Sprintf("%d", now), 24*time.Hour)
+	return s.RevokeUserSession(ctx, userID)
 }

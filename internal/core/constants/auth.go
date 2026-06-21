@@ -70,4 +70,13 @@ const (
 	// RedisIDPRefreshKeyPrefix is the prefix for IDP refresh tokens
 	// (idp_refresh:jti)
 	RedisIDPRefreshKeyPrefix = "idp_refresh:"
+
+	// RedisUserSessionKeyPrefix is the prefix for whitelisted user sessions
+	RedisUserSessionKeyPrefix = "user:session:"
+
+	// RedisSessionAccessJTIField is the hash field for access token JTI
+	RedisSessionAccessJTIField = "access_jti"
+
+	// RedisSessionRefreshJTIField is the hash field for refresh token JTI
+	RedisSessionRefreshJTIField = "refresh_jti"
 )
