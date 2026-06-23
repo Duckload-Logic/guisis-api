@@ -21,14 +21,35 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 		if strings.HasPrefix(c.Request.URL.Path, "/api/v1/docs") {
 			c.Header(
 				"Content-Security-Policy",
-				"default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data:;",
+				"default-src 'self'; style-src 'self' 'unsafe-inline'; "+
+					"script-src 'self' 'unsafe-inline' 'unsafe-eval'; "+
+					"img-src 'self' data:;",
 			)
 		} else {
-			c.Header("Content-Security-Policy", "default-src 'none'; frame-ancestors *;")
+			c.Header(
+				"Content-Security-Policy",
+				"default-src 'none'; frame-ancestors 'none';",
+			)
 		}
 
 		// Prevent search engines from indexing the API
 		c.Header("X-Robots-Tag", "noindex, nofollow")
+
+		// Anti-clickjacking Header
+		c.Header("X-Frame-Options", "DENY")
+
+		// Remove Server response header to prevent version leaks
+		c.Writer.Header().Del("Server")
+
+		// Re-examine Cache-control Directives
+		if !strings.HasPrefix(c.Request.URL.Path, "/api/v1/docs") {
+			c.Header(
+				"Cache-Control",
+				"no-store, no-cache, must-revalidate, proxy-revalidate",
+			)
+			c.Header("Pragma", "no-cache")
+			c.Header("Expires", "0")
+		}
 
 		// Enforce HTTPS
 		c.Header(

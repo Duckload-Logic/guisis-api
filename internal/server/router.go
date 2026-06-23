@@ -40,7 +40,7 @@ func NewRouter(
 	cfg *config.Config,
 ) *gin.Engine {
 	log.Printf("PRODUCTION MODE: %v", cfg.IsProduction)
-	if cfg.IsProduction {
+	if cfg.IsProduction || cfg.IsStaging {
 		gin.SetMode(gin.ReleaseMode)
 	} else {
 		gin.SetMode(gin.DebugMode)
@@ -50,14 +50,17 @@ func NewRouter(
 
 	corsConfig := cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			if cfg.IsProduction {
+			if cfg.IsProduction || cfg.IsStaging {
 				target := "dllbsit2027.com"
 				parsed, err := url.Parse(origin)
 				if err != nil {
 					return false
 				}
 				host := parsed.Hostname()
-				return host == target || strings.HasSuffix(host, "."+target)
+				return host == target || strings.HasSuffix(
+					host,
+					"."+target,
+				)
 			}
 
 			return strings.HasPrefix(origin, "http://localhost")
@@ -82,13 +85,13 @@ func NewRouter(
 		AllowCredentials: true,
 	}
 
-	g.Use(cors.New(corsConfig))
-
 	// Security & DoS Protection
+	g.Use(middleware.SecurityHeadersMiddleware())
 	g.Use(
 		middleware.BodySizeLimitMiddleware(2 << 20),
 	) // 2MB limit for JSON payloads
-	g.Use(middleware.SecurityHeadersMiddleware())
+
+	g.Use(cors.New(corsConfig))
 
 	g.Use(func(c *gin.Context) {
 		c.Set(
