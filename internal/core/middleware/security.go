@@ -23,12 +23,14 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 				"Content-Security-Policy",
 				"default-src 'self'; style-src 'self' 'unsafe-inline'; "+
 					"script-src 'self' 'unsafe-inline' 'unsafe-eval'; "+
-					"img-src 'self' data:;",
+					"img-src 'self' data:; frame-ancestors 'none'; "+
+					"form-action 'self';",
 			)
 		} else {
 			c.Header(
 				"Content-Security-Policy",
-				"default-src 'none'; frame-ancestors 'none';",
+				"default-src 'none'; frame-ancestors 'none'; "+
+					"form-action 'none';",
 			)
 		}
 
@@ -38,8 +40,11 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 		// Anti-clickjacking Header
 		c.Header("X-Frame-Options", "DENY")
 
-		// Remove Server response header to prevent version leaks
-		c.Writer.Header().Del("Server")
+		// Set a generic server name to mask actual server details
+		c.Header("Server", "GuiSIS-API")
+
+		// Restrict Flash/Silverlight cross-domain policies
+		c.Header("X-Permitted-Cross-Domain-Policies", "none")
 
 		// Re-examine Cache-control Directives
 		if !strings.HasPrefix(c.Request.URL.Path, "/api/v1/docs") {

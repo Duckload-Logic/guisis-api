@@ -217,5 +217,18 @@ func NewRouter(
 		handlers.IntegrationStudentHandler,
 		handlers.Redis,
 	)
+
+	g.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "Endpoint not found",
+		})
+	})
+
+	g.NoMethod(func(c *gin.Context) {
+		c.JSON(http.StatusMethodNotAllowed, gin.H{
+			"error": "Method not allowed",
+		})
+	})
+
 	return g
 }
