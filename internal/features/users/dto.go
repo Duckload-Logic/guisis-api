@@ -72,3 +72,11 @@ type WhitelistResponse struct {
 	Roles     []Role `json:"roles"`
 	CreatedAt string `json:"createdAt"`
 }
+
+// FullName returns the user's full name, fallback to a default if user is nil.
+func (u *UserResponse) FullName() string {
+	if u == nil {
+		return "A student"
+	}
+	return u.FirstName + " " + u.LastName
+}

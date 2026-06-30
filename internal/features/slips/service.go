@@ -28,6 +28,12 @@ import (
 )
 
 const MaxFileSize = 5 * 1024 * 1024 // 5MB limit
+
+const (
+	statusPending     = 1
+	statusForRevision = 9
+)
+
 type Service struct {
 	repo           *Repository
 	logService     audit.Logger
@@ -140,7 +146,7 @@ func (s *Service) GetUrgentSlips(
 		slipDTOs = append(slipDTOs, *dto)
 	}
 
-	req.StatusID = 1
+	req.StatusID = statusPending
 	total, err := s.repo.GetTotalUrgentSlipsCount(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get slips count: %w", err)
@@ -379,27 +385,30 @@ func (s *Service) SubmitExcuseSlip(
 		return nil, err
 	}
 
-	dateOfAbsence := strings.Split(req.DateOfAbsence, "T")[0]
-	parsedDate, err := time.Parse("2006-01-02", dateOfAbsence)
+	dateOfAbsence := datetime.ExtractDateOnly(req.DateOfAbsence)
+	parsedDate, err := time.Parse(
+		constants.LayoutDateOnly,
+		dateOfAbsence,
+	)
 	if err != nil {
-		return nil, fmt.Errorf(
-			"invalid date format: YYYY-MM-DD",
-		)
+		return nil, fmt.Errorf("invalid date format: YYYY-MM-DD")
 	}
 
-	// Evaluate current day in Philippine Time (UTC+8)
-	loc := time.FixedZone("PHT", 8*3600)
-	now := time.Now().In(loc)
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	today := datetime.GetTodayInPHT()
 
 	if parsedDate.After(today) {
 		return nil, fmt.Errorf("absence date cannot be in future")
 	}
 
-	dateNeeded := strings.Split(req.DateNeeded, "T")[0]
-	parsedDateNeeded, err := time.Parse("2006-01-02", dateNeeded)
+	dateNeeded := datetime.ExtractDateOnly(req.DateNeeded)
+	parsedDateNeeded, err := time.Parse(
+		constants.LayoutDateOnly,
+		dateNeeded,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("invalid date needed format: YYYY-MM-DD")
+		return nil, fmt.Errorf(
+			"invalid date needed format: YYYY-MM-DD",
+		)
 	}
 	if parsedDateNeeded.Before(today) {
 		return nil, fmt.Errorf("date needed cannot be in the past")
@@ -430,7 +439,7 @@ func (s *Service) SubmitExcuseSlip(
 		DateOfAbsence: req.DateOfAbsence,
 		DateNeeded:    req.DateNeeded,
 		CategoryID:    req.CategoryID,
-		StatusID:      1,
+		StatusID:      statusPending,
 	}
 
 	var createdSlip *SlipWithDetailsView
@@ -503,10 +512,7 @@ func (s *Service) SubmitExcuseSlip(
 	// Fetch personalized notification targets
 	userID := audit.ExtractUserID(ctx)
 	student, _ := s.userService.GetUserByID(ctx, userID)
-	studentName := "A student"
-	if student != nil {
-		studentName = fmt.Sprintf("%s %s", student.FirstName, student.LastName)
-	}
+	studentName := student.FullName()
 
 	counselorIDs, _ := s.userService.GetUserIDsByRole(
 		ctx,
@@ -616,8 +622,9 @@ func (s *Service) UpdateExcuseSlip(
 		return nil, fmt.Errorf("access denied")
 	}
 
-	// Only allow editing if status is Pending (1) or For Revision (9)
-	if existingSlip.StatusID != 1 && existingSlip.StatusID != 9 {
+	// Only allow editing if status is Pending or For Revision
+	if existingSlip.StatusID != statusPending &&
+		existingSlip.StatusID != statusForRevision {
 		return nil, fmt.Errorf("cannot edit slip in current status")
 	}
 
@@ -634,25 +641,30 @@ func (s *Service) UpdateExcuseSlip(
 		return nil, err
 	}
 
-	dateOfAbsence := strings.Split(req.DateOfAbsence, "T")[0]
-	parsedDate, err := time.Parse("2006-01-02", dateOfAbsence)
+	dateOfAbsence := datetime.ExtractDateOnly(req.DateOfAbsence)
+	parsedDate, err := time.Parse(
+		constants.LayoutDateOnly,
+		dateOfAbsence,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("invalid date format: YYYY-MM-DD")
 	}
 
-	// Evaluate current day in Philippine Time (UTC+8)
-	loc := time.FixedZone("PHT", 8*3600)
-	now := time.Now().In(loc)
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	today := datetime.GetTodayInPHT()
 
 	if parsedDate.After(today) {
 		return nil, fmt.Errorf("absence date cannot be in future")
 	}
 
-	dateNeeded := strings.Split(req.DateNeeded, "T")[0]
-	parsedDateNeeded, err := time.Parse("2006-01-02", dateNeeded)
+	dateNeeded := datetime.ExtractDateOnly(req.DateNeeded)
+	parsedDateNeeded, err := time.Parse(
+		constants.LayoutDateOnly,
+		dateNeeded,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("invalid date needed format: YYYY-MM-DD")
+		return nil, fmt.Errorf(
+			"invalid date needed format: YYYY-MM-DD",
+		)
 	}
 	if parsedDateNeeded.Before(today) {
 		return nil, fmt.Errorf("date needed cannot be in the past")
@@ -701,8 +713,8 @@ func (s *Service) UpdateExcuseSlip(
 	}
 
 	updatedNotes := existingNotes
-	if existingSlip.StatusID != 1 {
-		formattedTime := time.Now().Format("2006-01-02 15:04:05")
+	if existingSlip.StatusID != statusPending {
+		formattedTime := datetime.FormatDateTime(time.Now())
 		newLogEntry := fmt.Sprintf(
 			"[%s] STATUS: PENDING\n"+
 				"Remarks: Student updated/resubmitted the slip.",
@@ -725,7 +737,7 @@ func (s *Service) UpdateExcuseSlip(
 		DateOfAbsence: req.DateOfAbsence,
 		DateNeeded:    req.DateNeeded,
 		CategoryID:    req.CategoryID,
-		StatusID:      1, // Reset to Pending
+		StatusID:      statusPending, // Reset to Pending
 		AdminNotes: structs.StringToNullableString(
 			updatedNotes,
 		),
@@ -795,14 +807,7 @@ func (s *Service) UpdateExcuseSlip(
 
 	userID := audit.ExtractUserID(ctx)
 	student, _ := s.userService.GetUserByID(ctx, userID)
-	studentName := "A student"
-	if student != nil {
-		studentName = fmt.Sprintf(
-			"%s %s",
-			student.FirstName,
-			student.LastName,
-		)
-	}
+	studentName := student.FullName()
 
 	for _, cid := range counselorIDs {
 		notifications = append(

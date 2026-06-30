@@ -12,12 +12,16 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/datetime"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
+
+const secretLength = 32
+
 
 type Service struct {
 	repo           *Repository
@@ -66,7 +70,7 @@ func (s *Service) CreateClient(
 	}
 
 	clientID := uuid.NewString()
-	rawSecret, _ := s.generateRandomString(32)
+	rawSecret, _ := s.generateRandomString(secretLength)
 	hashedSecret := s.hashSecret(rawSecret)
 
 	client := M2MClient{
@@ -152,8 +156,7 @@ func (s *Service) CreateClient(
 						"StudentName": userID,
 						"Category":    "M2M Access",
 						"Reason":      req.ClientDescription,
-						"TimeSlot": time.Now().
-							Format("2006-01-02 15:04:05"),
+						"TimeSlot": datetime.FormatDateTime(time.Now()),
 						"UrgencyLevel": "HIGH",
 						"RequestURL": fmt.Sprintf(
 							"%s/superadmin/m2m-management",
@@ -333,7 +336,7 @@ func (s *Service) ResetSecret(
 		return "", fmt.Errorf("unauthorized: you do not own this client")
 	}
 
-	rawSecret, _ := s.generateRandomString(32)
+	rawSecret, _ := s.generateRandomString(secretLength)
 	hashedSecret := s.hashSecret(rawSecret)
 
 	err = s.repo.UpdateSecret(ctx, id, hashedSecret)

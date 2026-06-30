@@ -425,7 +425,10 @@ func (r *Repository) GetSlipByID(
 	id string,
 ) (*Slip, error) {
 	var slip Slip
-	query := `SELECT id, iir_id, reason, date_of_absence, date_needed, admin_notes, category_id, status_id, created_at, updated_at FROM admission_slips WHERE id = ?`
+	query := fmt.Sprintf(
+		"SELECT %s FROM admission_slips WHERE id = ?",
+		datastore.GetColumns(Slip{}),
+	)
 	err := r.db.GetContext(ctx, &slip, query, id)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -596,9 +599,10 @@ func (r *Repository) GetTicketByCode(
 	code string,
 ) (*AdmissionTicket, error) {
 	var ticket AdmissionTicket
-	query := `SELECT id, admission_slip_id, ticket_code, is_verified,
-			  verified_at, verified_by, created_at, updated_at
-			  FROM admission_tickets WHERE ticket_code = ?`
+	query := fmt.Sprintf(
+		"SELECT %s FROM admission_tickets WHERE ticket_code = ?",
+		datastore.GetColumns(AdmissionTicket{}),
+	)
 	err := r.db.GetContext(ctx, &ticket, query, code)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -632,9 +636,10 @@ func (r *Repository) GetTicketBySlipID(
 	slipID string,
 ) (*AdmissionTicket, error) {
 	var ticket AdmissionTicket
-	query := `SELECT id, admission_slip_id, ticket_code, is_verified,
-			  verified_at, verified_by, created_at, updated_at
-			  FROM admission_tickets WHERE admission_slip_id = ?`
+	query := fmt.Sprintf(
+		"SELECT %s FROM admission_tickets WHERE admission_slip_id = ?",
+		datastore.GetColumns(AdmissionTicket{}),
+	)
 	err := r.db.GetContext(ctx, &ticket, query, slipID)
 	if err != nil {
 		if err == sql.ErrNoRows {

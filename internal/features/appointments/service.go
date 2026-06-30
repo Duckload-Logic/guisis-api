@@ -21,6 +21,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const statusPending = 1
+
 type Service struct {
 	repo           *Repository
 	notifService   audit.Notifier
@@ -74,15 +76,15 @@ func (s *Service) CreateAppointment(
 		ID:         uuid.New().String(),
 		IIRID:      iirID,
 		Reason:     req.Reason,
-		WhenDate:   strings.Split(req.WhenDate, "T")[0],
+		WhenDate:   datetime.ExtractDateOnly(req.WhenDate),
 		TimeSlotID: req.TimeSlot.ID,
 		CategoryID: req.AppointmentCategory.ID,
-		StatusID:   1,
+		StatusID:   statusPending,
 	}
 
 	if req.PreferredDate1 != "" {
 		appt.PrefDate1 = structs.StringToNullableString(
-			strings.Split(req.PreferredDate1, "T")[0],
+			datetime.ExtractDateOnly(req.PreferredDate1),
 		)
 	}
 	if req.PreferredTimeSlot1 != nil && req.PreferredTimeSlot1.ID != 0 {
@@ -92,7 +94,7 @@ func (s *Service) CreateAppointment(
 	}
 	if req.PreferredDate2 != "" {
 		appt.PrefDate2 = structs.StringToNullableString(
-			strings.Split(req.PreferredDate2, "T")[0],
+			datetime.ExtractDateOnly(req.PreferredDate2),
 		)
 	}
 	if req.PreferredTimeSlot2 != nil && req.PreferredTimeSlot2.ID != 0 {
@@ -102,7 +104,7 @@ func (s *Service) CreateAppointment(
 	}
 	if req.PreferredDate3 != "" {
 		appt.PrefDate3 = structs.StringToNullableString(
-			strings.Split(req.PreferredDate3, "T")[0],
+			datetime.ExtractDateOnly(req.PreferredDate3),
 		)
 	}
 	if req.PreferredTimeSlot3 != nil && req.PreferredTimeSlot3.ID != 0 {
@@ -179,14 +181,7 @@ func (s *Service) CreateAppointment(
 		return nil, err
 	}
 
-	studentName := "A student"
-	if student != nil {
-		studentName = fmt.Sprintf(
-			"%s %s",
-			student.FirstName,
-			student.LastName,
-		)
-	}
+	studentName := student.FullName()
 
 	counselors, err := s.userService.GetUsersByRole(
 		ctx,
@@ -570,7 +565,7 @@ func (s *Service) UpdateAppointment(
 		return fmt.Errorf("appointment not found")
 	}
 
-	reqDateOnly := strings.Split(req.WhenDate, "T")[0]
+	reqDateOnly := datetime.ExtractDateOnly(req.WhenDate)
 	statusChanged := req.Status.ID != oldAppt.StatusID
 	scheduleChanged := (reqDateOnly != oldAppt.WhenDate) ||
 		(req.TimeSlot.ID != oldAppt.TimeSlotID)
@@ -588,7 +583,7 @@ func (s *Service) UpdateAppointment(
 		existingNotes = oldAppt.AdminNotes.String
 	}
 
-	formattedTime := time.Now().Format("2006-01-02 15:04:05")
+	formattedTime := datetime.FormatDateTime(time.Now())
 	newLogEntry := ""
 
 	if scheduleChanged {
@@ -707,11 +702,7 @@ func (s *Service) UpdateAppointment(
 			ctx,
 			int(constants.AdminRoleID),
 		)
-		studentName := fmt.Sprintf(
-			"%s %s",
-			newAppt.UserFirstName,
-			newAppt.UserLastName,
-		)
+		studentName := newAppt.FullName()
 		for _, cid := range counselorIDs {
 			notifications = append(notifications, audit.NotificationParams{
 				ReceiverID: structs.StringToNullableString(cid),

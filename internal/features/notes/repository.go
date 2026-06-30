@@ -20,11 +20,10 @@ func (r *Repository) GetStudentSignificantNotes(
 	ctx context.Context,
 	iirID string,
 ) ([]SignificantNote, error) {
-	query := `
-		SELECT id, iir_id, appointment_id, admission_slip_id, note, remarks, created_at, updated_at
-		FROM significant_notes
-		WHERE iir_id = ?
-	`
+	query := fmt.Sprintf(
+		"SELECT %s FROM significant_notes WHERE iir_id = ?",
+		datastore.GetColumns(SignificantNote{}),
+	)
 
 	var results []SignificantNote
 	err := r.db.SelectContext(ctx, &results, query, iirID)

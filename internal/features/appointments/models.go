@@ -101,3 +101,12 @@ type DailyStatusCount struct {
 	ScheduledCount   int    `db:"scheduled_count"   json:"scheduledCount"`
 	RescheduledCount int    `db:"rescheduled_count" json:"rescheduledCount"`
 }
+
+// FullName returns the user's full name from the denormalized view.
+func (a *AppointmentWithDetailsView) FullName() string {
+	if a == nil {
+		return "A student"
+	}
+	return a.UserFirstName + " " + a.UserLastName
+}
+

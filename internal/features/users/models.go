@@ -51,3 +51,12 @@ type UserRoleDB struct {
 	Reason      sql.NullString `db:"reason"`
 	ReferenceID sql.NullString `db:"reference_id"`
 }
+
+// FullName returns the user's full name, fallback to a default if user is nil.
+func (u *User) FullName() string {
+	if u == nil {
+		return "A student"
+	}
+	return u.FirstName + " " + u.LastName
+}
+

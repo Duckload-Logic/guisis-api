@@ -82,8 +82,10 @@ func (r *Repository) GetDB() *sqlx.DB {
 func (r *Repository) GetCategories(
 	ctx context.Context,
 ) ([]AppointmentCategory, error) {
-	query := `SELECT id, name FROM appointment_categories`
-
+	query := fmt.Sprintf(
+		"SELECT %s FROM appointment_categories",
+		datastore.GetColumns(AppointmentCategory{}),
+	)
 	var categories []AppointmentCategory
 	err := r.db.SelectContext(ctx, &categories, query)
 	if err != nil {
@@ -282,7 +284,10 @@ func (r *Repository) GetTimeSlotByID(
 	ctx context.Context,
 	id int,
 ) (*TimeSlot, error) {
-	query := `SELECT id, time FROM time_slots WHERE id = ?`
+	query := fmt.Sprintf(
+		"SELECT %s FROM time_slots WHERE id = ?",
+		datastore.GetColumns(TimeSlot{}),
+	)
 	var slot TimeSlot
 	err := r.db.GetContext(ctx, &slot, query, id)
 	if err != nil {
@@ -296,7 +301,10 @@ func (r *Repository) GetAppointmentCategoryByID(
 	ctx context.Context,
 	id int,
 ) (*AppointmentCategory, error) {
-	query := `SELECT id, name FROM appointment_categories WHERE id = ?`
+	query := fmt.Sprintf(
+		"SELECT %s FROM appointment_categories WHERE id = ?",
+		datastore.GetColumns(AppointmentCategory{}),
+	)
 	var category AppointmentCategory
 	err := r.db.GetContext(ctx, &category, query, id)
 	if err != nil {
@@ -310,12 +318,12 @@ func (r *Repository) GetStatusByID(
 	ctx context.Context,
 	id int,
 ) (*AppointmentStatus, error) {
-	query := `
-		SELECT id, name
+	query := fmt.Sprintf(`
+		SELECT %s
 		FROM statuses
 		WHERE status_type IN ('appointment', 'both')
 		AND id = ?
-	`
+	`, datastore.GetColumns(AppointmentStatus{}))
 
 	var status AppointmentStatus
 	err := r.db.GetContext(ctx, &status, query, id)
@@ -374,11 +382,11 @@ func (r *Repository) GetAvailableTimeSlots(
 func (r *Repository) GetStatuses(
 	ctx context.Context,
 ) ([]AppointmentStatus, error) {
-	query := `
-		SELECT id, name
+	query := fmt.Sprintf(`
+		SELECT %s
 		FROM statuses
 		WHERE status_type IN ('appointment', 'both')
-	`
+	`, datastore.GetColumns(AppointmentStatus{}))
 	var statuses []AppointmentStatus
 	err := r.db.SelectContext(ctx, &statuses, query)
 	if err != nil {

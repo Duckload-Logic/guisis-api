@@ -10,15 +10,7 @@ type AuthType string
 
 const (
 	AuthTypeNative AuthType = "native"
-	AuthTypeM2M    AuthType = "m2m"
 	AuthTypeIDP    AuthType = "idp"
-)
-
-// OAuth 2.0 parameter constants for IDP integration
-const (
-	// ResponseTypeCode is the OAuth 2.0 response_type parameter value
-	// for authorization code flow
-	ResponseTypeCode = "code"
 )
 
 // Timeout constants for IDP requests
@@ -50,17 +42,6 @@ const (
 	CookiePathRoot = "/"
 )
 
-// Logging constants for consistent log messages
-const (
-	// LogCategorySecurity is the log category for security-related events
-	LogCategorySecurity = "Security"
-
-	// LogActionLoginSuccess is the log action for successful login
-	LogActionLoginSuccess = "LoginSuccess"
-
-	// LogActionLoginFailed is the log action for failed login
-	LogActionLoginFailed = "LoginFailed"
-)
 
 // Redis Key Constants
 const (
