@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
@@ -219,4 +220,59 @@ func (c *IDPClient) GetLogoutURL(
 		cfg.IDPClientID,
 		idpUserID,
 	)
+}
+
+// PingIDP checks if the IDP is reachable by sending a fast HEAD request,
+// falling back to a GET request with a short timeout.
+func (c *IDPClient) PingIDP(
+	ctx context.Context,
+	cfg *config.Config,
+) error {
+	pingClient := &http.Client{
+		Timeout: 3 * time.Second,
+	}
+
+	targetURL := strings.TrimSuffix(cfg.IDPBaseUrl, "/api/v1")
+	if targetURL == "" {
+		targetURL = cfg.IDPBaseUrl
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodHead,
+		targetURL,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("[IDPClient] {Ping IDP HEAD Req}: %w", err)
+	}
+
+	resp, err := pingClient.Do(req)
+	if err != nil {
+		// Fallback to GET
+		reqGet, errGet := http.NewRequestWithContext(
+			ctx,
+			http.MethodGet,
+			targetURL,
+			nil,
+		)
+		if errGet != nil {
+			return fmt.Errorf(
+				"[IDPClient] {Ping IDP GET Req}: %w",
+				errGet,
+			)
+		}
+
+		respGet, errGet := pingClient.Do(reqGet)
+		if errGet != nil {
+			return fmt.Errorf(
+				"[IDPClient] {Ping IDP Connection}: %w",
+				errGet,
+			)
+		}
+		respGet.Body.Close()
+		return nil
+	}
+	resp.Body.Close()
+	return nil
 }

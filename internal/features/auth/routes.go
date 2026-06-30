@@ -25,6 +25,10 @@ func RegisterRoutes(
 		// IDP OAuth 2.0 routes
 		authRoutes.GET("/idp/authorize", h.GetAuthorizeURL)
 		authRoutes.POST("/idp/token", h.PostIDPToken)
+
+		// OTP Fallback routes
+		authRoutes.POST("/otp/request", h.PostOTPRequest)
+		authRoutes.POST("/otp/login", h.PostOTPLogin)
 	}
 
 	// Internal Debugging (Redis Dashboard)

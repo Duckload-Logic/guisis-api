@@ -2,9 +2,11 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"fmt"
 	"log"
+	"math/big"
 	"net"
 	"net/url"
 	"strings"
@@ -67,9 +69,16 @@ func (s *Service) validateEmailDomain(email string) error {
 func (s *Service) AuthenticateUser(
 	ctx context.Context, email, password, ipAddress, userAgent string,
 ) (string, string, string, error) {
+	const (
+		lockoutPrefix   = "lockout:"
+		failurePrefix   = "failed_attempts:"
+		maxFailures     = 5
+		lockoutDuration = 15 * time.Minute
+	)
+
 	// Check if user is locked out
 	// TODO: Remove this implementation in the future
-	lockoutKey := fmt.Sprintf("lockout:%s", email)
+	lockoutKey := fmt.Sprintf("%s%s", lockoutPrefix, email)
 	if locked, _ := s.redis.Get(ctx, lockoutKey); locked != "" {
 		log.Printf("Account locked for user: %s", email)
 		return "", "", "", fmt.Errorf(
@@ -127,7 +136,7 @@ func (s *Service) AuthenticateUser(
 		return "", "", "", fmt.Errorf("invalid credentials")
 	}
 
-	failureKey := fmt.Sprintf("failed_attempts:%s", email)
+	failureKey := fmt.Sprintf("%s%s", failurePrefix, email)
 	err = bcrypt.CompareHashAndPassword(
 		[]byte(user.PasswordHash.String),
 		[]byte(password),
@@ -142,8 +151,13 @@ func (s *Service) AuthenticateUser(
 
 		failures++
 
-		if failures >= 5 {
-			err = s.redis.Set(ctx, lockoutKey, "true", 15*time.Minute)
+		if failures >= maxFailures {
+			err = s.redis.Set(
+				ctx,
+				lockoutKey,
+				"true",
+				lockoutDuration,
+			)
 			if err != nil {
 				return "", "", "", fmt.Errorf(
 					"[REDIS:SET-LOCKOUT]:%v", err,
@@ -179,7 +193,7 @@ func (s *Service) AuthenticateUser(
 			ctx,
 			failureKey,
 			fmt.Sprintf("%d", failures),
-			15*time.Minute, // 15 minutes lockout period
+			lockoutDuration, // lockout period
 		)
 		if err != nil {
 			return "", "", "", fmt.Errorf("[REDIS:SET-FAILURES]:%v", err)
@@ -795,4 +809,229 @@ func (s *Service) GetIDPUserInfo(
 		)
 	}
 	return userInfo, nil
+}
+
+// IsIDPUp checks if the IDP is up, utilizing a short-lived cache in Redis.
+func (s *Service) IsIDPUp(
+	ctx context.Context,
+	cfg *config.Config,
+) bool {
+	const cacheKey = "idp_health_status"
+	const cacheTTL = 30 * time.Second
+
+	if s.redis != nil {
+		status, err := s.redis.Get(ctx, cacheKey)
+		if err == nil && status != "" {
+			return status == "up"
+		}
+	}
+
+	err := s.idpClient.PingIDP(ctx, cfg)
+	if err != nil {
+		log.Printf("[AuthService] {IsIDPUp}: IDP down: %v", err)
+		if s.redis != nil {
+			_ = s.redis.Set(ctx, cacheKey, "down", cacheTTL)
+		}
+		return false
+	}
+
+	if s.redis != nil {
+		_ = s.redis.Set(ctx, cacheKey, "up", cacheTTL)
+	}
+	return true
+}
+
+// GenerateAndSendOTP generates a cryptographically secure OTP,
+// saves it to Redis, and sends it to the user's email.
+func (s *Service) GenerateAndSendOTP(
+	ctx context.Context,
+	email string,
+) error {
+	// First verify that the user exists in the system
+	// We support native or idp fallback login for registered users
+	_, err := s.repo.GetUserByEmail(
+		ctx,
+		email,
+		string(constants.AuthTypeIDP),
+	)
+	if err != nil {
+		// Fallback to checking native user existence
+		_, err = s.repo.GetUserByEmail(
+			ctx,
+			email,
+			string(constants.AuthTypeNative),
+		)
+		if err != nil {
+			return fmt.Errorf(
+				"[AuthService] {Verify User}: user not found",
+			)
+		}
+	}
+
+	// Generate 6-digit OTP
+	maxVal := big.NewInt(1000000)
+	n, err := rand.Int(rand.Reader, maxVal)
+	if err != nil {
+		return fmt.Errorf("[AuthService] {Generate OTP}: %w", err)
+	}
+	otp := fmt.Sprintf("%06d", n.Int64())
+
+	// Store OTP in Redis with 5 minutes TTL
+	redisKey := fmt.Sprintf("otp:%s", email)
+	err = s.redis.Set(ctx, redisKey, otp, 5*time.Minute)
+	if err != nil {
+		return fmt.Errorf("[AuthService] {Store OTP}: %w", err)
+	}
+
+	// Send email
+	emailEntry := audit.EmailEntry{
+		To:           []string{email},
+		Subject:      "PUPT GuiSIS - Verification Code",
+		TemplatePath: "otp.html",
+		TemplateData: map[string]string{
+			"OTP": otp,
+		},
+	}
+	err = s.emailer.Send(ctx, emailEntry)
+	if err != nil {
+		return fmt.Errorf("[AuthService] {Send OTP Email}: %w", err)
+	}
+
+	return nil
+}
+
+// AuthenticateUserOTP authenticates a user using a verified OTP.
+func (s *Service) AuthenticateUserOTP(
+	ctx context.Context,
+	email, otp string,
+	ipAddress, userAgent string,
+) (string, string, string, error) {
+	redisKey := fmt.Sprintf("otp:%s", email)
+	cachedOTP, err := s.redis.Get(ctx, redisKey)
+	if err != nil || cachedOTP == "" {
+		return "", "", "", fmt.Errorf(
+			"verification code expired or invalid",
+		)
+	}
+
+	if cachedOTP != otp {
+		return "", "", "", fmt.Errorf("invalid verification code")
+	}
+
+	// Consume OTP immediately to prevent reuse
+	_ = s.redis.Del(ctx, redisKey)
+
+	// Fetch user (either IDP or native fallback type)
+	user, err := s.repo.GetUserByEmail(
+		ctx,
+		email,
+		string(constants.AuthTypeIDP),
+	)
+	authTypeUsed := string(constants.AuthTypeIDP)
+	if err != nil {
+		user, err = s.repo.GetUserByEmail(
+			ctx,
+			email,
+			string(constants.AuthTypeNative),
+		)
+		authTypeUsed = string(constants.AuthTypeNative)
+		if err != nil {
+			return "", "", "", fmt.Errorf("user not found")
+		}
+	}
+
+	if !user.IsActive {
+		return "", "", "", fmt.Errorf("account is inactive")
+	}
+
+	// Retrieve student IDs if applicable
+	var iirID, corID string
+	for _, r := range user.Roles {
+		if r.ID == int(constants.StudentRoleID) {
+			_ = s.repo.GetDB().QueryRowContext(ctx, `
+				SELECT id FROM iir_records WHERE user_id = ?
+			`, user.ID).Scan(&iirID)
+			_ = s.repo.GetDB().QueryRowContext(ctx, `
+				SELECT file_id FROM student_cors WHERE student_id = ?
+			`, user.ID).Scan(&corID)
+			break
+		}
+	}
+
+	// Generate session tokens
+	roleIDs := make([]int, len(user.Roles))
+	for i, r := range user.Roles {
+		roleIDs[i] = r.ID
+	}
+
+	token, accessClaims, err := tokens.NewService().GenerateSessionToken(
+		user.Email,
+		user.ID,
+		roleIDs,
+		authTypeUsed,
+		constants.AccessTokenMaxAge,
+		func(c *tokens.Claims) {
+			c.IsVerified = user.IsActive
+			c.IIRID = iirID
+			c.CORID = corID
+		},
+	)
+	if err != nil {
+		return "", "", "", fmt.Errorf(
+			"[AuthService] {Gen Token}: %w",
+			err,
+		)
+	}
+
+	refreshToken, refreshClaims, err := tokens.NewService().
+		GenerateSessionToken(
+			user.Email,
+			user.ID,
+			roleIDs,
+			authTypeUsed,
+			constants.RefreshTokenMaxAge,
+			func(c *tokens.Claims) {
+				c.IsVerified = user.IsActive
+				c.IIRID = iirID
+				c.CORID = corID
+			},
+		)
+	if err != nil {
+		return "", "", "", fmt.Errorf(
+			"[AuthService] {Gen Refresh Token}: %w",
+			err,
+		)
+	}
+
+	// Whitelist session in Redis
+	err = s.sessionService.WhitelistSession(
+		ctx,
+		user.ID,
+		accessClaims.ID,
+		refreshClaims.ID,
+		constants.RefreshTokenMaxAge,
+	)
+	if err != nil {
+		return "", "", "", fmt.Errorf(
+			"[AuthService] {Whitelist Session}: %w",
+			err,
+		)
+	}
+
+	// Log successful fallback login
+	s.logger.Record(ctx, nil, audit.LogEntry{
+		Level:    audit.LevelInfo,
+		Category: audit.CategorySecurity,
+		Action:   audit.ActionLoginSuccess,
+		Message: fmt.Sprintf(
+			"User %s successfully logged in via OTP fallback",
+			user.Email,
+		),
+		UserID:    structs.StringToNullableString(user.ID),
+		UserEmail: structs.StringToNullableString(user.Email),
+		IPAddress: structs.StringToNullableString(ipAddress),
+		UserAgent: structs.StringToNullableString(userAgent),
+	})
+
+	return user.ID, token, refreshToken, nil
 }

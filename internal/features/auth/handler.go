@@ -34,6 +34,32 @@ func NewHandler(
 	}
 }
 
+func (h *Handler) setAuthCookies(
+	c *gin.Context,
+	accessToken,
+	refreshToken string,
+) {
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie(
+		constants.AccessTokenCookieName,
+		accessToken,
+		int(constants.RefreshTokenMaxAge),
+		constants.CookiePathRoot,
+		"",
+		h.cfg.IsProduction,
+		true,
+	)
+	c.SetCookie(
+		constants.RefreshTokenCookieName,
+		refreshToken,
+		int(constants.RefreshTokenMaxAge),
+		constants.CookiePathRoot,
+		"",
+		h.cfg.IsProduction,
+		true,
+	)
+}
+
 // PostLogin handles traditional email/password login.
 func (h *Handler) PostLogin(c *gin.Context) {
 	if h.cfg.IsProduction && !h.cfg.IsStaging {
@@ -67,33 +93,13 @@ func (h *Handler) PostLogin(c *gin.Context) {
 		ipAddress,
 		userAgent,
 	)
-	_ = refreshToken // explicitly ignore if unused for now
 	if err != nil {
 		fmt.Printf("[PostLogin] {Authentication Error}: %v\n", err)
 		response.SendError(c, err.Error(), http.StatusUnauthorized, nil)
 		return
 	}
 
-	// Set secure httpOnly cookies
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(
-		constants.AccessTokenCookieName,
-		accessToken,
-		int(constants.RefreshTokenMaxAge),
-		constants.CookiePathRoot,
-		"",
-		h.cfg.IsProduction,
-		true,
-	)
-	c.SetCookie(
-		constants.RefreshTokenCookieName,
-		refreshToken,
-		int(constants.RefreshTokenMaxAge),
-		constants.CookiePathRoot,
-		"",
-		h.cfg.IsProduction,
-		true,
-	)
+	h.setAuthCookies(c, accessToken, refreshToken)
 
 	response.SendSuccess(c, gin.H{
 		"userId": userID,
@@ -241,31 +247,27 @@ func (h *Handler) PostRefreshToken(c *gin.Context) {
 	}
 
 	// Set new cookies
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(
-		constants.AccessTokenCookieName,
-		newAccessToken,
-		int(constants.RefreshTokenMaxAge),
-		constants.CookiePathRoot,
-		"",
-		h.cfg.IsProduction,
-		true,
-	)
-	c.SetCookie(
-		constants.RefreshTokenCookieName,
-		newRefreshToken,
-		int(constants.RefreshTokenMaxAge),
-		constants.CookiePathRoot,
-		"",
-		h.cfg.IsProduction,
-		true,
-	)
+	h.setAuthCookies(c, newAccessToken, newRefreshToken)
 
 	response.SendSuccess(c, gin.H{"message": "Token refreshed"})
 }
 
 // GetAuthorizeURL initiates the IDP login flow.
 func (h *Handler) GetAuthorizeURL(c *gin.Context) {
+	if !h.service.IsIDPUp(c.Request.Context(), h.cfg) {
+		fmt.Printf(
+			"[GetAuthorizeURL] {IDP Health Check}: " +
+				"IDP is down, redirecting to native fallback\n",
+		)
+		uiBaseURL := "http://localhost:5173"
+		if h.cfg.IsProduction {
+			uiBaseURL = "https://guisis.dllbsit2027.com"
+		}
+		fallbackURL := fmt.Sprintf("%s/login?fallback=true", uiBaseURL)
+		c.Redirect(http.StatusFound, fallbackURL)
+		return
+	}
+
 	authURL, err := h.service.GetAuthorizeURL(h.cfg)
 	if err != nil {
 		fmt.Printf("[GetAuthorizeURL] {Service Error}: %v\n", err)
@@ -313,26 +315,7 @@ func (h *Handler) PostIDPToken(c *gin.Context) {
 		return
 	}
 
-	// Set cookies
-	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie(
-		constants.AccessTokenCookieName,
-		accessToken,
-		int(constants.RefreshTokenMaxAge),
-		constants.CookiePathRoot,
-		"",
-		h.cfg.IsProduction,
-		true,
-	)
-	c.SetCookie(
-		constants.RefreshTokenCookieName,
-		refreshToken,
-		int(constants.RefreshTokenMaxAge),
-		constants.CookiePathRoot,
-		"",
-		h.cfg.IsProduction,
-		true,
-	)
+	h.setAuthCookies(c, accessToken, refreshToken)
 
 	// Return success for AJAX flow; cookies are already set.
 	response.SendSuccess(c, gin.H{"message": "IDP authentication successful"})
@@ -356,4 +339,99 @@ func (h *Handler) GetMe(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, user)
+}
+
+type OTPRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+type OTPLoginRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	OTP   string `json:"otp"   binding:"required,len=6"`
+}
+
+// PostOTPRequest triggers sending the OTP to the user's email.
+func (h *Handler) PostOTPRequest(c *gin.Context) {
+	if h.cfg.IsProduction && !h.cfg.IsStaging {
+		if h.service.IsIDPUp(c.Request.Context(), h.cfg) {
+			fmt.Printf(
+				"[PostOTPRequest] {IDP Check}: " +
+					"OTP fallback is only allowed when IDP is down\n",
+			)
+			response.SendError(
+				c,
+				"OTP fallback is only allowed when IDP is down",
+				http.StatusForbidden,
+				nil,
+			)
+			return
+		}
+	}
+
+	var req OTPRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Printf("[PostOTPRequest] {Binding Error}: %v\n", err)
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.service.GenerateAndSendOTP(c.Request.Context(), req.Email)
+	if err != nil {
+		fmt.Printf("[PostOTPRequest] {Service Error}: %v\n", err)
+		response.SendError(
+			c,
+			err.Error(),
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{"message": "Verification code sent"})
+}
+
+// PostOTPLogin authenticates the user using email and OTP.
+func (h *Handler) PostOTPLogin(c *gin.Context) {
+	if h.cfg.IsProduction && !h.cfg.IsStaging {
+		if h.service.IsIDPUp(c.Request.Context(), h.cfg) {
+			fmt.Printf(
+				"[PostOTPLogin] {IDP Check}: " +
+					"OTP login is only allowed when IDP is down\n",
+			)
+			response.SendError(
+				c,
+				"OTP login is only allowed when IDP is down",
+				http.StatusForbidden,
+				nil,
+			)
+			return
+		}
+	}
+
+	var req OTPLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Printf("[PostOTPLogin] {Binding Error}: %v\n", err)
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+
+	ipAddress := c.ClientIP()
+	userAgent := c.Request.UserAgent()
+
+	userID, accessToken, refreshToken, err := h.service.AuthenticateUserOTP(
+		c.Request.Context(),
+		req.Email,
+		req.OTP,
+		ipAddress,
+		userAgent,
+	)
+	if err != nil {
+		fmt.Printf("[PostOTPLogin] {Authentication Error}: %v\n", err)
+		response.SendError(c, err.Error(), http.StatusUnauthorized, nil)
+		return
+	}
+
+	h.setAuthCookies(c, accessToken, refreshToken)
+
+	response.SendSuccess(c, gin.H{"userId": userID})
 }
