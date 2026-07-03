@@ -1,21 +1,21 @@
 services:
     api:
-        image: ghcr.io/olazo-johnalbert/capstone-api:latest
-        container_name: capstone-api
+        image: ghcr.io/olazo-johnalbert/capstone-staging-api:latest
+        container_name: capstone-staging-api
         ports:
-            - "127.0.0.1:8080:8080"
+            - "127.0.0.1:8081:8080"
         deploy:
             resources:
                 limits:
-                    cpus: "0.25"
-                    memory: 200M
+                    cpus: "0.15"
+                    memory: 150M
         depends_on:
             redis:
                 condition: service_healthy
             mysql:
                 condition: service_healthy
         networks:
-            - app-network
+            - staging-network
         restart: always
         env_file:
             - .env
@@ -24,13 +24,13 @@ services:
 
     redis:
         image: redis:7-alpine
-        container_name: capstone-redis
+        container_name: capstone-staging-redis
         command: redis-server --stop-writes-on-bgsave-error no
         deploy:
             resources:
                 limits:
-                    cpus: "0.15"
-                    memory: 48M
+                    cpus: "0.10"
+                    memory: 32M
         healthcheck:
             test: ["CMD", "redis-cli", "ping"]
             interval: 5s
@@ -38,22 +38,22 @@ services:
             retries: 5
         restart: always
         networks:
-            - app-network
+            - staging-network
         volumes:
             - redis-data:/data
 
     mysql:
         image: mysql:8.0
-        container_name: capstone-mysql
+        container_name: capstone-staging-mysql
         command: >
             --performance-schema=OFF
-            --innodb-buffer-pool-size=128M
-            --max-connections=64
+            --innodb-buffer-pool-size=64M
+            --max-connections=30
         deploy:
             resources:
                 limits:
-                    cpus: "0.75"
-                    memory: 512M
+                    cpus: "0.25"
+                    memory: 256M
         environment:
             MYSQL_ROOT_PASSWORD: ${DB_PASS}
             MYSQL_DATABASE: ${DB_NAME}
@@ -62,38 +62,42 @@ services:
         healthcheck:
             test:
                 - "CMD-SHELL"
-                - "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"
+                - "mysqladmin ping -p$$MYSQL_ROOT_PASSWORD"
             interval: 10s
             timeout: 5s
             retries: 5
         ports:
-            - "127.0.0.1:3306:3306"
+            - "127.0.0.1:3307:3306"
         restart: always
         networks:
-            - app-network
+            - staging-network
         volumes:
             - mysql-data:/var/lib/mysql
 
     gotenberg:
         image: gotenberg/gotenberg:8-chromium
-        container_name: capstone-gotenberg
+        container_name: capstone-staging-gotenberg
+        profiles:
+            - qa-heavy
         deploy:
             resources:
                 limits:
-                    # cpus: "0.35"
-                    memory: 800M
+                    cpus: "0.20"
+                    memory: 250M
         restart: always
         networks:
-            - app-network
+            - staging-network
 
     ai:
-        image: ghcr.io/olazo-johnalbert/capstone-ai:latest
-        container_name: capstone-ai
+        image: ghcr.io/olazo-johnalbert/capstone-staging-ai:latest
+        container_name: capstone-staging-ai
+        profiles:
+            - qa-heavy
         deploy:
             resources:
                 limits:
-                    # cpus: "0.50"
-                    memory: 1.5G
+                    cpus: "0.30"
+                    memory: 800M
         healthcheck:
             test:
                 - "CMD-SHELL"
@@ -112,12 +116,12 @@ services:
             - hf-cache:/root/.cache/huggingface
         restart: always
         networks:
-            - app-network
+            - staging-network
         env_file:
             - .env
 
 networks:
-    app-network:
+    staging-network:
         driver: bridge
 
 volumes:

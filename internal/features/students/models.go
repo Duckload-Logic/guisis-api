@@ -162,9 +162,9 @@ type StudentPersonalInfo struct {
 	StudentNumber string `db:"student_number" json:"studentNumber"`
 
 	// Personal Details
-	GenderID      int `db:"gender_id"       json:"genderId"`
-	CivilStatusID int `db:"civil_status_id" json:"civilStatusId"`
-	ReligionID    int `db:"religion_id"     json:"religionId"`
+	Gender        string `db:"gender"          json:"gender"`
+	CivilStatusID int    `db:"civil_status_id" json:"civilStatusId"`
+	ReligionID    int    `db:"religion_id"     json:"religionId"`
 
 	// Physical Attributes
 	HeightM    float64 `db:"height_m"   json:"heightM"`

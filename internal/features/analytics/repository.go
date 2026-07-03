@@ -36,18 +36,17 @@ func (r *Repository) GetGenderStats(
 	filter, args := r.buildFilter(year, courseID)
 	query := `
 		SELECT
-			g.gender_name as category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			spi.gender as category,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
 				PARTITION BY COUNT(*)
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
-		JOIN genders g ON spi.gender_id = g.id
 		WHERE 1=1 ` + filter + `
-		GROUP BY g.gender_name;`
+		GROUP BY spi.gender;`
 
 	err := r.db.SelectContext(ctx, &results, query, args...)
 	if err != nil {
@@ -244,15 +243,14 @@ func (r *Repository) GetAgeStats(
 			CAST(TIMESTAMPDIFF(
 				YEAR, spi.date_of_birth, CURDATE()
 			) AS CHAR) AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
 				PARTITION BY COUNT(*)
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE spi.date_of_birth IS NOT NULL ` + filter + `
 		GROUP BY category
 		ORDER BY category ASC;`
@@ -266,8 +264,8 @@ func (r *Repository) GetCivilStatusStats(
 	query := `
 		SELECT
 			COALESCE(status_name, 'Not Indicated') AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -275,7 +273,6 @@ func (r *Repository) GetCivilStatusStats(
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
 		LEFT JOIN civil_status_types cs ON spi.civil_status_id = cs.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE 1=1 ` + filter + `
 		GROUP BY category
 		ORDER BY category ASC;`
@@ -295,8 +292,8 @@ func (r *Repository) GetReligionStats(
 					THEN 'Others (' || spi.other_religion_text || ')'
 				ELSE COALESCE(rel.religion_name, 'Not Indicated')
 			END AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -304,7 +301,6 @@ func (r *Repository) GetReligionStats(
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
 		LEFT JOIN religions rel ON spi.religion_id = rel.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE 1=1 ` + filter + `
 		GROUP BY category
 		ORDER BY
@@ -323,8 +319,8 @@ func (r *Repository) GetCityAddressStats(
 				WHEN c.type = 'SubMun' THEN 'City of Manila'
 				ELSE COALESCE(c.name, 'Not Indicated')
 			END AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -334,7 +330,6 @@ func (r *Repository) GetCityAddressStats(
 		LEFT JOIN student_addresses sa ON spi.iir_id = sa.iir_id
 		LEFT JOIN addresses a ON sa.address_id = a.id
 		LEFT JOIN cities c ON a.city_code = c.code
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE sa.address_type = "Residential" ` + filter + `
 		GROUP BY category
 		ORDER BY rank_pos ASC;`
@@ -350,8 +345,8 @@ func (r *Repository) GetMonthlyIncomeStats(
 	query := `
 		SELECT
 			COALESCE(ir.range_text, 'Not Indicated') AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -360,7 +355,6 @@ func (r *Repository) GetMonthlyIncomeStats(
 		FROM student_personal_info spi
 		JOIN student_finances sf ON spi.iir_id = sf.iir_id
 		LEFT JOIN income_ranges ir ON sf.monthly_family_income_range_id = ir.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE 1=1 ` + filter + `
 		GROUP BY category
 		ORDER BY category ASC;`
@@ -381,8 +375,8 @@ func (r *Repository) GetOrdinalPositionStats(
 				WHEN fb.ordinal_position = 0 THEN 'Not Indicated'
 				ELSE 'Others'
 			END AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -390,7 +384,6 @@ func (r *Repository) GetOrdinalPositionStats(
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
 		JOIN family_backgrounds fb ON spi.iir_id = fb.iir_id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE 1=1 ` + filter + `
 		GROUP BY category
 		ORDER BY category ASC;`
@@ -404,8 +397,8 @@ func (r *Repository) GetFatherEducationStats(
 	query := `
 		SELECT
 			COALESCE(ea.name, 'Not Indicated') AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -416,7 +409,6 @@ func (r *Repository) GetFatherEducationStats(
 		JOIN related_persons rp ON srp.related_person_id = rp.id
 		JOIN student_relationship_types srt ON srp.relationship_id = srt.id
 		LEFT JOIN educational_attainments ea ON rp.educational_attainment_id = ea.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE srt.relationship_name = 'Father' ` + filter + `
 		GROUP BY category
 		ORDER BY FIELD(
@@ -442,8 +434,8 @@ func (r *Repository) GetMotherEducationStats(
 	query := `
 		SELECT
 			COALESCE(ea.name, 'Not Indicated') AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -454,7 +446,6 @@ func (r *Repository) GetMotherEducationStats(
 		JOIN related_persons rp ON srp.related_person_id = rp.id
 		JOIN student_relationship_types srt ON srp.relationship_id = srt.id
 		LEFT JOIN educational_attainments ea ON rp.educational_attainment_id = ea.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE srt.relationship_name = 'Mother' ` + filter + `
 		GROUP BY category
 		ORDER BY FIELD(
@@ -480,8 +471,8 @@ func (r *Repository) GetParentsMaritalStatusStats(
 	query := `
 		SELECT
 			COALESCE(pst.status_name, 'Not Indicated') AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -490,7 +481,6 @@ func (r *Repository) GetParentsMaritalStatusStats(
 		FROM student_personal_info spi
 		JOIN family_backgrounds fb ON spi.iir_id = fb.iir_id
 		LEFT JOIN parental_status_types pst ON fb.parental_status_id = pst.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE 1=1 ` + filter + `
 		GROUP BY category;`
 	return r.executeStatQuery(ctx, query, args...)
@@ -503,8 +493,8 @@ func (r *Repository) GetQuietStudyPlaceStats(
 	query := `
 		SELECT
 			CASE WHEN fb.have_quiet_place_to_study = 1 THEN 'Yes' ELSE 'No' END AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -512,7 +502,6 @@ func (r *Repository) GetQuietStudyPlaceStats(
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
 		JOIN family_backgrounds fb ON spi.iir_id = fb.iir_id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE 1=1 ` + filter + `
 		GROUP BY category;`
 	return r.executeStatQuery(ctx, query, args...)
@@ -538,15 +527,14 @@ func (r *Repository) GetHSGWAStats(
 				WHEN spi.high_school_gwa >= 75.00 THEN '75.00'
 				ELSE 'Below 75.00'
 			END AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
 				PARTITION BY COUNT(*)
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE spi.high_school_gwa IS NOT NULL
 		  AND spi.high_school_gwa > 0 ` + filter + `
 		GROUP BY category
@@ -573,8 +561,8 @@ func (r *Repository) GetElementaryStats(
 	query := `
 		SELECT
 			COALESCE(sd.school_type, 'Not Indicated') AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -584,7 +572,6 @@ func (r *Repository) GetElementaryStats(
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
 		JOIN school_details sd ON eb.id = sd.eb_id
 		JOIN educational_levels el ON sd.educational_level_id = el.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE el.level_name = 'Elementary' ` + filter + `
 		GROUP BY category
 		ORDER BY FIELD(
@@ -600,8 +587,8 @@ func (r *Repository) GetJuniorHighStats(
 	query := `
 		SELECT
 			COALESCE(sd.school_type, 'Not Indicated') AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -611,7 +598,6 @@ func (r *Repository) GetJuniorHighStats(
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
 		JOIN school_details sd ON eb.id = sd.eb_id
 		JOIN educational_levels el ON sd.educational_level_id = el.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE el.level_name = 'Junior High School' ` + filter + `
 		GROUP BY category
 		ORDER BY FIELD(
@@ -627,8 +613,8 @@ func (r *Repository) GetSeniorHighStats(
 	query := `
 		SELECT
 			COALESCE(sd.school_type, 'Not Indicated') AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -638,7 +624,6 @@ func (r *Repository) GetSeniorHighStats(
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
 		JOIN school_details sd ON eb.id = sd.eb_id
 		JOIN educational_levels el ON sd.educational_level_id = el.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE el.level_name = 'Senior High School' ` + filter + `
 		GROUP BY category
 		ORDER BY FIELD(
@@ -654,8 +639,8 @@ func (r *Repository) GetHighSchoolStats(
 	query := `
 		SELECT
 			COALESCE(sd.school_type, 'Not Indicated') AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -665,7 +650,6 @@ func (r *Repository) GetHighSchoolStats(
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
 		JOIN school_details sd ON eb.id = sd.eb_id
 		JOIN educational_levels el ON sd.educational_level_id = el.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE el.level_name IN (
 			'High School', 'Junior High School',
 			'Senior High School'
@@ -684,8 +668,8 @@ func (r *Repository) GetVocationalStats(
 	query := `
 		SELECT
 			COALESCE(sd.school_type, 'Not Indicated') AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -695,7 +679,6 @@ func (r *Repository) GetVocationalStats(
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
 		JOIN school_details sd ON eb.id = sd.eb_id
 		JOIN educational_levels el ON sd.educational_level_id = el.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE el.level_name = 'Vocational' ` + filter + `
 		GROUP BY category
 		ORDER BY FIELD(
@@ -711,8 +694,8 @@ func (r *Repository) GetCollegeStats(
 	query := `
 		SELECT
 			COALESCE(sd.school_type, 'Not Indicated') AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -722,7 +705,6 @@ func (r *Repository) GetCollegeStats(
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
 		JOIN school_details sd ON eb.id = sd.eb_id
 		JOIN educational_levels el ON sd.educational_level_id = el.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE el.level_name = 'College' ` + filter + `
 		GROUP BY category
 		ORDER BY FIELD(
@@ -738,8 +720,8 @@ func (r *Repository) GetNatureOfSchoolingStats(
 	query := `
 		SELECT
 			COALESCE(eb.nature_of_schooling, 'Not Indicated') AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END) as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END) as female_count,
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END) as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
 			(COUNT(*) OVER (
@@ -747,7 +729,6 @@ func (r *Repository) GetNatureOfSchoolingStats(
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE 1=1 ` + filter + `
 		GROUP BY category;`
 	return r.executeStatQuery(ctx, query, args...)
@@ -763,9 +744,9 @@ func (r *Repository) GetFatherLifeStatusStats(
 				WHEN srp.is_living = 1 THEN 'Living'
 				ELSE 'Deceased'
 			END AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END)
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END)
 				as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END)
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END)
 				as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
@@ -775,7 +756,6 @@ func (r *Repository) GetFatherLifeStatusStats(
 		FROM student_personal_info spi
 		JOIN student_related_persons srp ON spi.iir_id = srp.iir_id
 		JOIN student_relationship_types srt ON srp.relationship_id = srt.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE srt.relationship_name = 'Father' ` + filter + `
 		GROUP BY category
 		ORDER BY category ASC;`
@@ -792,9 +772,9 @@ func (r *Repository) GetMotherLifeStatusStats(
 				WHEN srp.is_living = 1 THEN 'Living'
 				ELSE 'Deceased'
 			END AS category,
-			SUM(CASE WHEN g.gender_name = 'Male' THEN 1 ELSE 0 END)
+			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END)
 				as male_count,
-			SUM(CASE WHEN g.gender_name = 'Female' THEN 1 ELSE 0 END)
+			SUM(CASE WHEN spi.gender = 'Female' THEN 1 ELSE 0 END)
 				as female_count,
 			COUNT(*) as total,
 			RANK() OVER (ORDER BY COUNT(*) DESC) +
@@ -804,7 +784,6 @@ func (r *Repository) GetMotherLifeStatusStats(
 		FROM student_personal_info spi
 		JOIN student_related_persons srp ON spi.iir_id = srp.iir_id
 		JOIN student_relationship_types srt ON srp.relationship_id = srt.id
-		LEFT JOIN genders g ON spi.gender_id = g.id
 		WHERE srt.relationship_name = 'Mother' ` + filter + `
 		GROUP BY category
 		ORDER BY category ASC;`

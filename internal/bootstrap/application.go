@@ -20,7 +20,7 @@ func Initialize(db *sqlx.DB, cfg *config.Config) (*Application, error) {
 	var fileStorage storage.FileStorage
 	var emailer email.Emailer
 
-	if cfg.IsProduction {
+	if cfg.StorageDriver == "lightsail" {
 		var err error
 		fileStorage, err = storage.NewLightsailStorage(
 			context.Background(),
@@ -33,7 +33,12 @@ func Initialize(db *sqlx.DB, cfg *config.Config) (*Application, error) {
 				err,
 			)
 		}
+	} else {
+		uploadDir := cfg.LocalUploadDIR
+		fileStorage = storage.NewDiskStorage(uploadDir)
+	}
 
+	if cfg.IsProduction {
 		emailer = email.NewSMTPMailer(
 			cfg.SMTPHost,
 			cfg.SMTPPort,
@@ -41,10 +46,10 @@ func Initialize(db *sqlx.DB, cfg *config.Config) (*Application, error) {
 			cfg.SMTPPass,
 		)
 	} else {
-		uploadDir := cfg.LocalUploadDIR
-		fileStorage = storage.NewDiskStorage(uploadDir)
-
-		mailpit, err := email.NewMailPit(cfg.MailPitHost, cfg.MailPitPort)
+		mailpit, err := email.NewMailPit(
+			cfg.MailPitHost,
+			cfg.MailPitPort,
+		)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"failed to initialize MailPit: %w",

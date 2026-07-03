@@ -56,8 +56,12 @@ func (r *Repository) ListStudents(
 	}
 
 	if req.GenderID != 0 {
-		query += " AND sp.gender_id = ?"
-		args = append(args, req.GenderID)
+		query += " AND sp.gender = ?"
+		genderStr := "Male"
+		if req.GenderID == 2 {
+			genderStr = "Female"
+		}
+		args = append(args, genderStr)
 	}
 
 	if req.YearLevel != 0 {
@@ -161,14 +165,13 @@ func (r *Repository) GetPersonalInfoByStudentNumber(
 	query := `
 		SELECT
 			sp.student_number AS student_number,
-			g.id AS gender_id,
-			g.gender_name AS gender_name,
+			CASE WHEN sp.gender = 'Male' THEN 1 ELSE 2 END AS gender_id,
+			sp.gender AS gender_name,
 			sp.date_of_birth AS date_of_birth,
 			sp.place_of_birth AS place_of_birth,
 			sp.height_m AS height_m,
 			sp.weight_kg AS weight_kg
 		FROM student_personal_info sp
-		JOIN genders g ON sp.gender_id = g.id
 		WHERE sp.student_number = ?
 		LIMIT 1
 	`

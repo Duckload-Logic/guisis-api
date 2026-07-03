@@ -168,6 +168,8 @@ func (h *Handler) GetLogout(c *gin.Context) {
 	redirectTarget := "http://localhost:5173/"
 	if h.cfg.IsProduction {
 		redirectTarget = "https://guisis.dllbsit2027.com/"
+	} else if h.cfg.IsStaging {
+		redirectTarget = "https://www.staging.guisis.dllbsit2027.com/"
 	}
 
 	if logoutURL != "" {
@@ -203,7 +205,7 @@ func (h *Handler) GetLogout(c *gin.Context) {
 // isAllowedOrigin checks if the given origin is
 // permitted for redirects.
 func (h *Handler) isAllowedOrigin(origin string) bool {
-	if h.cfg.IsProduction {
+	if h.cfg.IsProduction || h.cfg.IsStaging {
 		target := "dllbsit2027.com"
 		parsed, err := url.Parse(origin)
 		if err != nil {

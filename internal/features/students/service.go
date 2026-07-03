@@ -1137,15 +1137,20 @@ func (s *Service) saveComprehensiveProfile(
 
 	// 2. Personal Info
 	err = s.repo.UpsertStudentPersonalInfo(ctx, tx, &StudentPersonalInfo{
-		IIRID:                 iirID,
-		StudentNumber:         req.Student.StudentNumber,
-		GenderID:              req.Student.Gender.ID,
-		CivilStatusID:         req.Student.CivilStatus.ID,
-		ReligionID:            req.Student.Religion.ID,
-		OtherReligionText:     req.Student.OtherReligionText,
-		HeightM:               req.Student.HeightM,
-		WeightKg:              req.Student.WeightKg,
-		Complexion:            req.Student.Complexion,
+		IIRID:         iirID,
+		StudentNumber: req.Student.StudentNumber,
+		Gender: func() string {
+			if req.Student.Gender.ID == 2 {
+				return "Female"
+			}
+			return "Male"
+		}(),
+		CivilStatusID:     req.Student.CivilStatus.ID,
+		ReligionID:        req.Student.Religion.ID,
+		OtherReligionText: req.Student.OtherReligionText,
+		HeightM:           req.Student.HeightM,
+		WeightKg:          req.Student.WeightKg,
+		Complexion:        req.Student.Complexion,
 		HighSchoolGWA:         req.Student.HighSchoolGWA,
 		CourseID:              req.Student.Course.ID,
 		YearLevel:             req.Student.YearLevel,

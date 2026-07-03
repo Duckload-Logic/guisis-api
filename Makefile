@@ -84,6 +84,47 @@ swagger-integrations:
 compose-up:
 	docker compose --env-file $(ENV) up --build
 
+compose-staging:
+	docker compose -f docker-compose.staging.yml \
+		--env-file $(ENV) up --build -d
+
+compose-staging-qa:
+	docker compose -f docker-compose.staging.yml \
+		--env-file $(ENV) up --build -d --profile qa-heavy
+
 compose-prod:
 	docker compose -f docker-compose.prod.yml \
 		--env-file $(ENV) up --build -d
+
+# Desc: Build and push production API image
+push-api-prod:
+	docker build --network=host --target prod \
+		-t ghcr.io/olazo-johnalbert/capstone-api:latest .
+	docker push ghcr.io/olazo-johnalbert/capstone-api:latest
+
+# Desc: Build and push staging API image
+push-api-staging:
+	docker build --network=host --target prod \
+		-t ghcr.io/olazo-johnalbert/capstone-staging-api:latest .
+	docker push ghcr.io/olazo-johnalbert/capstone-staging-api:latest
+
+# Desc: Build and push production AI image
+push-ai-prod:
+	docker build --network=host \
+		-t ghcr.io/olazo-johnalbert/capstone-ai:latest \
+		-f ../guisis-ai/Dockerfile ../guisis-ai
+	docker push ghcr.io/olazo-johnalbert/capstone-ai:latest
+
+# Desc: Build and push staging AI image
+push-ai-staging:
+	docker build --network=host \
+		-t ghcr.io/olazo-johnalbert/capstone-staging-ai:latest \
+		-f ../guisis-ai/Dockerfile ../guisis-ai
+	docker push ghcr.io/olazo-johnalbert/capstone-staging-ai:latest
+
+# Desc: Push both production images
+push-all-prod: push-api-prod push-ai-prod
+
+# Desc: Push both staging images
+push-all-staging: push-api-staging push-ai-staging
+

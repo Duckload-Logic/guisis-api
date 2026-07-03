@@ -48,17 +48,13 @@ func (r *Repository) GetEnrollmentYears(ctx context.Context) ([]int, error) {
 	return years, nil
 }
 
-func (r *Repository) GetGenders(ctx context.Context) ([]Gender, error) {
-	query := fmt.Sprintf(`
-		SELECT %s FROM genders ORDER BY id
-	`, datastore.GetColumns(Gender{}))
-
-	var genders []Gender
-	err := r.db.SelectContext(ctx, &genders, query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get genders: %w", err)
-	}
-	return genders, nil
+func (r *Repository) GetGenders(
+	ctx context.Context,
+) ([]Gender, error) {
+	return []Gender{
+		{ID: 1, Name: "Male"},
+		{ID: 2, Name: "Female"},
+	}, nil
 }
 
 func (r *Repository) GetParentalStatusTypes(
@@ -1583,10 +1579,8 @@ func (r *Repository) ValidateGenderExists(
 	tx datastore.DB,
 	id int,
 ) (bool, error) {
-	var exists bool
-	query := "SELECT EXISTS(SELECT 1 FROM genders WHERE id = ?)"
-	err := tx.GetContext(ctx, &exists, query, id)
-	return exists, err
+	exists := id == 1 || id == 2
+	return exists, nil
 }
 
 func (r *Repository) ValidateCivilStatusExists(

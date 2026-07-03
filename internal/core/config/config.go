@@ -21,6 +21,7 @@ type Config struct {
 	WebsitesPort string
 
 	LocalUploadDIR string
+	StorageDriver  string
 
 	IsProduction bool
 	IsStaging    bool
@@ -72,6 +73,7 @@ func LoadConfig() *Config {
 		WebsitesPort: os.Getenv("WEBSITES_PORT"),
 
 		LocalUploadDIR: os.Getenv("UPLOAD_DIR"),
+		StorageDriver:  os.Getenv("STORAGE_DRIVER"),
 
 		IsProduction: os.Getenv("IS_PRODUCTION") == "true",
 		IsStaging:    os.Getenv("IS_STAGING") == "true",
@@ -180,12 +182,12 @@ func validateCoreConfig(config *Config) {
 }
 
 func validateStorageConfig(config *Config) {
-	if config.IsProduction || config.IsStaging {
+	if config.StorageDriver == "lightsail" {
 		if config.LightsailBucketName == "" {
-			panic("LIGHTSAIL_BUCKET_NAME is required for production")
+			panic("LIGHTSAIL_BUCKET_NAME is required for lightsail")
 		}
 		if config.LightsailRegion == "" {
-			panic("LIGHTSAIL_REGION is required for production")
+			panic("LIGHTSAIL_REGION is required for lightsail")
 		}
 	} else {
 		if config.LocalUploadDIR == "" {

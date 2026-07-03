@@ -424,7 +424,7 @@ func insertPersonalInfo(
 	}
 
 	civilStatusID := chooseCivilStatusID()
-	genderID := randomChoice(genderIDs).(int)
+	gender := randomChoice([]string{"Male", "Female"}).(string)
 
 	var hsGwa float64
 	if yearLevel == 1 {
@@ -434,10 +434,10 @@ func insertPersonalInfo(
 	}
 
 	info := &students.StudentPersonalInfo{
-		IIRID:           iirID,
-		StudentNumber:   studentNumber,
-		GenderID:        genderID,
-		CivilStatusID:   civilStatusID,
+		IIRID:         iirID,
+		StudentNumber: studentNumber,
+		Gender:        gender,
+		CivilStatusID: civilStatusID,
 		ReligionID:      randomChoice(religionIDs).(int),
 		HeightM:         gofakeit.Float64Range(1.37, 1.98),
 		WeightKg:        gofakeit.Float64Range(40, 100),
