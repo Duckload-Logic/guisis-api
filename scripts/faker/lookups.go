@@ -6,21 +6,14 @@ import (
 )
 
 func loadLookups() {
-	// genders
-	rows, err := db.Query("SELECT id FROM genders")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id int
-		rows.Scan(&id)
-		genderIDs = append(genderIDs, id)
-	}
+	// Gender was denormalized in migration 31.
+	// The faker now writes the enum string directly to student_personal_info.gender,
+	// so do not query the removed genders lookup table here.
+	genderIDs = []int{1, 2}
 
 	// civil status
 	civilStatusByName = make(map[string]int)
-	rows, err = db.Query("SELECT id, status_name FROM civil_status_types")
+	rows, err := db.Query("SELECT id, status_name FROM civil_status_types")
 	if err != nil {
 		log.Fatal(err)
 	}

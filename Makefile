@@ -56,7 +56,11 @@ seed-up:
 	migrate -path scripts/seeds -database \
 	"$(DB_URL)$(if $(filter true,$(DB_TLS)),&,?)x-migrations-table=seed_migrations" up
 
-refresh: migrate-reset migrate-up seed-up locations
+refresh: migrate-reset
+	migrate -path scripts/migrations -database "$(DB_URL)" up 30
+	$(MAKE) seed-up
+	migrate -path scripts/migrations -database "$(DB_URL)" up
+	$(MAKE) locations
 
 # Desc: To generate swagger docs
 # Usage: make swagger-internal
@@ -127,4 +131,3 @@ push-all-prod: push-api-prod push-ai-prod
 
 # Desc: Push both staging images
 push-all-staging: push-api-staging push-ai-staging
-
