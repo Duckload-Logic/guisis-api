@@ -110,23 +110,24 @@ type StudentBasicInfoView struct {
 }
 
 type StudentProfileView struct {
-	IIRID         string                 `db:"iir_id"`
-	UserID        string                 `db:"user_id"`
-	FirstName     string                 `db:"first_name"`
-	MiddleName    structs.NullableString `db:"middle_name"`
-	LastName      string                 `db:"last_name"`
-	SuffixName    structs.NullableString `db:"suffix_name"`
-	Email         string                 `db:"email"`
-	StudentNumber string                 `db:"student_number"`
-	GenderID      int                    `db:"gender_id"`
-	CourseID      int                    `db:"course_id"`
-	Section       int                    `db:"section"`
-	YearLevel     int                    `db:"year_level"`
-	StatusID      int                    `db:"status_id"`
-	StatusName    string                 `db:"status_name"`
-	GenderName    string                 `db:"gender_name"`
-	CourseCode    string                 `db:"course_code"`
-	CourseName    string                 `db:"course_name"`
+	IIRID          string                 `db:"iir_id"`
+	UserID         string                 `db:"user_id"`
+	FirstName      string                 `db:"first_name"`
+	MiddleName     structs.NullableString `db:"middle_name"`
+	LastName       string                 `db:"last_name"`
+	SuffixName     structs.NullableString `db:"suffix_name"`
+	Email          string                 `db:"email"`
+	StudentNumber  string                 `db:"student_number"`
+	GenderID       int                    `db:"gender_id"`
+	CourseID       int                    `db:"course_id"`
+	Section        int                    `db:"section"`
+	YearLevel      int                    `db:"year_level"`
+	StatusID       int                    `db:"status_id"`
+	StatusName     string                 `db:"status_name"`
+	GenderName     string                 `db:"gender_name"`
+	ProfilePicture structs.NullableString `db:"profile_picture"`
+	CourseCode     string                 `db:"course_code"`
+	CourseName     string                 `db:"course_name"`
 }
 
 // IIRDraft represents an unsubmitted draft of the student's IIR form.
@@ -446,6 +447,7 @@ type StudentPersonalInfoView struct {
 	TelephoneNumber       structs.NullableString `db:"telephone_number"`
 	EmployerContactNumber structs.NullableString `db:"employer_contact_number"`
 	OtherReligionText     structs.NullableString `db:"other_religion_text"`
+	TwoByTwoPhotoDataURL  structs.NullableString `db:"two_by_two_photo_data_url"`
 	StatusID              int                    `db:"status_id"`
 	StatusName            string                 `db:"status_name"`
 	GraduationYear        structs.NullableInt64  `db:"graduation_year"`
@@ -490,6 +492,7 @@ type StudentFinanceView struct {
 	OtherIncome     structs.NullableString `db:"other_income"`
 	WeeklyAllowance float64                `db:"weekly_allowance"`
 }
+
 // SignificantNote represents a note record from the database.
 type SignificantNote struct {
 	ID              string                 `db:"id"`

@@ -1,3 +1,31 @@
+CREATE OR REPLACE VIEW v_student_profiles AS
+SELECT
+    iir.id AS iir_id,
+    iir.user_id,
+    u.first_name,
+    u.middle_name,
+    u.last_name,
+    u.suffix_name,
+    u.email,
+    spi.student_number,
+    CASE WHEN spi.gender = 'Male' THEN 1 ELSE 2 END AS gender_id,
+    spi.course_id,
+    spi.section,
+    spi.year_level,
+    spi.status_id,
+    COALESCE(ss.status_name, '') AS status_name,
+    spi.gender AS gender_name,
+    COALESCE(c.code, '') AS course_code,
+    COALESCE(c.course_name, '') AS course_name,
+    iir.created_at,
+    iir.updated_at
+FROM iir_records iir
+JOIN users u ON iir.user_id = u.id
+JOIN student_personal_info spi ON iir.id = spi.iir_id
+LEFT JOIN student_statuses ss ON spi.status_id = ss.id
+LEFT JOIN courses c ON spi.course_id = c.id
+WHERE iir.is_submitted = TRUE;
+
 CREATE OR REPLACE VIEW v_student_personal_info AS
 SELECT
     spi.id,
@@ -27,7 +55,6 @@ SELECT
     spi.mobile_number,
     spi.telephone_number,
     spi.employer_contact_number,
-    COALESCE(pf.file_url, '') AS two_by_two_photo_data_url,
     spi.status_id,
     COALESCE(ss.status_name, '') AS status_name,
     spi.graduation_year,
@@ -40,12 +67,10 @@ SELECT
     COALESCE(ert.relationship_name, '') AS emergency_relationship_name,
     COALESCE(ec.address_id, 0) AS emergency_address_id
 FROM student_personal_info spi
-JOIN iir_records iir ON iir.id = spi.iir_id
-LEFT JOIN profile_pictures pp ON pp.user_id = iir.user_id
-LEFT JOIN files pf ON pf.id = pp.file_id
 LEFT JOIN civil_status_types cst ON spi.civil_status_id = cst.id
 LEFT JOIN religions rel ON spi.religion_id = rel.id
 LEFT JOIN courses c ON spi.course_id = c.id
 LEFT JOIN student_statuses ss ON spi.status_id = ss.id
 LEFT JOIN emergency_contacts ec ON spi.iir_id = ec.iir_id
 LEFT JOIN student_relationship_types ert ON ec.relationship_id = ert.id;
+
