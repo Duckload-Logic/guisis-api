@@ -808,7 +808,23 @@ func (s *Service) GetStudentActivities(
 
 	dtos := make([]StudentActivityDTO, len(activities))
 	for i, a := range activities {
-		option, _ := s.repo.GetActivityOptionByID(ctx, a.OptionID)
+		option, err := s.repo.GetActivityOptionByID(ctx, a.OptionID)
+		if err != nil || option == nil {
+			dtos[i] = StudentActivityDTO{
+				ID: a.ID,
+				ActivityOption: ActivityOption{
+					ID:       a.OptionID,
+					Name:     "Unknown activity",
+					Category: "",
+					IsActive: false,
+				},
+				OtherSpecification: a.OtherSpecification,
+				Role:               a.Role,
+				RoleSpecification:  a.RoleSpecification,
+			}
+			continue
+		}
+
 		dtos[i] = a.ToDTO(*option)
 	}
 	return dtos, nil
@@ -1145,12 +1161,12 @@ func (s *Service) saveComprehensiveProfile(
 			}
 			return "Male"
 		}(),
-		CivilStatusID:     req.Student.CivilStatus.ID,
-		ReligionID:        req.Student.Religion.ID,
-		OtherReligionText: req.Student.OtherReligionText,
-		HeightM:           req.Student.HeightM,
-		WeightKg:          req.Student.WeightKg,
-		Complexion:        req.Student.Complexion,
+		CivilStatusID:         req.Student.CivilStatus.ID,
+		ReligionID:            req.Student.Religion.ID,
+		OtherReligionText:     req.Student.OtherReligionText,
+		HeightM:               req.Student.HeightM,
+		WeightKg:              req.Student.WeightKg,
+		Complexion:            req.Student.Complexion,
 		HighSchoolGWA:         req.Student.HighSchoolGWA,
 		CourseID:              req.Student.Course.ID,
 		YearLevel:             req.Student.YearLevel,

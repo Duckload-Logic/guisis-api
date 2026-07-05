@@ -37,6 +37,7 @@ type StudentProfileDTO struct {
 	Status            StudentStatus          `json:"status"`
 	StudentCORURL     string                 `json:"studentCorUrl,omitempty"`
 	IsStudentCORValid bool                   `json:"isStudentCorValid"`
+	ProfilePicture    string                 `json:"profilePicture,omitempty"`
 }
 
 type ComprehensiveProfileDTO struct {
@@ -107,6 +108,7 @@ type StudentPersonalInfoDTO struct {
 	TelephoneNumber       structs.NullableString `json:"telephoneNumber,omitempty"`
 	EmployerContactNumber structs.NullableString `json:"employerContactNumber,omitempty"`
 	OtherReligionText     structs.NullableString `json:"otherReligionText"`
+	TwoByTwoPhotoDataUrl  string                 `json:"twoByTwoPhotoDataUrl,omitempty"`
 	Status                StudentStatus          `json:"status"                          binding:"required"`
 	GraduationYear        *int                   `json:"graduationYear,omitempty"`
 	EmergencyContact      EmergencyContactDTO    `json:"emergencyContact,omitempty"`
@@ -307,8 +309,9 @@ func (st *StudentProfileView) ToDTO() StudentProfileDTO {
 			ID:   st.GenderID,
 			Name: st.GenderName,
 		},
-		Email:         st.Email,
-		StudentNumber: st.StudentNumber,
+		Email:          st.Email,
+		StudentNumber:  st.StudentNumber,
+		ProfilePicture: st.ProfilePicture.String,
 		Course: Course{
 			ID:   st.CourseID,
 			Code: st.CourseCode,
@@ -374,6 +377,7 @@ func (view *StudentPersonalInfoView) ToDTO(
 		EmployerAddress:       view.EmployerAddress,
 		EmployerContactNumber: view.EmployerContactNumber,
 		OtherReligionText:     view.OtherReligionText,
+		TwoByTwoPhotoDataUrl:  view.TwoByTwoPhotoDataURL.String,
 		Status:                statusDTO,
 		GraduationYear:        gradYear,
 		EmergencyContact: EmergencyContactDTO{
