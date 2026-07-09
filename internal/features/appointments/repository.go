@@ -29,6 +29,7 @@ const appointmentsBaseQuery = `
 		u.middle_name AS user_middle_name,
 		COALESCE(u.last_name, '') AS user_last_name,
 		COALESCE(u.email, '') AS user_email,
+		COALESCE(pf.file_url, '') AS user_profile_picture,
 		a.reason AS reason,
 		a.admin_notes AS admin_notes,
 		DATE_FORMAT(a.when_date, '%Y-%m-%d') AS when_date,
@@ -54,6 +55,8 @@ const appointmentsBaseQuery = `
 	FROM appointments a
 	LEFT JOIN iir_records ir ON a.iir_id = ir.id
 	LEFT JOIN users u ON ir.user_id = u.id
+	LEFT JOIN profile_pictures pp ON pp.user_id = u.id
+	LEFT JOIN files pf ON pf.id = pp.file_id
 	LEFT JOIN student_personal_info spi ON ir.id = spi.iir_id
 	JOIN time_slots ts ON a.time_slot_id = ts.id
 	LEFT JOIN time_slots ts1 ON a.preferred_time_slot_id_1 = ts1.id
