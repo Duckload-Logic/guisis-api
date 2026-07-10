@@ -10,7 +10,6 @@ TRUNCATE TABLE educational_levels;
 TRUNCATE TABLE address_types;
 TRUNCATE TABLE guardian_types;
 TRUNCATE TABLE roles;
-TRUNCATE TABLE genders;
 
 SET FOREIGN_KEY_CHECKS = 1;
 

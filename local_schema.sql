@@ -451,21 +451,7 @@ CREATE TABLE `files` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Table structure for table `genders`
---
 
-DROP TABLE IF EXISTS `genders`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `genders` (
-  `id` int NOT NULL,
-  `gender_name` varchar(50) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `gender_name` (`gender_name`),
-  UNIQUE KEY `unique_idx_gender_name` (`gender_name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `iir_drafts`
@@ -1077,7 +1063,7 @@ CREATE TABLE `student_personal_info` (
   `id` int NOT NULL AUTO_INCREMENT,
   `iir_id` char(36) NOT NULL,
   `student_number` varchar(20) NOT NULL,
-  `gender_id` int NOT NULL,
+  `gender` enum('Male','Female') NOT NULL DEFAULT 'Male',
   `civil_status_id` int NOT NULL,
   `religion_id` int NOT NULL,
   `height_m` decimal(5,2) NOT NULL,
@@ -1103,19 +1089,24 @@ CREATE TABLE `student_personal_info` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `student_number` (`student_number`),
   UNIQUE KEY `unique_idx_student_personal_info_iir_id` (`iir_id`),
-  UNIQUE KEY `unique_idx_student_personal_info_student_number` (`student_number`),
+  UNIQUE KEY `unique_idx_student_personal_info_student_number`
+    (`student_number`),
   KEY `idx_student_personal_info_iir_id` (`iir_id`),
-  KEY `idx_student_personal_info_gender_id` (`gender_id`),
   KEY `idx_student_personal_info_civil_status_id` (`civil_status_id`),
   KEY `idx_student_personal_info_religion_id` (`religion_id`),
   KEY `idx_student_personal_info_course_id` (`course_id`),
   KEY `idx_student_personal_info_status_id` (`status_id`),
-  CONSTRAINT `fk_student_status` FOREIGN KEY (`status_id`) REFERENCES `student_statuses` (`id`),
-  CONSTRAINT `student_personal_info_ibfk_1` FOREIGN KEY (`iir_id`) REFERENCES `iir_records` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `student_personal_info_ibfk_2` FOREIGN KEY (`religion_id`) REFERENCES `religions` (`id`),
-  CONSTRAINT `student_personal_info_ibfk_3` FOREIGN KEY (`civil_status_id`) REFERENCES `civil_status_types` (`id`),
-  CONSTRAINT `student_personal_info_ibfk_4` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`),
-  CONSTRAINT `student_personal_info_ibfk_5` FOREIGN KEY (`gender_id`) REFERENCES `genders` (`id`)
+  CONSTRAINT `fk_student_status`
+    FOREIGN KEY (`status_id`) REFERENCES `student_statuses` (`id`),
+  CONSTRAINT `student_personal_info_ibfk_1`
+    FOREIGN KEY (`iir_id`) REFERENCES `iir_records` (`id`)
+    ON DELETE CASCADE,
+  CONSTRAINT `student_personal_info_ibfk_2`
+    FOREIGN KEY (`religion_id`) REFERENCES `religions` (`id`),
+  CONSTRAINT `student_personal_info_ibfk_3`
+    FOREIGN KEY (`civil_status_id`) REFERENCES `civil_status_types` (`id`),
+  CONSTRAINT `student_personal_info_ibfk_4`
+    FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1501,6 +1492,7 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `mobile_number`,
  1 AS `telephone_number`,
  1 AS `employer_contact_number`,
+ 1 AS `two_by_two_photo_data_url`,
  1 AS `status_id`,
  1 AS `status_name`,
  1 AS `graduation_year`,
@@ -1538,6 +1530,7 @@ SET @saved_cs_client     = @@character_set_client;
  1 AS `status_id`,
  1 AS `status_name`,
  1 AS `gender_name`,
+ 1 AS `profile_picture`,
  1 AS `course_code`,
  1 AS `course_name`,
  1 AS `created_at`,
@@ -1673,37 +1666,94 @@ CREATE TABLE `whitelists` (
 -- Final view structure for view `v_student_personal_info`
 --
 
-/*!50001 DROP VIEW IF EXISTS `v_student_personal_info`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8mb4 */;
-/*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_general_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`mysqladmin`@`%` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_student_personal_info` AS select `spi`.`id` AS `id`,`spi`.`iir_id` AS `iir_id`,`spi`.`student_number` AS `student_number`,`spi`.`gender_id` AS `gender_id`,coalesce(`g`.`gender_name`,'') AS `gender_name`,`spi`.`civil_status_id` AS `civil_status_id`,coalesce(`cst`.`status_name`,'') AS `civil_status_name`,`spi`.`religion_id` AS `religion_id`,coalesce(`rel`.`religion_name`,'') AS `religion_name`,`spi`.`other_religion_text` AS `other_religion_text`,`spi`.`height_m` AS `height_m`,`spi`.`weight_kg` AS `weight_kg`,`spi`.`complexion` AS `complexion`,`spi`.`high_school_gwa` AS `high_school_gwa`,`spi`.`course_id` AS `course_id`,coalesce(`c`.`code`,'') AS `course_code`,coalesce(`c`.`course_name`,'') AS `course_name`,`spi`.`year_level` AS `year_level`,`spi`.`section` AS `section`,`spi`.`place_of_birth` AS `place_of_birth`,`spi`.`date_of_birth` AS `date_of_birth`,`spi`.`is_employed` AS `is_employed`,`spi`.`employer_name` AS `employer_name`,`spi`.`employer_address` AS `employer_address`,`spi`.`mobile_number` AS `mobile_number`,`spi`.`telephone_number` AS `telephone_number`,`spi`.`employer_contact_number` AS `employer_contact_number`,`spi`.`status_id` AS `status_id`,coalesce(`ss`.`status_name`,'') AS `status_name`,`spi`.`graduation_year` AS `graduation_year`,coalesce(`ec`.`id`,0) AS `emergency_id`,coalesce(`ec`.`first_name`,'') AS `emergency_first_name`,coalesce(`ec`.`middle_name`,'') AS `emergency_middle_name`,coalesce(`ec`.`last_name`,'') AS `emergency_last_name`,coalesce(`ec`.`contact_number`,'') AS `emergency_contact_number`,coalesce(`ec`.`relationship_id`,0) AS `emergency_relationship_id`,coalesce(`ert`.`relationship_name`,'') AS `emergency_relationship_name`,coalesce(`ec`.`address_id`,0) AS `emergency_address_id` from (((((((`student_personal_info` `spi` left join `genders` `g` on((`spi`.`gender_id` = `g`.`id`))) left join `civil_status_types` `cst` on((`spi`.`civil_status_id` = `cst`.`id`))) left join `religions` `rel` on((`spi`.`religion_id` = `rel`.`id`))) left join `courses` `c` on((`spi`.`course_id` = `c`.`id`))) left join `student_statuses` `ss` on((`spi`.`status_id` = `ss`.`id`))) left join `emergency_contacts` `ec` on((`spi`.`iir_id` = `ec`.`iir_id`))) left join `student_relationship_types` `ert` on((`ec`.`relationship_id` = `ert`.`id`))) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
+DROP VIEW IF EXISTS `v_student_personal_info`;
+CREATE OR REPLACE VIEW `v_student_personal_info` AS
+SELECT
+  spi.id,
+  spi.iir_id,
+  spi.student_number,
+  CASE WHEN spi.gender = 'Male' THEN 1 ELSE 2 END AS gender_id,
+  spi.gender AS gender_name,
+  spi.civil_status_id,
+  COALESCE(cst.status_name, '') AS civil_status_name,
+  spi.religion_id,
+  COALESCE(rel.religion_name, '') AS religion_name,
+  spi.other_religion_text,
+  spi.height_m,
+  spi.weight_kg,
+  spi.complexion,
+  spi.high_school_gwa,
+  spi.course_id,
+  COALESCE(c.code, '') AS course_code,
+  COALESCE(c.course_name, '') AS course_name,
+  spi.year_level,
+  spi.section,
+  spi.place_of_birth,
+  spi.date_of_birth,
+  spi.is_employed,
+  spi.employer_name,
+  spi.employer_address,
+  spi.mobile_number,
+  spi.telephone_number,
+  spi.employer_contact_number,
+  COALESCE(pf.file_url, '') AS two_by_two_photo_data_url,
+  spi.status_id,
+  COALESCE(ss.status_name, '') AS status_name,
+  spi.graduation_year,
+  COALESCE(ec.id, 0) AS emergency_id,
+  COALESCE(ec.first_name, '') AS emergency_first_name,
+  COALESCE(ec.middle_name, '') AS emergency_middle_name,
+  COALESCE(ec.last_name, '') AS emergency_last_name,
+  COALESCE(ec.contact_number, '') AS emergency_contact_number,
+  COALESCE(ec.relationship_id, 0) AS emergency_relationship_id,
+  COALESCE(ert.relationship_name, '') AS emergency_relationship_name,
+  COALESCE(ec.address_id, 0) AS emergency_address_id
+FROM student_personal_info spi
+JOIN iir_records iir ON iir.id = spi.iir_id
+LEFT JOIN profile_pictures pp ON pp.user_id = iir.user_id
+LEFT JOIN files pf ON pf.id = pp.file_id
+LEFT JOIN civil_status_types cst ON spi.civil_status_id = cst.id
+LEFT JOIN religions rel ON spi.religion_id = rel.id
+LEFT JOIN courses c ON spi.course_id = c.id
+LEFT JOIN student_statuses ss ON spi.status_id = ss.id
+LEFT JOIN emergency_contacts ec ON spi.iir_id = ec.iir_id
+LEFT JOIN student_relationship_types ert ON ec.relationship_id = ert.id;
 
 --
 -- Final view structure for view `v_student_profiles`
 --
 
-/*!50001 DROP VIEW IF EXISTS `v_student_profiles`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8mb4 */;
-/*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_general_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`mysqladmin`@`%` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_student_profiles` AS select `iir`.`id` AS `iir_id`,`iir`.`user_id` AS `user_id`,`u`.`first_name` AS `first_name`,`u`.`middle_name` AS `middle_name`,`u`.`last_name` AS `last_name`,`u`.`suffix_name` AS `suffix_name`,`u`.`email` AS `email`,`spi`.`student_number` AS `student_number`,`spi`.`gender_id` AS `gender_id`,`spi`.`course_id` AS `course_id`,`spi`.`section` AS `section`,`spi`.`year_level` AS `year_level`,`spi`.`status_id` AS `status_id`,coalesce(`ss`.`status_name`,'') AS `status_name`,coalesce(`g`.`gender_name`,'') AS `gender_name`,coalesce(`c`.`code`,'') AS `course_code`,coalesce(`c`.`course_name`,'') AS `course_name`,`iir`.`created_at` AS `created_at`,`iir`.`updated_at` AS `updated_at` from (((((`iir_records` `iir` join `users` `u` on((`iir`.`user_id` = `u`.`id`))) join `student_personal_info` `spi` on((`iir`.`id` = `spi`.`iir_id`))) left join `student_statuses` `ss` on((`spi`.`status_id` = `ss`.`id`))) left join `genders` `g` on((`spi`.`gender_id` = `g`.`id`))) left join `courses` `c` on((`spi`.`course_id` = `c`.`id`))) where (`iir`.`is_submitted` = true) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
+DROP VIEW IF EXISTS `v_student_profiles`;
+CREATE OR REPLACE VIEW `v_student_profiles` AS
+SELECT
+  iir.id AS iir_id,
+  iir.user_id,
+  u.first_name,
+  u.middle_name,
+  u.last_name,
+  u.suffix_name,
+  u.email,
+  spi.student_number,
+  CASE WHEN spi.gender = 'Male' THEN 1 ELSE 2 END AS gender_id,
+  spi.course_id,
+  spi.section,
+  spi.year_level,
+  spi.status_id,
+  COALESCE(ss.status_name, '') AS status_name,
+  spi.gender AS gender_name,
+  COALESCE(pf.file_url, '') AS profile_picture,
+  COALESCE(c.code, '') AS course_code,
+  COALESCE(c.course_name, '') AS course_name,
+  iir.created_at,
+  iir.updated_at
+FROM iir_records iir
+JOIN users u ON iir.user_id = u.id
+JOIN student_personal_info spi ON iir.id = spi.iir_id
+LEFT JOIN profile_pictures pp ON pp.user_id = iir.user_id
+LEFT JOIN files pf ON pf.id = pp.file_id
+LEFT JOIN student_statuses ss ON spi.status_id = ss.id
+LEFT JOIN courses c ON spi.course_id = c.id
+WHERE iir.is_submitted = TRUE;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;

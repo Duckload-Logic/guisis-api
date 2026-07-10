@@ -1,8 +1,3 @@
-INSERT INTO genders (id, gender_name)
-VALUES
-    (1, 'Male'),
-    (2, 'Female');
-
 INSERT IGNORE INTO roles (id, `name`)
 VALUES
     (1, 'STUDENT'),

@@ -150,13 +150,6 @@ func TestSlipLifecycle(t *testing.T) {
 		t.Fatalf("failed to seed test database: %v", err)
 	}
 
-	// Retrieve valid lookup IDs from seeded database
-	var genderID int
-	err = db.Get(&genderID, "SELECT id FROM genders LIMIT 1")
-	if err != nil {
-		t.Fatalf("failed to get gender ID: %v", err)
-	}
-
 	var civilStatusID int
 	err = db.Get(&civilStatusID, "SELECT id FROM civil_status_types LIMIT 1")
 	if err != nil {
@@ -187,17 +180,17 @@ func TestSlipLifecycle(t *testing.T) {
 	// Seed student_personal_info to satisfy views and queries
 	_, err = db.Exec(`
 		INSERT INTO student_personal_info (
-			iir_id, student_number, gender_id, civil_status_id,
+			iir_id, student_number, gender, civil_status_id,
 			religion_id, height_m, weight_kg, complexion,
 			high_school_gwa, course_id, year_level, section,
 			place_of_birth, date_of_birth, mobile_number, status_id
 		) VALUES (
-			'iir-uuid', '2025-00001-MN-0', ?, ?,
+			'iir-uuid', '2025-00001-MN-0', 'Male', ?,
 			?, 1.75, 70.0, 'Fair',
 			85.0, ?, 1, 1,
 			'Manila', '2000-01-01', '09123456789', 1
 		)
-	`, genderID, civilStatusID, religionID, courseID)
+	`, civilStatusID, religionID, courseID)
 	if err != nil {
 		t.Fatalf("failed to seed student_personal_info: %v", err)
 	}

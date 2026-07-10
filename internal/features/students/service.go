@@ -1040,21 +1040,6 @@ func (s *Service) saveComprehensiveProfile(
 		iirID = uuid.New().String()
 	}
 
-	// Validate Lookup IDs exist in reference tables
-	if ok, err := s.repo.ValidateGenderExists(
-		ctx, tx, req.Student.Gender.ID,
-	); err != nil {
-		return "", fmt.Errorf(
-			"[StudentService] {saveComprehensiveProfile}: %w", err,
-		)
-	} else if !ok {
-		return "", &ValidationError{
-			Message: fmt.Sprintf(
-				"invalid gender ID: %d", req.Student.Gender.ID,
-			),
-		}
-	}
-
 	if ok, err := s.repo.ValidateCivilStatusExists(
 		ctx, tx, req.Student.CivilStatus.ID,
 	); err != nil {

@@ -6,10 +6,10 @@ import (
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
-	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/testutil"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/locations"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
+	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
 
 type mockLogger struct{}
@@ -37,11 +37,11 @@ func TestIIRLifecycle(t *testing.T) {
 	// Seed geographic data, test user and roles
 	_, err := db.Exec(`
 		INSERT INTO regions (id, name, code) VALUES (1, 'NCR', '130000000');
-		INSERT INTO provinces (id, code, name, region_code) 
+		INSERT INTO provinces (id, code, name, region_code)
 		VALUES (1, '133900000', 'NCR', '130000000');
-		INSERT INTO cities (id, code, name, province_code, region_code) 
+		INSERT INTO cities (id, code, name, province_code, region_code)
 		VALUES (1, '133901000', 'Manila', '133900000', '130000000');
-		INSERT INTO barangays (id, code, name, city_code) 
+		INSERT INTO barangays (id, code, name, city_code)
 		VALUES (1, '133901001', 'Barangay 1', '133901000');
 
 		INSERT INTO users (id, email, first_name, last_name, auth_type, is_active)
@@ -51,13 +51,6 @@ func TestIIRLifecycle(t *testing.T) {
 	`)
 	if err != nil {
 		t.Fatalf("failed to seed test database: %v", err)
-	}
-
-	// Retrieve valid lookup IDs from seeded database
-	var genderID int
-	err = db.Get(&genderID, "SELECT id FROM genders LIMIT 1")
-	if err != nil {
-		t.Fatalf("failed to get gender ID: %v", err)
 	}
 
 	var civilStatusID int
@@ -159,7 +152,10 @@ func TestIIRLifecycle(t *testing.T) {
 	}
 
 	req := ComprehensiveProfileDTO{}
-	req.Student.Gender.ID = genderID
+	req.Student.Gender = Gender{
+		ID:   1,
+		Name: "Male",
+	}
 	req.Student.CivilStatus.ID = civilStatusID
 	req.Student.Religion.ID = religionID
 	req.Student.Course.ID = courseID

@@ -56,7 +56,8 @@ FROM alpine:latest AS prod
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 COPY --from=builder /app/main .
-COPY --from=builder /app/.env.example ./.env
+COPY --from=builder /app/scripts/migrations ./scripts/migrations/
+# COPY --from=builder /app/.env.example ./.env
 # Note: You should ideally provide a real .env or use environment variables in compose
 EXPOSE 8080
 CMD ["./main"]

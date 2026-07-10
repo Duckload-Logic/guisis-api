@@ -3,9 +3,9 @@ ALTER TABLE student_personal_info
 ADD COLUMN gender ENUM('Male', 'Female') NOT NULL DEFAULT 'Male';
 
 -- Populate gender column from genders table
-UPDATE student_personal_info spi
-JOIN genders g ON spi.gender_id = g.id
-SET spi.gender = g.gender_name;
+UPDATE student_personal_info
+INNER JOIN genders ON student_personal_info.gender_id = genders.id
+SET student_personal_info.gender = genders.gender_name;
 
 -- Drop foreign key and index
 ALTER TABLE student_personal_info
