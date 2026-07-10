@@ -1,6 +1,6 @@
 services:
     api:
-        image: ghcr.io/olazo-johnalbert/capstone-api:latest
+        image: ghcr.io/duckload-logic/guisis-api:main
         container_name: capstone-api
         ports:
             - "127.0.0.1:8080:8080"

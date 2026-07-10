@@ -1,31 +1,76 @@
-name: Deploy
+name: Build and Deploy
 
 on:
     push:
-        branches: [main, staging]
+        branches:
+            - main
+            - staging
+
+permissions:
+    packages: write
+    contents: read
 
 jobs:
-    deploy:
+    build-and-push:
         runs-on: ubuntu-latest
-        environment: ${{github.ref_name == 'main' && 'prod' || 'staging'}}
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Log in to GHCR
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.repository_owner }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Extract metadata (tags, labels) for Docker
+              id: meta
+              uses: docker/metadata-action@v5
+              with:
+                  images: ghcr.io/${{ github.repository }}
+                  tags: |
+                      type=ref,event=branch
+
+            - name: Build and push Docker image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  push: true
+                  tags: ${{ id.meta.outputs.tags }}
+                  labels: ${{ id.meta.outputs.labels }}
+
+    deploy:
+        needs: build-and-push
+        runs-on: ubuntu-latest
+        environment: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
         steps:
             - name: Deploy to Hostinger via SSH
               uses: appleboy/ssh-action@v1.0.3
               with:
-                  host: ${{ secrets.SSH_HOST}}
-                  username: ${{ secrets.SSH_USERNAME}}
-                  key: ${{ secrets.SSH_KEY}}
-                  port: ${{ secrets.SSH_PORT}}
+                  host: ${{ secrets.SSH_HOST }}
+                  username: ${{ secrets.SSH_USERNAME }}
+                  key: ${{ secrets.SSH_KEY }}
+                  port: ${{ secrets.SSH_PORT }}
                   script: |
-                      REF="${{ github.ref_name }}"
                       ENV_NAME="staging"
-                      if [ "$REF" = "main" ]; then
+                      if [ "${{ github.ref_name }}" = "main" ]; then
                         ENV_NAME="prod"
                       fi
                       cd "/home/docker/projects/capstone-${ENV_NAME}"
+
+                      # Log into GHCR on the VPS
                       echo "${{ secrets.GITHUB_TOKEN }}" | \
                         docker login ghcr.io \
                         -u ${{ github.repository_owner }} \
                         --password-stdin
-                      docker compose pull
-                      docker compose up -d
+
+                      # Pull down docker-compose changes
+                      git pull origin ${{ github.ref_name }}
+
+                      # Pull the newly pushed images
+                      docker compose -f docker-compose.${ENV_NAME}.yml pull
+
+                      # Recreate containers
+                      docker compose -f docker-compose.${ENV_NAME}.yml \
+                        up -d --remove-orphans
