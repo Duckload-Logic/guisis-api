@@ -68,9 +68,12 @@ jobs:
                       # Pull down docker-compose changes
                       git pull origin ${{ github.ref_name }}
 
+                      # Copy environment-specific config
+                      cp docker-compose.${ENV_NAME}.yml docker-compose.yml
+
                       # Pull the newly pushed images
-                      docker compose -f docker-compose.${ENV_NAME}.yml pull
+                      docker compose -f docker-compose.yml pull
 
                       # Recreate containers
-                      docker compose -f docker-compose.${ENV_NAME}.yml \
+                      docker compose -f docker-compose.yml \
                         up -d --remove-orphans
