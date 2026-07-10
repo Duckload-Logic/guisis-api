@@ -45,6 +45,27 @@ jobs:
         runs-on: ubuntu-latest
         environment: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
         steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Copy docker-compose file to VPS
+              uses: appleboy/scp-action@v0.1.7
+              with:
+                  host: ${{ secrets.SSH_HOST }}
+                  username: ${{ secrets.SSH_USERNAME }}
+                  key: ${{ secrets.SSH_PRIVATE_KEY }}
+                  port: ${{ secrets.SSH_PORT }}
+                  source: >-
+                      docker-compose.${{
+                      github.ref_name == 'main'
+                      && 'prod' || 'staging'
+                      }}.yml
+                  target: >-
+                      /home/docker/projects/capstone-${{
+                      github.ref_name == 'main'
+                      && 'prod' || 'staging'
+                      }}/
+
             - name: Deploy to Hostinger via SSH
               uses: appleboy/ssh-action@v1.0.3
               with:
@@ -59,17 +80,13 @@ jobs:
                       fi
                       cd "/home/docker/projects/capstone-${ENV_NAME}"
 
+                      mv docker-compose.${ENV_NAME}.yml docker-compose.yml
+
                       # Log into GHCR on the VPS
                       echo "${{ secrets.GITHUB_TOKEN }}" | \
                         docker login ghcr.io \
                         -u ${{ github.repository_owner }} \
                         --password-stdin
-
-                      # Pull down docker-compose changes
-                      git pull origin ${{ github.ref_name }}
-
-                      # Copy environment-specific config
-                      cp docker-compose.${ENV_NAME}.yml docker-compose.yml
 
                       # Pull the newly pushed images
                       docker compose -f docker-compose.yml pull
