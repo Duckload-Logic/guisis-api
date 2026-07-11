@@ -26,6 +26,16 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 					"img-src 'self' data:; frame-ancestors 'none'; "+
 					"form-action 'self';",
 			)
+		} else if strings.Contains(c.Request.URL.Path, "/uploads/") ||
+			strings.Contains(c.Request.URL.Path, "/export") ||
+			strings.Contains(c.Request.URL.Path, "/attachments/") {
+			c.Header(
+				"Content-Security-Policy",
+				"default-src 'self' data: blob:; img-src 'self' data: "+
+					"blob:; style-src 'self' 'unsafe-inline'; "+
+					"frame-ancestors 'self' http://localhost:* "+
+					"https://*.dllbsit2027.com;",
+			)
 		} else {
 			c.Header(
 				"Content-Security-Policy",
@@ -38,7 +48,13 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 		c.Header("X-Robots-Tag", "noindex, nofollow")
 
 		// Anti-clickjacking Header
-		c.Header("X-Frame-Options", "DENY")
+		if strings.Contains(c.Request.URL.Path, "/uploads/") ||
+			strings.Contains(c.Request.URL.Path, "/export") ||
+			strings.Contains(c.Request.URL.Path, "/attachments/") {
+			c.Header("X-Frame-Options", "SAMEORIGIN")
+		} else {
+			c.Header("X-Frame-Options", "DENY")
+		}
 
 		// Set a generic server name to mask actual server details
 		c.Header("Server", "GuiSIS-API")

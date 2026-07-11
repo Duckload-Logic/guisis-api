@@ -129,6 +129,8 @@ func NewRouter(
 			isLong := strings.Contains(path, "/cors") ||
 				strings.Contains(path, "/cor") ||
 				strings.Contains(path, "/slips") ||
+				strings.Contains(path, "/download") ||
+				strings.Contains(path, "/export") ||
 				(strings.Contains(path, "/appointments") &&
 					(method == http.MethodPost ||
 						method == http.MethodPatch))

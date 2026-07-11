@@ -88,13 +88,11 @@ swagger-integrations:
 compose-up:
 	docker compose --env-file $(ENV) up --build
 
+QA_HEAVY ?= false
+
 compose-staging:
 	docker compose -f docker-compose.staging.yml \
 		--env-file $(ENV) up --build -d
-
-compose-staging-qa:
-	docker compose -f docker-compose.staging.yml \
-		--env-file $(ENV) up --build -d --profile qa-heavy
 
 compose-prod:
 	docker compose -f docker-compose.prod.yml \
@@ -130,4 +128,7 @@ push-ai-staging:
 push-all-prod: push-api-prod push-ai-prod
 
 # Desc: Push both staging images
-push-all-staging: push-api-staging push-ai-staging
+push-all-staging: push-api-staging
+ifeq ($(QA_HEAVY),true)
+push-all-staging: push-ai-staging
+endif
