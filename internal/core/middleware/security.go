@@ -28,6 +28,7 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 			)
 		} else if strings.Contains(c.Request.URL.Path, "/uploads/") ||
 			strings.Contains(c.Request.URL.Path, "/export") ||
+			strings.Contains(c.Request.URL.Path, "/download") ||
 			strings.Contains(c.Request.URL.Path, "/attachments/") {
 			c.Header(
 				"Content-Security-Policy",
@@ -50,6 +51,7 @@ func SecurityHeadersMiddleware() gin.HandlerFunc {
 		// Anti-clickjacking Header
 		if strings.Contains(c.Request.URL.Path, "/uploads/") ||
 			strings.Contains(c.Request.URL.Path, "/export") ||
+			strings.Contains(c.Request.URL.Path, "/download") ||
 			strings.Contains(c.Request.URL.Path, "/attachments/") {
 			c.Header("X-Frame-Options", "SAMEORIGIN")
 		} else {
