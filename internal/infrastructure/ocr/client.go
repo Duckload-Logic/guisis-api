@@ -9,6 +9,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
+	"time"
 )
 
 type OCRClient struct {
@@ -20,7 +21,9 @@ type OCRClient struct {
 func NewClient(baseURL string, apiKey string) *OCRClient {
 	return &OCRClient{
 		baseURL: baseURL,
-		http:    &http.Client{},
+		http: &http.Client{
+			Timeout: 30 * time.Second,
+		},
 		apiKey:  apiKey,
 	}
 }

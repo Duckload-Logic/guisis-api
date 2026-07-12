@@ -50,20 +50,21 @@ func NewRouter(
 
 	corsConfig := cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			if cfg.IsProduction || cfg.IsStaging {
-				target := "dllbsit2027.com"
-				parsed, err := url.Parse(origin)
-				if err != nil {
-					return false
-				}
-				host := parsed.Hostname()
-				return host == target || strings.HasSuffix(
-					host,
-					"."+target,
-				)
+			target := "dllbsit2027.com"
+			parsed, err := url.Parse(origin)
+			if err != nil {
+				return false
 			}
-
-			return strings.HasPrefix(origin, "http://localhost")
+			host := parsed.Hostname()
+			if host == target ||
+				strings.HasSuffix(host, "."+target) {
+				return true
+			}
+			if !cfg.IsProduction {
+				return host == "localhost" ||
+					host == "127.0.0.1"
+			}
+			return false
 		},
 		AllowMethods: []string{
 			"GET",
@@ -85,13 +86,14 @@ func NewRouter(
 		AllowCredentials: true,
 	}
 
+	// Register CORS first to ensure preflights are resolved cleanly
+	g.Use(cors.New(corsConfig))
+
 	// Security & DoS Protection
 	g.Use(middleware.SecurityHeadersMiddleware())
 	g.Use(
 		middleware.BodySizeLimitMiddleware(2 << 20),
 	) // 2MB limit for JSON payloads
-
-	g.Use(cors.New(corsConfig))
 
 	g.Use(func(c *gin.Context) {
 		c.Set(
@@ -125,6 +127,11 @@ func NewRouter(
 		)
 		return func(c *gin.Context) {
 			path := c.Request.URL.Path
+			// Exclude EventSource stream from timeouts
+			if strings.Contains(path, "/stream") {
+				c.Next()
+				return
+			}
 			method := c.Request.Method
 			isLong := strings.Contains(path, "/cors") ||
 				strings.Contains(path, "/cor") ||
