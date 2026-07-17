@@ -162,17 +162,19 @@ func (r *Repository) GetStudentStatuses(
 	return statuses, nil
 }
 
-func (r *Repository) GetCourses(ctx context.Context) ([]Course, error) {
+func (r *Repository) GetPrograms(
+	ctx context.Context,
+) ([]Program, error) {
 	query := fmt.Sprintf(`
-		SELECT %s FROM courses ORDER BY id
-	`, datastore.GetColumns(Course{}))
+		SELECT %s FROM programs ORDER BY id
+	`, datastore.GetColumns(Program{}))
 
-	var courses []Course
-	err := r.db.SelectContext(ctx, &courses, query)
+	var programs []Program
+	err := r.db.SelectContext(ctx, &programs, query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get courses: %w", err)
+		return nil, fmt.Errorf("failed to get programs: %w", err)
 	}
-	return courses, nil
+	return programs, nil
 }
 
 func (r *Repository) GetCivilStatusTypes(
@@ -268,9 +270,9 @@ func (r *Repository) applyStudentFilters(
 		args = []interface{}{}
 	}
 
-	if req.CourseID > 0 {
-		query += " AND course_id = ?"
-		args = append(args, req.CourseID)
+	if req.ProgramID > 0 {
+		query += " AND program_id = ?"
+		args = append(args, req.ProgramID)
 	}
 
 	if req.GenderID > 0 {
@@ -320,7 +322,7 @@ func (r *Repository) ListStudents(
 		"last_name":      "last_name",
 		"first_name":     "first_name",
 		"year_level":     "year_level",
-		"course_id":      "course_id",
+		"program_id":     "program_id",
 		"created_at":     "created_at",
 		"updated_at":     "updated_at",
 		"student_number": "student_number",
@@ -466,18 +468,18 @@ func (r *Repository) GetEmergencyContactByIIRID(
 	return &model, nil
 }
 
-func (r *Repository) GetCourseByID(
+func (r *Repository) GetProgramByID(
 	ctx context.Context,
-	courseID int,
-) (*Course, error) {
+	programID int,
+) (*Program, error) {
 	query := fmt.Sprintf(`
-		SELECT %s FROM courses WHERE id = ?
-	`, datastore.GetColumns(Course{}))
+		SELECT %s FROM programs WHERE id = ?
+	`, datastore.GetColumns(Program{}))
 
-	var model Course
-	err := r.db.GetContext(ctx, &model, query, courseID)
+	var model Program
+	err := r.db.GetContext(ctx, &model, query, programID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get course by ID: %w", err)
+		return nil, fmt.Errorf("failed to get program by ID: %w", err)
 	}
 
 	return &model, nil
@@ -1605,13 +1607,13 @@ func (r *Repository) ValidateReligionExists(
 	return exists, err
 }
 
-func (r *Repository) ValidateCourseExists(
+func (r *Repository) ValidateProgramExists(
 	ctx context.Context,
 	tx datastore.DB,
 	id int,
 ) (bool, error) {
 	var exists bool
-	query := "SELECT EXISTS(SELECT 1 FROM courses WHERE id = ?)"
+	query := "SELECT EXISTS(SELECT 1 FROM programs WHERE id = ?)"
 	err := tx.GetContext(ctx, &exists, query, id)
 	return exists, err
 }

@@ -36,9 +36,9 @@ func NewService(
 func (s *Service) GetIIRAnalyticsReport(
 	ctx context.Context,
 	year int,
-	courseID int,
+	programID int,
 ) (*IIRAnalyticsReportResponse, error) {
-	total, err := s.repo.GetTotalStudents(ctx, year, courseID)
+	total, err := s.repo.GetTotalStudents(ctx, year, programID)
 	if err != nil {
 		return nil, err
 	}
@@ -69,86 +69,86 @@ func (s *Service) GetIIRAnalyticsReport(
 
 	if total > 0 {
 		// Demographic data
-		rawGender, _ := s.repo.GetGenderStats(ctx, year, courseID)
+		rawGender, _ := s.repo.GetGenderStats(ctx, year, programID)
 		report.GenderDistribution = s.mapToDTO(rawGender, total)
 
-		rawAges, _ := s.repo.GetAgeStats(ctx, year, courseID)
+		rawAges, _ := s.repo.GetAgeStats(ctx, year, programID)
 		report.AgeDistribution = s.mapToDTO(rawAges, total)
 
-		rawCivilStatus, _ := s.repo.GetCivilStatusStats(ctx, year, courseID)
+		rawCivilStatus, _ := s.repo.GetCivilStatusStats(ctx, year, programID)
 		report.CivilStatus = s.mapToDTO(rawCivilStatus, total)
 
-		rawReligions, _ := s.repo.GetReligionStats(ctx, year, courseID)
+		rawReligions, _ := s.repo.GetReligionStats(ctx, year, programID)
 		report.Religions = s.mapToDTO(rawReligions, total)
 
-		rawCityAddress, _ := s.repo.GetCityAddressStats(ctx, year, courseID)
+		rawCityAddress, _ := s.repo.GetCityAddressStats(ctx, year, programID)
 		report.CityAddress = s.mapToDTO(rawCityAddress, total)
 
 		// Economic/Social data
-		rawMonthlyIncome, _ := s.repo.GetMonthlyIncomeStats(ctx, year, courseID)
+		rawMonthlyIncome, _ := s.repo.GetMonthlyIncomeStats(ctx, year, programID)
 		report.MonthlyIncome = s.mapToDTO(rawMonthlyIncome, total)
 
 		rawOrdinalPosition, _ := s.repo.GetOrdinalPositionStats(
 			ctx,
 			year,
-			courseID,
+			programID,
 		)
 		report.OrdinalPosition = s.mapToDTO(rawOrdinalPosition, total)
 
-		rawQuietPlace, _ := s.repo.GetQuietStudyPlaceStats(ctx, year, courseID)
+		rawQuietPlace, _ := s.repo.GetQuietStudyPlaceStats(ctx, year, programID)
 		report.QuietStudyPlace = s.mapToDTO(rawQuietPlace, total)
 
 		// Family data
-		rawFatherEd, _ := s.repo.GetFatherEducationStats(ctx, year, courseID)
+		rawFatherEd, _ := s.repo.GetFatherEducationStats(ctx, year, programID)
 		report.FatherEducation = s.mapToDTO(rawFatherEd, total)
 
-		rawMotherEd, _ := s.repo.GetMotherEducationStats(ctx, year, courseID)
+		rawMotherEd, _ := s.repo.GetMotherEducationStats(ctx, year, programID)
 		report.MotherEducation = s.mapToDTO(rawMotherEd, total)
 
 		rawParentsMarital, _ := s.repo.GetParentsMaritalStatusStats(
 			ctx,
 			year,
-			courseID,
+			programID,
 		)
 		report.ParentsMaritalStatus = s.mapToDTO(rawParentsMarital, total)
 
 		rawFatherLife, _ := s.repo.GetFatherLifeStatusStats(
 			ctx,
 			year,
-			courseID,
+			programID,
 		)
 		report.FatherLifeStatus = s.mapToDTO(rawFatherLife, total)
 
 		rawMotherLife, _ := s.repo.GetMotherLifeStatusStats(
 			ctx,
 			year,
-			courseID,
+			programID,
 		)
 		report.MotherLifeStatus = s.mapToDTO(rawMotherLife, total)
 
 		// Academic data
-		rawHSGWA, _ := s.repo.GetHSGWAStats(ctx, year, courseID)
+		rawHSGWA, _ := s.repo.GetHSGWAStats(ctx, year, programID)
 		report.HighSchoolGWA = s.mapToDTO(rawHSGWA, total)
 
-		rawElem, _ := s.repo.GetElementaryStats(ctx, year, courseID)
+		rawElem, _ := s.repo.GetElementaryStats(ctx, year, programID)
 		report.Elementary = s.mapToDTO(rawElem, total)
 
-		rawHS, _ := s.repo.GetHighSchoolStats(ctx, year, courseID)
+		rawHS, _ := s.repo.GetHighSchoolStats(ctx, year, programID)
 		report.HighSchool = s.mapToDTO(rawHS, total)
 
-		rawJHS, _ := s.repo.GetJuniorHighStats(ctx, year, courseID)
+		rawJHS, _ := s.repo.GetJuniorHighStats(ctx, year, programID)
 		report.JuniorHigh = s.mapToDTO(rawJHS, total)
 
-		rawSHS, _ := s.repo.GetSeniorHighStats(ctx, year, courseID)
+		rawSHS, _ := s.repo.GetSeniorHighStats(ctx, year, programID)
 		report.SeniorHigh = s.mapToDTO(rawSHS, total)
 
-		rawVocational, _ := s.repo.GetVocationalStats(ctx, year, courseID)
+		rawVocational, _ := s.repo.GetVocationalStats(ctx, year, programID)
 		report.Vocational = s.mapToDTO(rawVocational, total)
 
-		rawCollege, _ := s.repo.GetCollegeStats(ctx, year, courseID)
+		rawCollege, _ := s.repo.GetCollegeStats(ctx, year, programID)
 		report.College = s.mapToDTO(rawCollege, total)
 
-		rawNature, _ := s.repo.GetNatureOfSchoolingStats(ctx, year, courseID)
+		rawNature, _ := s.repo.GetNatureOfSchoolingStats(ctx, year, programID)
 		report.NatureOfSchooling = s.mapToDTO(rawNature, total)
 	}
 
@@ -259,21 +259,21 @@ func (s *Service) calculatePercentage(count, total int) float64 {
 func (s *Service) ExportIIRAnalyticsReport(
 	ctx context.Context,
 	year int,
-	courseID int,
+	programID int,
 ) ([]byte, error) {
-	data, err := s.GetIIRAnalyticsReport(ctx, year, courseID)
+	data, err := s.GetIIRAnalyticsReport(ctx, year, programID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch analytics data: %w", err)
 	}
 
 	logoBase64 := base64.StdEncoding.EncodeToString(pupLogo)
 
-	courseCode := ""
-	courseName := ""
-	if courseID > 0 {
-		if code, name, err := s.repo.GetCourse(ctx, courseID); err == nil {
-			courseCode = code
-			courseName = name
+	programCode := ""
+	programName := ""
+	if programID > 0 {
+		if code, name, err := s.repo.GetProgram(ctx, programID); err == nil {
+			programCode = code
+			programName = name
 		}
 	}
 
@@ -308,8 +308,8 @@ func (s *Service) ExportIIRAnalyticsReport(
 		DateToday  string
 		Year       int
 		LogoBase64 string
-		CourseCode string
-		CourseName string
+		ProgramCode string
+		ProgramName string
 
 		AgeTopCategories            string
 		AgeTopPct                   float64
@@ -353,8 +353,8 @@ func (s *Service) ExportIIRAnalyticsReport(
 		DateToday:  time.Now().Format("January 02, 2006"),
 		Year:       year,
 		LogoBase64: logoBase64,
-		CourseCode: courseCode,
-		CourseName: courseName,
+		ProgramCode: programCode,
+		ProgramName: programName,
 
 		AgeTopCategories:            ageCats,
 		AgeTopPct:                   agePct,

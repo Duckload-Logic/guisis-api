@@ -23,7 +23,7 @@ type StudentPersonalInfo struct {
 	WeightKg        float64   `db:"weight_kg"        json:"weightKg"`
 	Complexion      string    `db:"complexion"       json:"complexion"`
 	HighSchoolGWA   float64   `db:"high_school_gwa"  json:"highSchoolGwa"`
-	CourseID        int       `db:"course_id"        json:"courseId"`
+	ProgramID       int       `db:"program_id"       json:"programId"`
 	YearLevel       int       `db:"year_level"       json:"yearLevel"`
 	Section         int       `db:"section"          json:"section"`
 	PlaceOfBirth    string    `db:"place_of_birth"   json:"placeOfBirth"`

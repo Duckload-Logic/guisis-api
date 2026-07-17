@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/logs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/notifications"
 )
@@ -48,12 +49,36 @@ func (w *MaintenanceWorker) runCleanup() {
 
 	log.Println("[MaintenanceWorker] Starting scheduled cleanup...")
 
-	// Cleanup System Logs (7 days)
-	logRows, err := w.logService.DeleteLogsOlderThan(ctx, 7)
+	// Cleanup System Logs (90 days)
+	logRows, err := w.logService.DeleteLogsOlderThan(
+		ctx,
+		90,
+		nil,
+		[]string{audit.CategorySecurity},
+	)
 	if err != nil {
 		log.Printf("[MaintenanceWorker] Error cleaning up logs: %v", err)
 	} else if logRows > 0 {
 		log.Printf("[MaintenanceWorker] Purged %d old system logs", logRows)
+	}
+
+	// Cleanup Security Logs (1 year)
+	secLogRows, err := w.logService.DeleteLogsOlderThan(
+		ctx,
+		365,
+		[]string{audit.CategorySecurity},
+		nil,
+	)
+	if err != nil {
+		log.Printf(
+			"[MaintenanceWorker] Error cleaning up security logs: %v",
+			err,
+		)
+	} else if secLogRows > 0 {
+		log.Printf(
+			"[MaintenanceWorker] Purged %d old security logs",
+			secLogRows,
+		)
 	}
 
 	// Cleanup Notifications (30 days)

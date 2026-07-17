@@ -109,8 +109,8 @@ func (s *Service) SubmitCOR(
 	if ocrResult != nil && ocrResult.StructuredData != "" {
 		var corData struct {
 			StudentNumber     string `json:"student_number"`
-			CourseCode        string `json:"course_code"`
-			CourseDesc        string `json:"course_desc"`
+			ProgramCode       string `json:"program_code"`
+			ProgramDesc       string `json:"program_desc"`
 			YearLevel         int    `json:"year_level"`
 			Section           int    `json:"section"`
 			Campus            string `json:"campus"`
@@ -138,8 +138,8 @@ func (s *Service) SubmitCOR(
 				)
 			}
 			cor.StudentNumber = corData.StudentNumber
-			cor.CourseCode = corData.CourseCode
-			cor.CourseDesc = corData.CourseDesc
+			cor.ProgramCode = corData.ProgramCode
+			cor.ProgramDesc = corData.ProgramDesc
 			cor.YearLevel = corData.YearLevel
 			cor.Section = corData.Section
 			cor.Campus = corData.Campus
@@ -318,8 +318,10 @@ func (s *Service) GetEducationalAttainments(
 	return s.repo.GetEducationalAttainments(ctx)
 }
 
-func (s *Service) GetCourses(ctx context.Context) ([]Course, error) {
-	return s.repo.GetCourses(ctx)
+func (s *Service) GetPrograms(
+	ctx context.Context,
+) ([]Program, error) {
+	return s.repo.GetPrograms(ctx)
 }
 
 func (s *Service) GetCivilStatusTypes(
@@ -1069,8 +1071,8 @@ func (s *Service) saveComprehensiveProfile(
 		}
 	}
 
-	if ok, err := s.repo.ValidateCourseExists(
-		ctx, tx, req.Student.Course.ID,
+	if ok, err := s.repo.ValidateProgramExists(
+		ctx, tx, req.Student.Program.ID,
 	); err != nil {
 		return "", fmt.Errorf(
 			"[StudentService] {saveComprehensiveProfile}: %w", err,
@@ -1078,7 +1080,7 @@ func (s *Service) saveComprehensiveProfile(
 	} else if !ok {
 		return "", &ValidationError{
 			Message: fmt.Sprintf(
-				"invalid course ID: %d", req.Student.Course.ID,
+				"invalid program ID: %d", req.Student.Program.ID,
 			),
 		}
 	}
@@ -1153,7 +1155,7 @@ func (s *Service) saveComprehensiveProfile(
 		WeightKg:              req.Student.WeightKg,
 		Complexion:            req.Student.Complexion,
 		HighSchoolGWA:         req.Student.HighSchoolGWA,
-		CourseID:              req.Student.Course.ID,
+		ProgramID:             req.Student.Program.ID,
 		YearLevel:             req.Student.YearLevel,
 		Section:               req.Student.Section,
 		PlaceOfBirth:          req.Student.PlaceOfBirth,

@@ -48,3 +48,12 @@ type RegisterRequest struct {
 type VerifyRequest struct {
 	VerificationOTP string `json:"otp" binding:"required"`
 }
+
+type OTPRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+type OTPLoginRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	OTP   string `json:"otp"   binding:"required,len=6"`
+}

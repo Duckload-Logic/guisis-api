@@ -40,8 +40,8 @@ func loadLookups() {
 		religionIDs = append(religionIDs, id)
 	}
 
-	// courses
-	rows, err = db.Query("SELECT id FROM courses")
+	// programs
+	rows, err = db.Query("SELECT id FROM programs")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func loadLookups() {
 	for rows.Next() {
 		var id int
 		rows.Scan(&id)
-		courseIDs = append(courseIDs, id)
+		programIDs = append(programIDs, id)
 	}
 
 	// student support types

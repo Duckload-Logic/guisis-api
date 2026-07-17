@@ -3,7 +3,7 @@ definitions:
   appointments.Appointment:
     properties:
       adminNotes:
-        $ref: '#/definitions/sql.NullString'
+        $ref: '#/definitions/structs.NullableString'
       appointmentCategoryId:
         type: integer
       createdAt:
@@ -12,14 +12,30 @@ definitions:
         type: string
       iirId:
         type: string
+      prefDate1:
+        $ref: '#/definitions/structs.NullableString'
+      prefDate2:
+        $ref: '#/definitions/structs.NullableString'
+      prefDate3:
+        $ref: '#/definitions/structs.NullableString'
+      prefTimeSlotID1:
+        $ref: '#/definitions/structs.NullableInt64'
+      prefTimeSlotID2:
+        $ref: '#/definitions/structs.NullableInt64'
+      prefTimeSlotID3:
+        $ref: '#/definitions/structs.NullableInt64'
       reason:
-        $ref: '#/definitions/sql.NullString'
-      scheduledTime:
-        type: integer
+        $ref: '#/definitions/structs.NullableString'
       statusId:
+        type: integer
+      timeSlotId:
         type: integer
       updatedAt:
         type: string
+      urgencyLevel:
+        type: string
+      urgencyScore:
+        type: number
       whenDate:
         type: string
     type: object
@@ -44,25 +60,43 @@ definitions:
         type: string
       iirId:
         type: string
+      preferredDate1:
+        type: string
+      preferredDate2:
+        type: string
+      preferredDate3:
+        type: string
+      preferredTimeSlot1:
+        $ref: '#/definitions/appointments.TimeSlot'
+      preferredTimeSlot2:
+        $ref: '#/definitions/appointments.TimeSlot'
+      preferredTimeSlot3:
+        $ref: '#/definitions/appointments.TimeSlot'
       reason:
         $ref: '#/definitions/structs.NullableString'
       status:
         $ref: '#/definitions/appointments.AppointmentStatus'
+      studentCorUrl:
+        type: string
       studentNumber:
         type: string
       timeSlot:
         $ref: '#/definitions/appointments.TimeSlot'
       updatedAt:
         type: string
+      urgencyLevel:
+        type: string
+      urgencyScore:
+        type: number
       user:
-        $ref: '#/definitions/users.GetUserResponse'
+        $ref: '#/definitions/users.UserResponse'
+      userId:
+        type: string
       whenDate:
         type: string
     type: object
   appointments.AppointmentStatus:
     properties:
-      colorKey:
-        type: string
       id:
         type: integer
       name:
@@ -104,64 +138,6 @@ definitions:
       time:
         type: string
     type: object
-  auth.LoginDTO:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-    required:
-    - email
-    - password
-    type: object
-  auth.MeResponse:
-    properties:
-      createdAt:
-        type: string
-      email:
-        type: string
-      firstName:
-        type: string
-      id:
-        type: string
-      lastName:
-        type: string
-      middleName:
-        type: string
-      role:
-        $ref: '#/definitions/users.Role'
-      type:
-        description: '"native" or "idp"'
-        type: string
-    type: object
-  auth.RegisterDTO:
-    properties:
-      email:
-        type: string
-      firstName:
-        type: string
-      lastName:
-        type: string
-      middleName:
-        type: string
-      password:
-        minLength: 8
-        type: string
-    required:
-    - email
-    - firstName
-    - lastName
-    - password
-    type: object
-  idp.IDPTokenExchangeRequest:
-    properties:
-      client_id:
-        type: string
-      client_secret:
-        type: string
-      code:
-        type: string
-    type: object
   integrations.ListStudentsSuccessResponse:
     properties:
       data:
@@ -193,14 +169,12 @@ definitions:
       region:
         $ref: '#/definitions/locations.Region'
       streetDetail:
-        type: string
+        $ref: '#/definitions/structs.NullableString'
       studentNumber:
         type: string
     type: object
   integrations.OGOSStudentDTO:
     properties:
-      course:
-        $ref: '#/definitions/students.Course'
       email:
         type: string
       firstName:
@@ -211,6 +185,8 @@ definitions:
         $ref: '#/definitions/structs.NullableString'
       mobileNumber:
         type: string
+      program:
+        $ref: '#/definitions/students.Program'
       section:
         type: string
       studentNumber:
@@ -226,7 +202,7 @@ definitions:
         type: string
       gender:
         $ref: '#/definitions/students.Gender'
-      heightFt:
+      heightM:
         type: number
       placeOfBirth:
         type: string
@@ -265,7 +241,7 @@ definitions:
     type: object
   locations.Barangay:
     properties:
-      cityId:
+      cityCode:
         type: integer
       code:
         type: string
@@ -279,19 +255,19 @@ definitions:
       code:
         type: string
       district:
-        type: string
+        $ref: '#/definitions/structs.NullableString'
       id:
         type: integer
       name:
         type: string
       provinceCode:
-        type: string
+        $ref: '#/definitions/structs.NullableString'
       regionCode:
-        type: string
+        $ref: '#/definitions/structs.NullableString'
       type:
-        type: string
+        $ref: '#/definitions/structs.NullableString'
       zipCode:
-        type: string
+        $ref: '#/definitions/structs.NullableString'
     type: object
   locations.ProvinceDTO:
     properties:
@@ -338,11 +314,44 @@ definitions:
     - StatusError
   slips.AttachmentDTO:
     properties:
+      attachmentType:
+        type: string
       fileName:
+        type: string
+      fileSize:
+        type: integer
+      fileType:
         type: string
       fileUrl:
         type: string
       id:
+        type: string
+      mimeType:
+        type: string
+      slipId:
+        type: string
+    type: object
+  slips.Slip:
+    properties:
+      adminNotes:
+        $ref: '#/definitions/structs.NullableString'
+      categoryId:
+        type: integer
+      createdAt:
+        type: string
+      dateNeeded:
+        type: string
+      dateOfAbsence:
+        type: string
+      id:
+        type: string
+      iirId:
+        type: string
+      reason:
+        type: string
+      statusId:
+        type: integer
+      updatedAt:
         type: string
     type: object
   slips.SlipCategory:
@@ -364,30 +373,33 @@ definitions:
         type: string
       dateOfAbsence:
         type: string
+      hasSignificantNote:
+        type: boolean
       id:
         type: string
       iirId:
         type: string
+      isVerified:
+        type: boolean
       reason:
         type: string
       status:
         $ref: '#/definitions/slips.SlipStatus'
+      studentCorUrl:
+        type: string
       studentNumber:
         type: string
+      ticket:
+        $ref: '#/definitions/slips.TicketDTO'
       updatedAt:
         type: string
       user:
-        $ref: '#/definitions/users.GetUserResponse'
-    required:
-    - category
-    - dateNeeded
-    - dateOfAbsence
-    - reason
+        $ref: '#/definitions/users.UserResponse'
+      userId:
+        type: string
     type: object
   slips.SlipStatus:
     properties:
-      colorKey:
-        type: string
       id:
         type: integer
       name:
@@ -395,13 +407,27 @@ definitions:
     type: object
   slips.SlipStatusCount:
     properties:
-      colorKey:
-        type: string
       count:
         type: integer
       id:
         type: integer
       name:
+        type: string
+    type: object
+  slips.TicketClaimRequest:
+    properties:
+      ticketCode:
+        type: string
+    required:
+    - ticketCode
+    type: object
+  slips.TicketDTO:
+    properties:
+      isVerified:
+        type: boolean
+      ticketCode:
+        type: string
+      verifiedAt:
         type: string
     type: object
   slips.UpdateStatusRequest:
@@ -413,12 +439,13 @@ definitions:
     required:
     - status
     type: object
-  sql.NullString:
+  structs.NullableInt64:
     properties:
-      string:
-        type: string
+      int64:
+        format: int64
+        type: integer
       valid:
-        description: Valid is true if String is not NULL
+        description: Valid is true if Int64 is not NULL
         type: boolean
     type: object
   structs.NullableString:
@@ -440,15 +467,6 @@ definitions:
       totalPages:
         type: integer
     type: object
-  students.Course:
-    properties:
-      code:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-    type: object
   students.Gender:
     properties:
       id:
@@ -465,10 +483,17 @@ definitions:
           $ref: '#/definitions/students.StudentProfileDTO'
         type: array
     type: object
+  students.Program:
+    properties:
+      code:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
   students.StudentProfileDTO:
     properties:
-      course:
-        $ref: '#/definitions/students.Course'
       email:
         type: string
       firstName:
@@ -477,12 +502,22 @@ definitions:
         $ref: '#/definitions/students.Gender'
       iirId:
         type: string
+      isStudentCorValid:
+        type: boolean
       lastName:
         type: string
       middleName:
         $ref: '#/definitions/structs.NullableString'
+      profilePicture:
+        type: string
+      program:
+        $ref: '#/definitions/students.Program'
       section:
         type: integer
+      status:
+        $ref: '#/definitions/students.StudentStatus'
+      studentCorUrl:
+        type: string
       studentNumber:
         type: string
       suffixName:
@@ -492,7 +527,21 @@ definitions:
       yearLevel:
         type: integer
     type: object
-  users.GetUserResponse:
+  students.StudentStatus:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  users.Role:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  users.UserResponse:
     properties:
       createdAt:
         type: string
@@ -502,20 +551,21 @@ definitions:
         type: string
       id:
         type: string
+      isActive:
+        type: boolean
       lastName:
         type: string
       middleName:
         $ref: '#/definitions/structs.NullableString'
-      role:
-        $ref: '#/definitions/users.Role'
-      updatedAt:
+      profilePicture:
         type: string
-    type: object
-  users.Role:
-    properties:
-      id:
-        type: integer
-      name:
+      roles:
+        items:
+          $ref: '#/definitions/users.Role'
+        type: array
+      suffixName:
+        $ref: '#/definitions/structs.NullableString'
+      updatedAt:
         type: string
     type: object
 info:
@@ -676,52 +726,6 @@ paths:
       summary: Get appointment details
       tags:
       - Appointments
-    patch:
-      consumes:
-      - application/json
-      description: Updates appointment details (reschedule).
-      parameters:
-      - description: Appointment ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Updated appointment
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/appointments.AppointmentDTO'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Update appointment
-      tags:
-      - Appointments
   /appointments/lookups/categories:
     get:
       description: Retrieves available appointment categories.
@@ -844,207 +848,6 @@ paths:
       summary: Get appointment statistics
       tags:
       - Appointments
-  /auth/idp/authorize:
-    get:
-      description: Redirects to OAuth 2.0 authorization page on the IDP.
-      produces:
-      - application/json
-      responses:
-        "302":
-          description: Redirect to IDP login page
-          schema:
-            type: string
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get IDP authorization URL
-      tags:
-      - Auth
-  /auth/idp/session:
-    get:
-      description: Validates the current IDP session using the idp_session cookie.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Validate IDP session
-      tags:
-      - Auth
-  /auth/idp/token:
-    post:
-      consumes:
-      - application/json
-      description: Completes OAuth 2.0 flow and provisions user
-      parameters:
-      - description: Code & State
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/idp.IDPTokenExchangeRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Exchange IDP authorization code for tokens
-      tags:
-      - Auth
-  /auth/login:
-    post:
-      consumes:
-      - application/json
-      description: Authenticates a user and sets JWT cookies.
-      parameters:
-      - description: Login Credentials
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/auth.LoginDTO'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Returns user info
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: User login
-      tags:
-      - Auth
-  /auth/logout:
-    post:
-      description: Invalidates the user's tokens by clearing cookies.
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: User logout
-      tags:
-      - Auth
-  /auth/me:
-    get:
-      description: Retrieves information about the currently authenticated user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/auth.MeResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get current user info
-      tags:
-      - Auth
-  /auth/refresh:
-    post:
-      consumes:
-      - application/json
-      description: Refreshes the JWT token using the refresh token cookie.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: New access token (optional)
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Refresh JWT token
-      tags:
-      - Auth
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Creates a new developer account.
-      parameters:
-      - description: Registration Data
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/auth.RegisterDTO'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Success message
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "409":
-          description: Conflict
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: User registration
-      tags:
-      - Auth
   /integrations/students/{studentNumber}:
     get:
       consumes:
@@ -1162,6 +965,45 @@ paths:
       summary: Get personal information by student number
       tags:
       - External Students
+  /integrations/students/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get student information by their email
+      parameters:
+      - description: Student Email
+        in: query
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/integrations.StudentSuccessResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.CommonErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.CommonErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.CommonErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.CommonErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get student by Email
+      tags:
+      - External Students
   /integrations/students/profiles:
     get:
       consumes:
@@ -1172,9 +1014,9 @@ paths:
         in: query
         name: search
         type: string
-      - description: Filter by course ID
+      - description: Filter by program ID
         in: query
-        name: course_id
+        name: program_id
         type: integer
       - description: Filter by gender ID
         in: query
@@ -1184,8 +1026,7 @@ paths:
         in: query
         name: year_level
         type: integer
-      - description: Order by field (first_name, last_name, student_number, created_at,
-          updated_at, year_level, course_id)
+      - description: Order by field
         in: query
         name: order_by
         type: string
@@ -1527,6 +1368,79 @@ paths:
       summary: Get slip statistics
       tags:
       - ExcuseSlips
+  /slips/tickets/{code}:
+    get:
+      description: Allows a counselor to view slip details before verification.
+      parameters:
+      - description: Ticket code
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/slips.Slip'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get slip details by ticket code
+      tags:
+      - ExcuseSlips
+  /slips/tickets/claim:
+    post:
+      consumes:
+      - application/json
+      description: Allows a counselor to verify a student's ticket on-site.
+      parameters:
+      - description: Ticket code
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/slips.TicketClaimRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Claim/Verify a ticket
+      tags:
+      - ExcuseSlips
   /slips/urgent:
     get:
       description: Retrieves urgent slips for counselor review.
@@ -1553,10 +1467,10 @@ paths:
       - application/json
       description: Retrieves a paginated list of students with optional filters.
       parameters:
-      - description: Filter by course
+      - description: Filter by program ID
         in: query
-        name: course
-        type: string
+        name: program_id
+        type: integer
       - description: Filter by year level
         in: query
         name: year_level
@@ -1622,60 +1536,6 @@ paths:
       summary: Generate Student IIR PDF
       tags:
       - Students
-  /users:
-    get:
-      consumes:
-      - application/json
-      description: Retrieves user information based on the provided email.
-      parameters:
-      - description: User Email
-        in: query
-        name: email
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Returns user details
-          schema:
-            $ref: '#/definitions/users.GetUserResponse'
-        "400":
-          description: Email query parameter is required
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Failed to get user by email
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get user by email
-      tags:
-      - Users
-  /users/me:
-    get:
-      consumes:
-      - application/json
-      description: Retrieves information about the currently authenticated user.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Returns current user details
-          schema:
-            $ref: '#/definitions/users.GetUserResponse'
-        "500":
-          description: Failed to get current user
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get current user
-      tags:
-      - Users
 securityDefinitions:
   ApiKeyAuth:
     in: header

@@ -65,10 +65,10 @@ func TestIIRLifecycle(t *testing.T) {
 		t.Fatalf("failed to get religion ID: %v", err)
 	}
 
-	var courseID int
-	err = db.Get(&courseID, "SELECT id FROM courses LIMIT 1")
+	var programID int
+	err = db.Get(&programID, "SELECT id FROM programs LIMIT 1")
 	if err != nil {
-		t.Fatalf("failed to get course ID: %v", err)
+		t.Fatalf("failed to get program ID: %v", err)
 	}
 
 	var relationshipID int
@@ -158,7 +158,7 @@ func TestIIRLifecycle(t *testing.T) {
 	}
 	req.Student.CivilStatus.ID = civilStatusID
 	req.Student.Religion.ID = religionID
-	req.Student.Course.ID = courseID
+	req.Student.Program.ID = programID
 	req.Student.StudentNumber = "2025-00001-MN-0"
 	req.Student.DateOfBirth = "2000-01-01"
 	req.Student.HeightM = 1.75

@@ -162,10 +162,10 @@ func TestSlipLifecycle(t *testing.T) {
 		t.Fatalf("failed to get religion ID: %v", err)
 	}
 
-	var courseID int
-	err = db.Get(&courseID, "SELECT id FROM courses LIMIT 1")
+	var programID int
+	err = db.Get(&programID, "SELECT id FROM programs LIMIT 1")
 	if err != nil {
-		t.Fatalf("failed to get course ID: %v", err)
+		t.Fatalf("failed to get program ID: %v", err)
 	}
 
 	var categoryID int
@@ -182,7 +182,7 @@ func TestSlipLifecycle(t *testing.T) {
 		INSERT INTO student_personal_info (
 			iir_id, student_number, gender, civil_status_id,
 			religion_id, height_m, weight_kg, complexion,
-			high_school_gwa, course_id, year_level, section,
+			high_school_gwa, program_id, year_level, section,
 			place_of_birth, date_of_birth, mobile_number, status_id
 		) VALUES (
 			'iir-uuid', '2025-00001-MN-0', 'Male', ?,
@@ -190,7 +190,7 @@ func TestSlipLifecycle(t *testing.T) {
 			85.0, ?, 1, 1,
 			'Manila', '2000-01-01', '09123456789', 1
 		)
-	`, civilStatusID, religionID, courseID)
+	`, civilStatusID, religionID, programID)
 	if err != nil {
 		t.Fatalf("failed to seed student_personal_info: %v", err)
 	}

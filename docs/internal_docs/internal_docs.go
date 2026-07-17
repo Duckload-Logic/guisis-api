@@ -244,75 +244,6 @@ const docTemplateinternal = `{
                         }
                     }
                 }
-            },
-            "patch": {
-                "description": "Updates appointment details (reschedule).",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Appointments"
-                ],
-                "summary": "Update appointment",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Appointment ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Updated appointment",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/appointments.AppointmentDTO"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
             }
         },
         "/appointments/lookups/categories": {
@@ -500,307 +431,62 @@ const docTemplateinternal = `{
                 }
             }
         },
-        "/auth/idp/authorize": {
+        "/integrations/students/profile": {
             "get": {
-                "description": "Redirects to OAuth 2.0 authorization page on the IDP.",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get student information by their email",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Auth"
+                    "External Students"
                 ],
-                "summary": "Get IDP authorization URL",
+                "summary": "Get student by Email",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Student Email",
+                        "name": "email",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
                 "responses": {
-                    "302": {
-                        "description": "Redirect to IDP login page",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/integrations.StudentSuccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.CommonErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.CommonErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.CommonErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/idp/session": {
-            "get": {
-                "description": "Validates the current IDP session using the idp_session cookie.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Validate IDP session",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/idp/token": {
-            "post": {
-                "description": "Completes OAuth 2.0 flow and provisions user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Exchange IDP authorization code for tokens",
-                "parameters": [
-                    {
-                        "description": "Code \u0026 State",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/idp.IDPTokenExchangeRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/login": {
-            "post": {
-                "description": "Authenticates a user and sets JWT cookies.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "User login",
-                "parameters": [
-                    {
-                        "description": "Login Credentials",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/auth.LoginDTO"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Returns user info",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/logout": {
-            "post": {
-                "description": "Invalidates the user's tokens by clearing cookies.",
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "User logout",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/me": {
-            "get": {
-                "description": "Retrieves information about the currently authenticated user",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Get current user info",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/auth.MeResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/refresh": {
-            "post": {
-                "description": "Refreshes the JWT token using the refresh token cookie.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Refresh JWT token",
-                "responses": {
-                    "200": {
-                        "description": "New access token (optional)",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/register": {
-            "post": {
-                "description": "Creates a new developer account.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "User registration",
-                "parameters": [
-                    {
-                        "description": "Registration Data",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/auth.RegisterDTO"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Success message",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/response.CommonErrorResponse"
                         }
                     }
                 }
@@ -833,8 +519,8 @@ const docTemplateinternal = `{
                     },
                     {
                         "type": "integer",
-                        "description": "Filter by course ID",
-                        "name": "course_id",
+                        "description": "Filter by program ID",
+                        "name": "program_id",
                         "in": "query"
                     },
                     {
@@ -851,7 +537,7 @@ const docTemplateinternal = `{
                     },
                     {
                         "type": "string",
-                        "description": "Order by field (first_name, last_name, student_number, created_at, updated_at, year_level, course_id)",
+                        "description": "Order by field",
                         "name": "order_by",
                         "in": "query"
                     },
@@ -1537,6 +1223,117 @@ const docTemplateinternal = `{
                 }
             }
         },
+        "/slips/tickets/claim": {
+            "post": {
+                "description": "Allows a counselor to verify a student's ticket on-site.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ExcuseSlips"
+                ],
+                "summary": "Claim/Verify a ticket",
+                "parameters": [
+                    {
+                        "description": "Ticket code",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/slips.TicketClaimRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/slips/tickets/{code}": {
+            "get": {
+                "description": "Allows a counselor to view slip details before verification.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ExcuseSlips"
+                ],
+                "summary": "Get slip details by ticket code",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ticket code",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/slips.Slip"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/slips/urgent": {
             "get": {
                 "description": "Retrieves urgent slips for counselor review.",
@@ -1582,9 +1379,9 @@ const docTemplateinternal = `{
                 "summary": "List Students",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Filter by course",
-                        "name": "course",
+                        "type": "integer",
+                        "description": "Filter by program ID",
+                        "name": "program_id",
                         "in": "query"
                     },
                     {
@@ -1679,88 +1476,6 @@ const docTemplateinternal = `{
                     }
                 }
             }
-        },
-        "/users": {
-            "get": {
-                "description": "Retrieves user information based on the provided email.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Get user by email",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "User Email",
-                        "name": "email",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Returns user details",
-                        "schema": {
-                            "$ref": "#/definitions/users.GetUserResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Email query parameter is required",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to get user by email",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/users/me": {
-            "get": {
-                "description": "Retrieves information about the currently authenticated user.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Get current user",
-                "responses": {
-                    "200": {
-                        "description": "Returns current user details",
-                        "schema": {
-                            "$ref": "#/definitions/users.GetUserResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to get current user",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
@@ -1768,7 +1483,7 @@ const docTemplateinternal = `{
             "type": "object",
             "properties": {
                 "adminNotes": {
-                    "$ref": "#/definitions/sql.NullString"
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "appointmentCategoryId": {
                     "type": "integer"
@@ -1782,17 +1497,41 @@ const docTemplateinternal = `{
                 "iirId": {
                     "type": "string"
                 },
-                "reason": {
-                    "$ref": "#/definitions/sql.NullString"
+                "prefDate1": {
+                    "$ref": "#/definitions/structs.NullableString"
                 },
-                "scheduledTime": {
-                    "type": "integer"
+                "prefDate2": {
+                    "$ref": "#/definitions/structs.NullableString"
+                },
+                "prefDate3": {
+                    "$ref": "#/definitions/structs.NullableString"
+                },
+                "prefTimeSlotID1": {
+                    "$ref": "#/definitions/structs.NullableInt64"
+                },
+                "prefTimeSlotID2": {
+                    "$ref": "#/definitions/structs.NullableInt64"
+                },
+                "prefTimeSlotID3": {
+                    "$ref": "#/definitions/structs.NullableInt64"
+                },
+                "reason": {
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "statusId": {
                     "type": "integer"
                 },
+                "timeSlotId": {
+                    "type": "integer"
+                },
                 "updatedAt": {
                     "type": "string"
+                },
+                "urgencyLevel": {
+                    "type": "string"
+                },
+                "urgencyScore": {
+                    "type": "number"
                 },
                 "whenDate": {
                     "type": "string"
@@ -1831,11 +1570,32 @@ const docTemplateinternal = `{
                 "iirId": {
                     "type": "string"
                 },
+                "preferredDate1": {
+                    "type": "string"
+                },
+                "preferredDate2": {
+                    "type": "string"
+                },
+                "preferredDate3": {
+                    "type": "string"
+                },
+                "preferredTimeSlot1": {
+                    "$ref": "#/definitions/appointments.TimeSlot"
+                },
+                "preferredTimeSlot2": {
+                    "$ref": "#/definitions/appointments.TimeSlot"
+                },
+                "preferredTimeSlot3": {
+                    "$ref": "#/definitions/appointments.TimeSlot"
+                },
                 "reason": {
                     "$ref": "#/definitions/structs.NullableString"
                 },
                 "status": {
                     "$ref": "#/definitions/appointments.AppointmentStatus"
+                },
+                "studentCorUrl": {
+                    "type": "string"
                 },
                 "studentNumber": {
                     "type": "string"
@@ -1846,8 +1606,17 @@ const docTemplateinternal = `{
                 "updatedAt": {
                     "type": "string"
                 },
+                "urgencyLevel": {
+                    "type": "string"
+                },
+                "urgencyScore": {
+                    "type": "number"
+                },
                 "user": {
-                    "$ref": "#/definitions/users.GetUserResponse"
+                    "$ref": "#/definitions/users.UserResponse"
+                },
+                "userId": {
+                    "type": "string"
                 },
                 "whenDate": {
                     "type": "string"
@@ -1857,9 +1626,6 @@ const docTemplateinternal = `{
         "appointments.AppointmentStatus": {
             "type": "object",
             "properties": {
-                "colorKey": {
-                    "type": "string"
-                },
                 "id": {
                     "type": "integer"
                 },
@@ -1924,92 +1690,6 @@ const docTemplateinternal = `{
                 }
             }
         },
-        "auth.LoginDTO": {
-            "type": "object",
-            "required": [
-                "email",
-                "password"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                }
-            }
-        },
-        "auth.MeResponse": {
-            "type": "object",
-            "properties": {
-                "createdAt": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "firstName": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "lastName": {
-                    "type": "string"
-                },
-                "middleName": {
-                    "type": "string"
-                },
-                "role": {
-                    "$ref": "#/definitions/users.Role"
-                },
-                "type": {
-                    "description": "\"native\" or \"idp\"",
-                    "type": "string"
-                }
-            }
-        },
-        "auth.RegisterDTO": {
-            "type": "object",
-            "required": [
-                "email",
-                "firstName",
-                "lastName",
-                "password"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "firstName": {
-                    "type": "string"
-                },
-                "lastName": {
-                    "type": "string"
-                },
-                "middleName": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 8
-                }
-            }
-        },
-        "idp.IDPTokenExchangeRequest": {
-            "type": "object",
-            "properties": {
-                "client_id": {
-                    "type": "string"
-                },
-                "client_secret": {
-                    "type": "string"
-                },
-                "code": {
-                    "type": "string"
-                }
-            }
-        },
         "integrations.ListStudentsSuccessResponse": {
             "type": "object",
             "properties": {
@@ -2059,7 +1739,7 @@ const docTemplateinternal = `{
                     "$ref": "#/definitions/locations.Region"
                 },
                 "streetDetail": {
-                    "type": "string"
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "studentNumber": {
                     "type": "string"
@@ -2069,9 +1749,6 @@ const docTemplateinternal = `{
         "integrations.OGOSStudentDTO": {
             "type": "object",
             "properties": {
-                "course": {
-                    "$ref": "#/definitions/students.Course"
-                },
                 "email": {
                     "type": "string"
                 },
@@ -2086,6 +1763,9 @@ const docTemplateinternal = `{
                 },
                 "mobileNumber": {
                     "type": "string"
+                },
+                "program": {
+                    "$ref": "#/definitions/students.Program"
                 },
                 "section": {
                     "type": "string"
@@ -2110,7 +1790,7 @@ const docTemplateinternal = `{
                 "gender": {
                     "$ref": "#/definitions/students.Gender"
                 },
-                "heightFt": {
+                "heightM": {
                     "type": "number"
                 },
                 "placeOfBirth": {
@@ -2174,7 +1854,7 @@ const docTemplateinternal = `{
         "locations.Barangay": {
             "type": "object",
             "properties": {
-                "cityId": {
+                "cityCode": {
                     "type": "integer"
                 },
                 "code": {
@@ -2195,7 +1875,7 @@ const docTemplateinternal = `{
                     "type": "string"
                 },
                 "district": {
-                    "type": "string"
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "id": {
                     "type": "integer"
@@ -2204,16 +1884,16 @@ const docTemplateinternal = `{
                     "type": "string"
                 },
                 "provinceCode": {
-                    "type": "string"
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "regionCode": {
-                    "type": "string"
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "type": {
-                    "type": "string"
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "zipCode": {
-                    "type": "string"
+                    "$ref": "#/definitions/structs.NullableString"
                 }
             }
         },
@@ -2282,7 +1962,16 @@ const docTemplateinternal = `{
         "slips.AttachmentDTO": {
             "type": "object",
             "properties": {
+                "attachmentType": {
+                    "type": "string"
+                },
                 "fileName": {
+                    "type": "string"
+                },
+                "fileSize": {
+                    "type": "integer"
+                },
+                "fileType": {
                     "type": "string"
                 },
                 "fileUrl": {
@@ -2290,34 +1979,23 @@ const docTemplateinternal = `{
                 },
                 "id": {
                     "type": "string"
-                }
-            }
-        },
-        "slips.SlipCategory": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
                 },
-                "name": {
+                "mimeType": {
+                    "type": "string"
+                },
+                "slipId": {
                     "type": "string"
                 }
             }
         },
-        "slips.SlipDTO": {
+        "slips.Slip": {
             "type": "object",
-            "required": [
-                "category",
-                "dateNeeded",
-                "dateOfAbsence",
-                "reason"
-            ],
             "properties": {
                 "adminNotes": {
                     "$ref": "#/definitions/structs.NullableString"
                 },
-                "category": {
-                    "$ref": "#/definitions/slips.SlipCategory"
+                "categoryId": {
+                    "type": "integer"
                 },
                 "createdAt": {
                     "type": "string"
@@ -2337,26 +2015,84 @@ const docTemplateinternal = `{
                 "reason": {
                     "type": "string"
                 },
+                "statusId": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "slips.SlipCategory": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "slips.SlipDTO": {
+            "type": "object",
+            "properties": {
+                "adminNotes": {
+                    "$ref": "#/definitions/structs.NullableString"
+                },
+                "category": {
+                    "$ref": "#/definitions/slips.SlipCategory"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "dateNeeded": {
+                    "type": "string"
+                },
+                "dateOfAbsence": {
+                    "type": "string"
+                },
+                "hasSignificantNote": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "iirId": {
+                    "type": "string"
+                },
+                "isVerified": {
+                    "type": "boolean"
+                },
+                "reason": {
+                    "type": "string"
+                },
                 "status": {
                     "$ref": "#/definitions/slips.SlipStatus"
                 },
+                "studentCorUrl": {
+                    "type": "string"
+                },
                 "studentNumber": {
                     "type": "string"
+                },
+                "ticket": {
+                    "$ref": "#/definitions/slips.TicketDTO"
                 },
                 "updatedAt": {
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/users.GetUserResponse"
+                    "$ref": "#/definitions/users.UserResponse"
+                },
+                "userId": {
+                    "type": "string"
                 }
             }
         },
         "slips.SlipStatus": {
             "type": "object",
             "properties": {
-                "colorKey": {
-                    "type": "string"
-                },
                 "id": {
                     "type": "integer"
                 },
@@ -2368,9 +2104,6 @@ const docTemplateinternal = `{
         "slips.SlipStatusCount": {
             "type": "object",
             "properties": {
-                "colorKey": {
-                    "type": "string"
-                },
                 "count": {
                     "type": "integer"
                 },
@@ -2378,6 +2111,31 @@ const docTemplateinternal = `{
                     "type": "integer"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "slips.TicketClaimRequest": {
+            "type": "object",
+            "required": [
+                "ticketCode"
+            ],
+            "properties": {
+                "ticketCode": {
+                    "type": "string"
+                }
+            }
+        },
+        "slips.TicketDTO": {
+            "type": "object",
+            "properties": {
+                "isVerified": {
+                    "type": "boolean"
+                },
+                "ticketCode": {
+                    "type": "string"
+                },
+                "verifiedAt": {
                     "type": "string"
                 }
             }
@@ -2396,14 +2154,15 @@ const docTemplateinternal = `{
                 }
             }
         },
-        "sql.NullString": {
+        "structs.NullableInt64": {
             "type": "object",
             "properties": {
-                "string": {
-                    "type": "string"
+                "int64": {
+                    "type": "integer",
+                    "format": "int64"
                 },
                 "valid": {
-                    "description": "Valid is true if String is not NULL",
+                    "description": "Valid is true if Int64 is not NULL",
                     "type": "boolean"
                 }
             }
@@ -2437,20 +2196,6 @@ const docTemplateinternal = `{
                 }
             }
         },
-        "students.Course": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
         "students.Gender": {
             "type": "object",
             "properties": {
@@ -2476,12 +2221,23 @@ const docTemplateinternal = `{
                 }
             }
         },
+        "students.Program": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "students.StudentProfileDTO": {
             "type": "object",
             "properties": {
-                "course": {
-                    "$ref": "#/definitions/students.Course"
-                },
                 "email": {
                     "type": "string"
                 },
@@ -2494,14 +2250,29 @@ const docTemplateinternal = `{
                 "iirId": {
                     "type": "string"
                 },
+                "isStudentCorValid": {
+                    "type": "boolean"
+                },
                 "lastName": {
                     "type": "string"
                 },
                 "middleName": {
                     "$ref": "#/definitions/structs.NullableString"
                 },
+                "profilePicture": {
+                    "type": "string"
+                },
+                "program": {
+                    "$ref": "#/definitions/students.Program"
+                },
                 "section": {
                     "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/students.StudentStatus"
+                },
+                "studentCorUrl": {
+                    "type": "string"
                 },
                 "studentNumber": {
                     "type": "string"
@@ -2517,7 +2288,29 @@ const docTemplateinternal = `{
                 }
             }
         },
-        "users.GetUserResponse": {
+        "students.StudentStatus": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "users.Role": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "users.UserResponse": {
             "type": "object",
             "properties": {
                 "createdAt": {
@@ -2532,27 +2325,28 @@ const docTemplateinternal = `{
                 "id": {
                     "type": "string"
                 },
+                "isActive": {
+                    "type": "boolean"
+                },
                 "lastName": {
                     "type": "string"
                 },
                 "middleName": {
                     "$ref": "#/definitions/structs.NullableString"
                 },
-                "role": {
-                    "$ref": "#/definitions/users.Role"
+                "profilePicture": {
+                    "type": "string"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/users.Role"
+                    }
+                },
+                "suffixName": {
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "updatedAt": {
-                    "type": "string"
-                }
-            }
-        },
-        "users.Role": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
                     "type": "string"
                 }
             }

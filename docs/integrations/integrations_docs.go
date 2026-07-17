@@ -195,8 +195,8 @@ const docTemplateintegrations = `{
                     },
                     {
                         "type": "integer",
-                        "description": "Filter by course ID",
-                        "name": "course_id",
+                        "description": "Filter by program ID",
+                        "name": "program_id",
                         "in": "query"
                     },
                     {
@@ -213,7 +213,7 @@ const docTemplateintegrations = `{
                     },
                     {
                         "type": "string",
-                        "description": "Order by field (first_name, last_name, student_number, created_at, updated_at, year_level, course_id)",
+                        "description": "Order by field",
                         "name": "order_by",
                         "in": "query"
                     },
@@ -492,7 +492,7 @@ const docTemplateintegrations = `{
                     "$ref": "#/definitions/locations.Region"
                 },
                 "streetDetail": {
-                    "type": "string"
+                    "$ref": "#/definitions/structs.NullableString"
                 },
                 "studentNumber": {
                     "type": "string"
@@ -502,9 +502,6 @@ const docTemplateintegrations = `{
         "integrations.OGOSStudentDTO": {
             "type": "object",
             "properties": {
-                "course": {
-                    "$ref": "#/definitions/students.Course"
-                },
                 "email": {
                     "type": "string"
                 },
@@ -519,6 +516,9 @@ const docTemplateintegrations = `{
                 },
                 "mobileNumber": {
                     "type": "string"
+                },
+                "program": {
+                    "$ref": "#/definitions/students.Program"
                 },
                 "section": {
                     "type": "string"
@@ -543,7 +543,7 @@ const docTemplateintegrations = `{
                 "gender": {
                     "$ref": "#/definitions/students.Gender"
                 },
-                "heightFt": {
+                "heightM": {
                     "type": "number"
                 },
                 "placeOfBirth": {
@@ -785,12 +785,9 @@ const docTemplateintegrations = `{
                 }
             }
         },
-        "students.Course": {
+        "students.Gender": {
             "type": "object",
             "properties": {
-                "code": {
-                    "type": "string"
-                },
                 "id": {
                     "type": "integer"
                 },
@@ -799,9 +796,12 @@ const docTemplateintegrations = `{
                 }
             }
         },
-        "students.Gender": {
+        "students.Program": {
             "type": "object",
             "properties": {
+                "code": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },

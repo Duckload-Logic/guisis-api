@@ -276,8 +276,10 @@ func (s *Service) GetTraceTracks(
 func (s *Service) DeleteLogsOlderThan(
 	ctx context.Context,
 	days int,
+	includeCategories []string,
+	excludeCategories []string,
 ) (int64, error) {
-	return s.repo.DeleteLogsOlderThan(ctx, days)
+	return s.repo.DeleteLogsOlderThan(ctx, days, includeCategories, excludeCategories)
 }
 
 func (s *Service) sanitizeMetadata(meta *audit.LogMetadata) {

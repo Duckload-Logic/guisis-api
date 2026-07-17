@@ -40,7 +40,7 @@ INSERT INTO educational_levels (level_name) VALUES
     ('Vocational'),
     ('College');
 
-INSERT INTO courses (code, course_name) VALUES
+INSERT INTO programs (code, program_name) VALUES
     ('BSBA-HRM', 'Bachelor of Science in Business Administration - Human Resource Management'),
     ('BSBA-MM', 'Bachelor of Science in Business Administration - Marketing Management'),
     ('BSED-ENGLISH', 'Bachelor of Science in Education - English'),

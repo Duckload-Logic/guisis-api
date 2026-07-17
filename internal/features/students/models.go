@@ -48,11 +48,11 @@ type EducationalAttainment struct {
 	Name string `db:"name" json:"name"`
 }
 
-// Course represents the domain entity for academic courses.
-type Course struct {
-	ID   int    `db:"id"          json:"id"`
-	Code string `db:"code"        json:"code"`
-	Name string `db:"course_name" json:"name"`
+// Program represents the domain entity for academic programs.
+type Program struct {
+	ID   int    `db:"id"           json:"id"`
+	Code string `db:"code"         json:"code"`
+	Name string `db:"program_name" json:"name"`
 }
 
 // CivilStatusType represents the domain entity for civil status types.
@@ -119,15 +119,15 @@ type StudentProfileView struct {
 	Email          string                 `db:"email"`
 	StudentNumber  string                 `db:"student_number"`
 	GenderID       int                    `db:"gender_id"`
-	CourseID       int                    `db:"course_id"`
+	ProgramID      int                    `db:"program_id"`
 	Section        int                    `db:"section"`
 	YearLevel      int                    `db:"year_level"`
 	StatusID       int                    `db:"status_id"`
 	StatusName     string                 `db:"status_name"`
 	GenderName     string                 `db:"gender_name"`
 	ProfilePicture structs.NullableString `db:"profile_picture"`
-	CourseCode     string                 `db:"course_code"`
-	CourseName     string                 `db:"course_name"`
+	ProgramCode    string                 `db:"program_code"`
+	ProgramName    string                 `db:"program_name"`
 }
 
 // IIRDraft represents an unsubmitted draft of the student's IIR form.
@@ -148,7 +148,7 @@ type IIRRecord struct {
 	UpdatedAt   time.Time `db:"updated_at"   json:"updatedAt"`
 }
 
-// StudentSelectedReason represents reasons why a student chose their course.
+// StudentSelectedReason represents reasons why a student chose their program.
 type StudentSelectedReason struct {
 	IIRID           string                 `db:"iir_id"            json:"iirId"`
 	ReasonID        int                    `db:"reason_id"         json:"reasonId"`
@@ -174,7 +174,7 @@ type StudentPersonalInfo struct {
 
 	// Academic Information
 	HighSchoolGWA float64 `db:"high_school_gwa" json:"highSchoolGWA"`
-	CourseID      int     `db:"course_id"       json:"courseId"`
+	ProgramID     int     `db:"program_id"      json:"programId"`
 	YearLevel     int     `db:"year_level"      json:"yearLevel"`
 	Section       int     `db:"section"         json:"section"`
 
@@ -396,8 +396,8 @@ type StudentCOR struct {
 	FileID        string               `db:"file_id"        json:"fileId"`
 	StudentID     string               `db:"student_id"     json:"studentId"`
 	StudentNumber string               `db:"student_number" json:"studentNumber"`
-	CourseCode    string               `db:"course_code"    json:"courseCode"`
-	CourseDesc    string               `db:"course_desc"    json:"courseDesc"`
+	ProgramCode   string               `db:"program_code"   json:"programCode"`
+	ProgramDesc   string               `db:"program_desc"   json:"programDesc"`
 	YearLevel     int                  `db:"year_level"     json:"yearLevel"`
 	Section       int                  `db:"section"        json:"section"`
 	Campus        string               `db:"campus"         json:"campus"`
@@ -433,9 +433,9 @@ type StudentPersonalInfoView struct {
 	WeightKg              float64                `db:"weight_kg"`
 	Complexion            string                 `db:"complexion"`
 	HighSchoolGWA         float64                `db:"high_school_gwa"`
-	CourseID              int                    `db:"course_id"`
-	CourseCode            string                 `db:"course_code"`
-	CourseName            string                 `db:"course_name"`
+	ProgramID             int                    `db:"program_id"`
+	ProgramCode           string                 `db:"program_code"`
+	ProgramName           string                 `db:"program_name"`
 	YearLevel             int                    `db:"year_level"`
 	Section               int                    `db:"section"`
 	PlaceOfBirth          string                 `db:"place_of_birth"`

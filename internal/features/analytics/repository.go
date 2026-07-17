@@ -18,10 +18,10 @@ func NewRepository(db *sqlx.DB) *Repository {
 func (r *Repository) GetTotalStudents(
 	ctx context.Context,
 	year int,
-	courseID int,
+	programID int,
 ) (int, error) {
 	var total int
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := "SELECT COUNT(*) FROM student_personal_info spi WHERE 1=1" + filter
 	err := r.db.GetContext(ctx, &total, query, args...)
 	return total, err
@@ -30,10 +30,10 @@ func (r *Repository) GetTotalStudents(
 func (r *Repository) GetGenderStats(
 	ctx context.Context,
 	year int,
-	courseID int,
+	programID int,
 ) ([]DemographicStat, error) {
 	var results []DemographicStat
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			spi.gender as category,
@@ -235,9 +235,9 @@ func (r *Repository) GetMonthlyAppointmentStats(
 // --- PERSONAL INFORMATION ---
 
 func (r *Repository) GetAgeStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			CAST(TIMESTAMPDIFF(
@@ -258,9 +258,9 @@ func (r *Repository) GetAgeStats(
 }
 
 func (r *Repository) GetCivilStatusStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			COALESCE(status_name, 'Not Indicated') AS category,
@@ -280,9 +280,9 @@ func (r *Repository) GetCivilStatusStats(
 }
 
 func (r *Repository) GetReligionStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			CASE
@@ -310,9 +310,9 @@ func (r *Repository) GetReligionStats(
 }
 
 func (r *Repository) GetCityAddressStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			CASE
@@ -339,9 +339,9 @@ func (r *Repository) GetCityAddressStats(
 // --- FAMILY & FINANCIAL BACKGROUND ---
 
 func (r *Repository) GetMonthlyIncomeStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			COALESCE(ir.range_text, 'Not Indicated') AS category,
@@ -362,9 +362,9 @@ func (r *Repository) GetMonthlyIncomeStats(
 }
 
 func (r *Repository) GetOrdinalPositionStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			CASE
@@ -391,9 +391,9 @@ func (r *Repository) GetOrdinalPositionStats(
 }
 
 func (r *Repository) GetFatherEducationStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			COALESCE(ea.name, 'Not Indicated') AS category,
@@ -428,9 +428,9 @@ func (r *Repository) GetFatherEducationStats(
 }
 
 func (r *Repository) GetMotherEducationStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			COALESCE(ea.name, 'Not Indicated') AS category,
@@ -465,9 +465,9 @@ func (r *Repository) GetMotherEducationStats(
 }
 
 func (r *Repository) GetParentsMaritalStatusStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			COALESCE(pst.status_name, 'Not Indicated') AS category,
@@ -487,9 +487,9 @@ func (r *Repository) GetParentsMaritalStatusStats(
 }
 
 func (r *Repository) GetQuietStudyPlaceStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			CASE WHEN fb.have_quiet_place_to_study = 1 THEN 'Yes' ELSE 'No' END AS category,
@@ -510,9 +510,9 @@ func (r *Repository) GetQuietStudyPlaceStats(
 // --- ACADEMIC BACKGROUND ---
 
 func (r *Repository) GetHSGWAStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			CASE
@@ -555,9 +555,9 @@ func (r *Repository) GetHSGWAStats(
 }
 
 func (r *Repository) GetElementaryStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			COALESCE(sd.school_type, 'Not Indicated') AS category,
@@ -581,9 +581,9 @@ func (r *Repository) GetElementaryStats(
 }
 
 func (r *Repository) GetJuniorHighStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			COALESCE(sd.school_type, 'Not Indicated') AS category,
@@ -607,9 +607,9 @@ func (r *Repository) GetJuniorHighStats(
 }
 
 func (r *Repository) GetSeniorHighStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			COALESCE(sd.school_type, 'Not Indicated') AS category,
@@ -633,9 +633,9 @@ func (r *Repository) GetSeniorHighStats(
 }
 
 func (r *Repository) GetHighSchoolStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			COALESCE(sd.school_type, 'Not Indicated') AS category,
@@ -662,9 +662,9 @@ func (r *Repository) GetHighSchoolStats(
 }
 
 func (r *Repository) GetVocationalStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			COALESCE(sd.school_type, 'Not Indicated') AS category,
@@ -688,9 +688,9 @@ func (r *Repository) GetVocationalStats(
 }
 
 func (r *Repository) GetCollegeStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			COALESCE(sd.school_type, 'Not Indicated') AS category,
@@ -714,9 +714,9 @@ func (r *Repository) GetCollegeStats(
 }
 
 func (r *Repository) GetNatureOfSchoolingStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			COALESCE(eb.nature_of_schooling, 'Not Indicated') AS category,
@@ -735,9 +735,9 @@ func (r *Repository) GetNatureOfSchoolingStats(
 }
 
 func (r *Repository) GetFatherLifeStatusStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			CASE
@@ -763,9 +763,9 @@ func (r *Repository) GetFatherLifeStatusStats(
 }
 
 func (r *Repository) GetMotherLifeStatusStats(
-	ctx context.Context, year int, courseID int,
+	ctx context.Context, year int, programID int,
 ) ([]DemographicStat, error) {
-	filter, args := r.buildFilter(year, courseID)
+	filter, args := r.buildFilter(year, programID)
 	query := `
 		SELECT
 			CASE
@@ -794,7 +794,7 @@ func (r *Repository) GetMotherLifeStatusStats(
 
 func (r *Repository) buildFilter(
 	year int,
-	courseID int,
+	programID int,
 ) (string, []interface{}) {
 	filter := ""
 	args := []interface{}{}
@@ -803,9 +803,9 @@ func (r *Repository) buildFilter(
 		filter += " AND spi.student_number LIKE ?"
 		args = append(args, fmt.Sprintf("%d-%%", year))
 	}
-	if courseID > 0 {
-		filter += " AND spi.course_id = ?"
-		args = append(args, courseID)
+	if programID > 0 {
+		filter += " AND spi.program_id = ?"
+		args = append(args, programID)
 	}
 	return filter, args
 }
@@ -828,12 +828,12 @@ func (r *Repository) executeStatQuery(
 	return results, nil
 }
 
-func (r *Repository) GetCourse(
+func (r *Repository) GetProgram(
 	ctx context.Context,
-	courseID int,
+	programID int,
 ) (string, string, error) {
 	var code, name string
-	query := "SELECT code, course_name FROM courses WHERE id = ?"
-	err := r.db.QueryRowContext(ctx, query, courseID).Scan(&code, &name)
+	query := "SELECT code, program_name FROM programs WHERE id = ?"
+	err := r.db.QueryRowContext(ctx, query, programID).Scan(&code, &name)
 	return code, name, err
 }

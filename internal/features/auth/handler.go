@@ -343,15 +343,6 @@ func (h *Handler) GetMe(c *gin.Context) {
 	response.SendSuccess(c, user)
 }
 
-type OTPRequest struct {
-	Email string `json:"email" binding:"required,email"`
-}
-
-type OTPLoginRequest struct {
-	Email string `json:"email" binding:"required,email"`
-	OTP   string `json:"otp"   binding:"required,len=6"`
-}
-
 // PostOTPRequest triggers sending the OTP to the user's email.
 func (h *Handler) PostOTPRequest(c *gin.Context) {
 	if h.cfg.IsProduction && !h.cfg.IsStaging {
@@ -394,7 +385,7 @@ func (h *Handler) PostOTPRequest(c *gin.Context) {
 
 // PostOTPLogin authenticates the user using email and OTP.
 func (h *Handler) PostOTPLogin(c *gin.Context) {
-	if h.cfg.IsProduction && !h.cfg.IsStaging {
+	if !h.cfg.IsProduction || h.cfg.IsStaging {
 		if h.service.IsIDPUp(c.Request.Context(), h.cfg) {
 			fmt.Printf(
 				"[PostOTPLogin] {IDP Check}: " +

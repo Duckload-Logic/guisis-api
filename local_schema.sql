@@ -275,21 +275,21 @@ CREATE TABLE `civil_status_types` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `courses`
+-- Table structure for table `programs`
 --
 
-DROP TABLE IF EXISTS `courses`;
+DROP TABLE IF EXISTS `programs`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `courses` (
+CREATE TABLE `programs` (
   `id` int NOT NULL AUTO_INCREMENT,
   `code` varchar(20) NOT NULL,
-  `course_name` varchar(100) NOT NULL,
+  `program_name` varchar(100) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `code` (`code`),
-  UNIQUE KEY `course_name` (`course_name`),
-  UNIQUE KEY `unique_idx_course_code` (`code`),
-  UNIQUE KEY `unique_idx_course_name` (`course_name`)
+  UNIQUE KEY `program_name` (`program_name`),
+  UNIQUE KEY `unique_idx_program_code` (`code`),
+  UNIQUE KEY `unique_idx_program_name` (`program_name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -943,8 +943,8 @@ CREATE TABLE `student_cors` (
   `file_id` char(36) NOT NULL,
   `student_id` char(36) NOT NULL,
   `student_number` varchar(20) NOT NULL,
-  `course_desc` varchar(255) NOT NULL,
-  `course_code` varchar(10) NOT NULL,
+  `program_desc` varchar(255) NOT NULL,
+  `program_code` varchar(10) NOT NULL,
   `year_level` int NOT NULL,
   `section` int NOT NULL,
   `campus` varchar(20) NOT NULL,
@@ -1070,7 +1070,7 @@ CREATE TABLE `student_personal_info` (
   `weight_kg` decimal(5,2) NOT NULL,
   `complexion` varchar(50) NOT NULL,
   `high_school_gwa` decimal(4,2) NOT NULL,
-  `course_id` int NOT NULL,
+  `program_id` int NOT NULL,
   `year_level` int NOT NULL,
   `section` int NOT NULL,
   `place_of_birth` varchar(255) NOT NULL,
@@ -1094,7 +1094,7 @@ CREATE TABLE `student_personal_info` (
   KEY `idx_student_personal_info_iir_id` (`iir_id`),
   KEY `idx_student_personal_info_civil_status_id` (`civil_status_id`),
   KEY `idx_student_personal_info_religion_id` (`religion_id`),
-  KEY `idx_student_personal_info_course_id` (`course_id`),
+  KEY `idx_student_personal_info_program_id` (`program_id`),
   KEY `idx_student_personal_info_status_id` (`status_id`),
   CONSTRAINT `fk_student_status`
     FOREIGN KEY (`status_id`) REFERENCES `student_statuses` (`id`),
@@ -1106,7 +1106,7 @@ CREATE TABLE `student_personal_info` (
   CONSTRAINT `student_personal_info_ibfk_3`
     FOREIGN KEY (`civil_status_id`) REFERENCES `civil_status_types` (`id`),
   CONSTRAINT `student_personal_info_ibfk_4`
-    FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`)
+    FOREIGN KEY (`program_id`) REFERENCES `programs` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1621,7 +1621,7 @@ CREATE TABLE `whitelists` (
 /*!50001 SET collation_connection      = utf8mb4_general_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`mysqladmin`@`%` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_student_current_cors` AS select `sc`.`file_id` AS `file_id`,`sc`.`student_id` AS `student_id`,`sc`.`student_number` AS `student_number`,`sc`.`course_desc` AS `course_desc`,`sc`.`course_code` AS `course_code`,`sc`.`year_level` AS `year_level`,`sc`.`section` AS `section`,`sc`.`campus` AS `campus`,`sc`.`year_start` AS `year_start`,`sc`.`year_end` AS `year_end`,`sc`.`term` AS `term`,`sc`.`valid_from` AS `valid_from`,`sc`.`valid_until` AS `valid_until` from (`student_cors` `sc` join `academic_settings` `ac` on((`ac`.`id` = 1))) where ((`sc`.`year_start` = `ac`.`current_year_start`) and (`sc`.`term` = `ac`.`current_term`) and (`sc`.`valid_from` is not null) and (`sc`.`valid_until` is not null)) */;
+/*!50001 VIEW `v_student_current_cors` AS select `sc`.`file_id` AS `file_id`,`sc`.`student_id` AS `student_id`,`sc`.`student_number` AS `student_number`,`sc`.`program_desc` AS `program_desc`,`sc`.`program_code` AS `program_code`,`sc`.`year_level` AS `year_level`,`sc`.`section` AS `section`,`sc`.`campus` AS `campus`,`sc`.`year_start` AS `year_start`,`sc`.`year_end` AS `year_end`,`sc`.`term` AS `term`,`sc`.`valid_from` AS `valid_from`,`sc`.`valid_until` AS `valid_until` from (`student_cors` `sc` join `academic_settings` `ac` on((`ac`.`id` = 1))) where ((`sc`.`year_start` = `ac`.`current_year_start`) and (`sc`.`term` = `ac`.`current_term`) and (`sc`.`valid_from` is not null) and (`sc`.`valid_until` is not null)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -1683,9 +1683,9 @@ SELECT
   spi.weight_kg,
   spi.complexion,
   spi.high_school_gwa,
-  spi.course_id,
-  COALESCE(c.code, '') AS course_code,
-  COALESCE(c.course_name, '') AS course_name,
+  spi.program_id,
+  COALESCE(p.code, '') AS program_code,
+  COALESCE(p.program_name, '') AS program_name,
   spi.year_level,
   spi.section,
   spi.place_of_birth,
@@ -1714,7 +1714,7 @@ LEFT JOIN profile_pictures pp ON pp.user_id = iir.user_id
 LEFT JOIN files pf ON pf.id = pp.file_id
 LEFT JOIN civil_status_types cst ON spi.civil_status_id = cst.id
 LEFT JOIN religions rel ON spi.religion_id = rel.id
-LEFT JOIN courses c ON spi.course_id = c.id
+LEFT JOIN programs p ON spi.program_id = p.id
 LEFT JOIN student_statuses ss ON spi.status_id = ss.id
 LEFT JOIN emergency_contacts ec ON spi.iir_id = ec.iir_id
 LEFT JOIN student_relationship_types ert ON ec.relationship_id = ert.id;
@@ -1735,15 +1735,15 @@ SELECT
   u.email,
   spi.student_number,
   CASE WHEN spi.gender = 'Male' THEN 1 ELSE 2 END AS gender_id,
-  spi.course_id,
+  spi.program_id,
   spi.section,
   spi.year_level,
   spi.status_id,
   COALESCE(ss.status_name, '') AS status_name,
   spi.gender AS gender_name,
   COALESCE(pf.file_url, '') AS profile_picture,
-  COALESCE(c.code, '') AS course_code,
-  COALESCE(c.course_name, '') AS course_name,
+  COALESCE(p.code, '') AS program_code,
+  COALESCE(p.program_name, '') AS program_name,
   iir.created_at,
   iir.updated_at
 FROM iir_records iir
@@ -1752,7 +1752,7 @@ JOIN student_personal_info spi ON iir.id = spi.iir_id
 LEFT JOIN profile_pictures pp ON pp.user_id = iir.user_id
 LEFT JOIN files pf ON pf.id = pp.file_id
 LEFT JOIN student_statuses ss ON spi.status_id = ss.id
-LEFT JOIN courses c ON spi.course_id = c.id
+LEFT JOIN programs p ON spi.program_id = p.id
 WHERE iir.is_submitted = TRUE;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 

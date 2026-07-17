@@ -257,6 +257,7 @@ func (r *Repository) DeleteOldNotifications(
 	query := `
 		DELETE FROM notifications
 		WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)
+		AND is_read = TRUE
 	`
 	res, err := r.db.ExecContext(ctx, query, days)
 	if err != nil {

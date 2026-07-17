@@ -18,16 +18,16 @@ func NewHandler(service *Service) *Handler {
 
 func (h *Handler) GetIIRAnalyticsReport(c *gin.Context) {
 	yearStr := c.DefaultQuery("year", "0")
-	courseIDStr := c.DefaultQuery("course_id", "0")
+	programIDStr := c.DefaultQuery("program_id", "0")
 
-	var year, courseID int
+	var year, programID int
 	fmt.Sscanf(yearStr, "%d", &year)
-	fmt.Sscanf(courseIDStr, "%d", &courseID)
+	fmt.Sscanf(programIDStr, "%d", &programID)
 
 	dashboardData, err := h.service.GetIIRAnalyticsReport(
 		c.Request.Context(),
 		year,
-		courseID,
+		programID,
 	)
 	if err != nil {
 		fmt.Printf("[GetIIRAnalyticsReport] {Fetch Data}: %v\n", err)
@@ -45,16 +45,16 @@ func (h *Handler) GetIIRAnalyticsReport(c *gin.Context) {
 
 func (h *Handler) ExportIIRAnalyticsReport(c *gin.Context) {
 	yearStr := c.DefaultQuery("year", "0")
-	courseIDStr := c.DefaultQuery("course_id", "0")
+	programIDStr := c.DefaultQuery("program_id", "0")
 
-	var year, courseID int
+	var year, programID int
 	fmt.Sscanf(yearStr, "%d", &year)
-	fmt.Sscanf(courseIDStr, "%d", &courseID)
+	fmt.Sscanf(programIDStr, "%d", &programID)
 
 	pdfBytes, err := h.service.ExportIIRAnalyticsReport(
 		c.Request.Context(),
 		year,
-		courseID,
+		programID,
 	)
 	if err != nil {
 		fmt.Printf("[ExportIIRAnalyticsReport] {Generate PDF}: %v\n", err)

@@ -443,7 +443,7 @@ func insertPersonalInfo(
 		WeightKg:        gofakeit.Float64Range(40, 100),
 		Complexion:      gofakeit.Color(),
 		HighSchoolGWA:   hsGwa,
-		CourseID:        randomChoice(courseIDs).(int),
+		ProgramID:       randomChoice(programIDs).(int),
 		YearLevel:       yearLevel,
 		Section:         rand.Intn(5) + 1,
 		PlaceOfBirth:    gofakeit.City(),

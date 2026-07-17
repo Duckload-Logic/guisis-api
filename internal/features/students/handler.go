@@ -152,20 +152,20 @@ func (h *Handler) GetEducationalAttainments(c *gin.Context) {
 	response.SendSuccess(c, attainments)
 }
 
-func (h *Handler) GetCourses(c *gin.Context) {
-	courses, err := h.service.GetCourses(c.Request.Context())
+func (h *Handler) GetPrograms(c *gin.Context) {
+	programs, err := h.service.GetPrograms(c.Request.Context())
 	if err != nil {
-		log.Printf("[GetCourses] {Service Call}: %v", err)
+		log.Printf("[GetPrograms] {Service Call}: %v", err)
 		response.SendError(
 			c,
-			"Failed to get courses",
+			"Failed to get programs",
 			http.StatusInternalServerError,
 			nil,
 		)
 		return
 	}
 
-	response.SendSuccess(c, courses)
+	response.SendSuccess(c, programs)
 }
 
 func (h *Handler) GetCivilStatusTypes(c *gin.Context) {
@@ -272,7 +272,7 @@ func (h *Handler) GetActivityOptions(c *gin.Context) {
 // @Tags         Students
 // @Accept       json
 // @Produce      json
-// @Param        course     query     string  false  "Filter by course"
+// @Param        program_id query     int     false  "Filter by program ID"
 // @Param        year_level query     int     false  "Filter by year level"
 // @Param		gender_id query     int     false  "Filter by gender ID"
 // @Param        page       query     int     false  "Page number" default(1)

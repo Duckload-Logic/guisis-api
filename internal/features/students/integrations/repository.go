@@ -26,15 +26,15 @@ func (r *Repository) ListStudents(
 			u.last_name AS last_name,
 			u.email AS email,
 			sp.mobile_number AS mobile_number,
-			c.id AS course_id,
-			c.code AS course_code,
-			c.course_name AS course_name,
+			p.id AS program_id,
+			p.code AS program_code,
+			p.program_name AS program_name,
 			sp.year_level AS year_level,
 			sp.section AS section
 		FROM users u
 		JOIN iir_records i ON i.user_id = u.id
 		JOIN student_personal_info sp ON sp.iir_id = i.id
-		JOIN courses c ON sp.course_id = c.id
+		JOIN programs p ON sp.program_id = p.id
 		WHERE 1=1
 	`
 	var args []interface{}
@@ -50,9 +50,9 @@ func (r *Repository) ListStudents(
 		args = append(args, searchTerm, searchTerm, searchTerm)
 	}
 
-	if req.CourseID != 0 {
-		query += " AND c.id = ?"
-		args = append(args, req.CourseID)
+	if req.ProgramID != 0 {
+		query += " AND p.id = ?"
+		args = append(args, req.ProgramID)
 	}
 
 	if req.GenderID != 0 {
@@ -102,15 +102,15 @@ func (r *Repository) GetStudentByStudentNumber(
 			u.last_name AS last_name,
 			u.email AS email,
 			sp.mobile_number AS mobile_number,
-			c.id AS course_id,
-			c.code AS course_code,
-			c.course_name AS course_name,
+			p.id AS program_id,
+			p.code AS program_code,
+			p.program_name AS program_name,
 			sp.year_level AS year_level,
 			sp.section AS section
 		FROM users u
 		JOIN iir_records i ON i.user_id = u.id
 		JOIN student_personal_info sp ON sp.iir_id = i.id
-		JOIN courses c ON sp.course_id = c.id
+		JOIN programs p ON sp.program_id = p.id
 		WHERE sp.student_number = ?
 		LIMIT 1
 	`
@@ -136,15 +136,15 @@ func (r *Repository) GetStudentByEmail(
 			u.last_name AS last_name,
 			u.email AS email,
 			sp.mobile_number AS mobile_number,
-			c.id AS course_id,
-			c.code AS course_code,
-			c.course_name AS course_name,
+			p.id AS program_id,
+			p.code AS program_code,
+			p.program_name AS program_name,
 			sp.year_level AS year_level,
 			sp.section AS section
 		FROM users u
 		JOIN iir_records i ON i.user_id = u.id
 		JOIN student_personal_info sp ON sp.iir_id = i.id
-		JOIN courses c ON sp.course_id = c.id
+		JOIN programs p ON sp.program_id = p.id
 		WHERE u.email = ?
 		LIMIT 1
 	`

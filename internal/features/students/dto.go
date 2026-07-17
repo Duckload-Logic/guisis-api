@@ -10,7 +10,7 @@ import (
 // List Students
 type ListStudentsRequest struct {
 	structs.PaginationRequest
-	CourseID  int `form:"course_id,omitempty"`
+	ProgramID int `form:"program_id,omitempty"`
 	GenderID  int `form:"gender_id,omitempty"`
 	YearLevel int `form:"year_level,omitempty"`
 	StatusID  int `form:"status_id,omitempty"`
@@ -31,7 +31,7 @@ type StudentProfileDTO struct {
 	Gender            Gender                 `json:"gender"`
 	Email             string                 `json:"email"`
 	StudentNumber     string                 `json:"studentNumber"`
-	Course            Course                 `json:"course"`
+	Program           Program                `json:"program"`
 	Section           int                    `json:"section"`
 	YearLevel         int                    `json:"yearLevel"`
 	Status            StudentStatus          `json:"status"`
@@ -96,7 +96,7 @@ type StudentPersonalInfoDTO struct {
 	WeightKg              float64                `json:"weightKg"                        binding:"required"`
 	Complexion            string                 `json:"complexion"                      binding:"required"`
 	HighSchoolGWA         float64                `json:"highSchoolGWA"                   binding:"required"`
-	Course                Course                 `json:"course"                          binding:"required"`
+	Program Program `json:"program" binding:"required"`
 	YearLevel             int                    `json:"yearLevel"                       binding:"required"`
 	Section               int                    `json:"section"                         binding:"required"`
 	PlaceOfBirth          string                 `json:"placeOfBirth"                    binding:"required"`
@@ -122,7 +122,7 @@ type BulkUpdateStatusRequest struct {
 	GraduationYear    *int     `json:"graduationYear,omitempty"`
 	Filters           struct {
 		Search     string `json:"search"`
-		CourseID   int    `json:"courseId"`
+		ProgramID  int    `json:"programId"`
 		YearLevel  int    `form:"yearLevel"`
 		EnrollYear int    `json:"enrollYear"`
 	} `json:"filters"`
@@ -312,10 +312,10 @@ func (st *StudentProfileView) ToDTO() StudentProfileDTO {
 		Email:          st.Email,
 		StudentNumber:  st.StudentNumber,
 		ProfilePicture: st.ProfilePicture.String,
-		Course: Course{
-			ID:   st.CourseID,
-			Code: st.CourseCode,
-			Name: st.CourseName,
+		Program: Program{
+			ID:   st.ProgramID,
+			Code: st.ProgramCode,
+			Name: st.ProgramName,
 		},
 		Section:   st.Section,
 		YearLevel: st.YearLevel,
@@ -361,10 +361,10 @@ func (view *StudentPersonalInfoView) ToDTO(
 		WeightKg:      view.WeightKg,
 		Complexion:    view.Complexion,
 		HighSchoolGWA: view.HighSchoolGWA,
-		Course: Course{
-			ID:   view.CourseID,
-			Code: view.CourseCode,
-			Name: view.CourseName,
+		Program: Program{
+			ID:   view.ProgramID,
+			Code: view.ProgramCode,
+			Name: view.ProgramName,
 		},
 		YearLevel:             view.YearLevel,
 		Section:               view.Section,

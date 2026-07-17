@@ -12,7 +12,7 @@ type OGOSLinkStudentRequest struct {
 
 type OGOSListStudentsRequest struct {
 	structs.PaginationRequest
-	CourseID  int `form:"course_id,omitempty"`
+	ProgramID int `form:"program_id,omitempty"`
 	GenderID  int `form:"gender_id,omitempty"`
 	YearLevel int `form:"year_level,omitempty"`
 }
@@ -33,7 +33,7 @@ type OGOSStudentDTO struct {
 	Email        string `json:"email"`
 	MobileNumber string `json:"mobileNumber"`
 
-	Course    students.Course `json:"course"`
+	Program   students.Program `json:"program"`
 	YearLevel int             `json:"yearLevel"`
 	Section   string          `json:"section"`
 }

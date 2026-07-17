@@ -16,9 +16,9 @@ type OGOSStudentView struct {
 	Email        string `db:"email"`
 	MobileNumber string `db:"mobile_number"`
 
-	CourseID   int    `db:"course_id"`
-	CourseCode string `db:"course_code"`
-	CourseName string `db:"course_name"`
+	ProgramID   int    `db:"program_id"`
+	ProgramCode string `db:"program_code"`
+	ProgramName string `db:"program_name"`
 	YearLevel  int    `db:"year_level"`
 	Section    string `db:"section"`
 }

@@ -254,12 +254,33 @@ func (r *Repository) GetByTraceID(
 func (r *Repository) DeleteLogsOlderThan(
 	ctx context.Context,
 	days int,
+	includeCategories []string,
+	excludeCategories []string,
 ) (int64, error) {
 	query := `
 		DELETE FROM system_logs
 		WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)
 	`
-	res, err := r.db.ExecContext(ctx, query, days)
+	args := []interface{}{days}
+
+	if len(includeCategories) > 0 {
+		query += " AND category IN (?)"
+		args = append(args, includeCategories)
+	}
+
+	if len(excludeCategories) > 0 {
+		query += " AND category NOT IN (?)"
+		args = append(args, excludeCategories)
+	}
+
+	var err error
+	query, args, err = sqlx.In(query, args...)
+	if err != nil {
+		return 0, fmt.Errorf("failed to bind query: %w", err)
+	}
+	query = r.db.Rebind(query)
+
+	res, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return 0, fmt.Errorf("failed to delete old logs: %w", err)
 	}

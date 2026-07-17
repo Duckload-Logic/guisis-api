@@ -40,7 +40,7 @@ var (
 	civilStatusIDs              []int
 	civilStatusByName           map[string]int
 	religionIDs                 []int
-	courseIDs                   []int
+	programIDs                  []int
 	enrollmentReasonIDs         []int
 	supportTypeIDs              []int
 	incomeRangeIDs              []int

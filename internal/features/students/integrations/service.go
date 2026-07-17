@@ -38,10 +38,10 @@ func (s *Service) ListStudents(
 			LastName:      student.LastName,
 			Email:         student.Email,
 			MobileNumber:  student.MobileNumber,
-			Course: students.Course{
-				ID:   student.CourseID,
-				Code: student.CourseCode,
-				Name: student.CourseName,
+			Program: students.Program{
+				ID:   student.ProgramID,
+				Code: student.ProgramCode,
+				Name: student.ProgramName,
 			},
 			YearLevel: student.YearLevel,
 			Section:   student.Section,
@@ -72,10 +72,10 @@ func (s *Service) GetStudentByStudentNumber(
 		LastName:      student.LastName,
 		Email:         student.Email,
 		MobileNumber:  student.MobileNumber,
-		Course: students.Course{
-			ID:   student.CourseID,
-			Code: student.CourseCode,
-			Name: student.CourseName,
+		Program: students.Program{
+			ID:   student.ProgramID,
+			Code: student.ProgramCode,
+			Name: student.ProgramName,
 		},
 		YearLevel: student.YearLevel,
 		Section:   student.Section,
@@ -102,10 +102,10 @@ func (s *Service) GetStudentByEmail(
 		LastName:      student.LastName,
 		Email:         student.Email,
 		MobileNumber:  student.MobileNumber,
-		Course: students.Course{
-			ID:   student.CourseID,
-			Code: student.CourseCode,
-			Name: student.CourseName,
+		Program: students.Program{
+			ID:   student.ProgramID,
+			Code: student.ProgramCode,
+			Name: student.ProgramName,
 		},
 		YearLevel: student.YearLevel,
 		Section:   student.Section,

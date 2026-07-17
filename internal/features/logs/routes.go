@@ -31,6 +31,6 @@ func RegisterRoutes(
 		adminOnly.GET("/activity", h.GetLogsActivity)
 		adminOnly.GET("/trace/:traceId", h.GetTraceTracks)
 		adminOnly.GET("/:id", h.GetLog)
-		adminOnly.POST("/cleanup", h.PostLogsCleanup)
+		// adminOnly.POST("/cleanup", h.PostLogsCleanup)
 	}
 }

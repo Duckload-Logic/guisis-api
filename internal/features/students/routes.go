@@ -35,7 +35,7 @@ func RegisterRoutes(
 		lookupRoutes.GET("/activity-options", h.GetActivityOptions)
 		lookupRoutes.GET("/support-types", h.GetStudentSupportTypes)
 		lookupRoutes.GET("/support-types/siblings", h.GetSiblingSupportTypes)
-		lookupRoutes.GET("/courses", h.GetCourses)
+		lookupRoutes.GET("/programs", h.GetPrograms)
 		lookupRoutes.GET("/civil-statuses", h.GetCivilStatusTypes)
 		lookupRoutes.GET(
 			"/nature-of-residence-types",

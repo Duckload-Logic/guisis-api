@@ -31,14 +31,12 @@ definitions:
       region:
         $ref: '#/definitions/locations.Region'
       streetDetail:
-        type: string
+        $ref: '#/definitions/structs.NullableString'
       studentNumber:
         type: string
     type: object
   integrations.OGOSStudentDTO:
     properties:
-      course:
-        $ref: '#/definitions/students.Course'
       email:
         type: string
       firstName:
@@ -49,6 +47,8 @@ definitions:
         $ref: '#/definitions/structs.NullableString'
       mobileNumber:
         type: string
+      program:
+        $ref: '#/definitions/students.Program'
       section:
         type: string
       studentNumber:
@@ -64,7 +64,7 @@ definitions:
         type: string
       gender:
         $ref: '#/definitions/students.Gender'
-      heightFt:
+      heightM:
         type: number
       placeOfBirth:
         type: string
@@ -222,17 +222,17 @@ definitions:
       totalPages:
         type: integer
     type: object
-  students.Course:
+  students.Gender:
     properties:
-      code:
-        type: string
       id:
         type: integer
       name:
         type: string
     type: object
-  students.Gender:
+  students.Program:
     properties:
+      code:
+        type: string
       id:
         type: integer
       name:
@@ -470,9 +470,9 @@ paths:
         in: query
         name: search
         type: string
-      - description: Filter by course ID
+      - description: Filter by program ID
         in: query
-        name: course_id
+        name: program_id
         type: integer
       - description: Filter by gender ID
         in: query
@@ -482,8 +482,7 @@ paths:
         in: query
         name: year_level
         type: integer
-      - description: Order by field (first_name, last_name, student_number, created_at,
-          updated_at, year_level, course_id)
+      - description: Order by field
         in: query
         name: order_by
         type: string
