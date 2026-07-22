@@ -38,7 +38,7 @@ func Initialize(db *sqlx.DB, cfg *config.Config) (*Application, error) {
 		fileStorage = storage.NewDiskStorage(uploadDir)
 	}
 
-	if cfg.IsProduction {
+	if cfg.IsProduction || cfg.IsStaging {
 		emailer = email.NewSMTPMailer(
 			cfg.SMTPHost,
 			cfg.SMTPPort,
