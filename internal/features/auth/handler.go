@@ -262,6 +262,11 @@ func (h *Handler) GetAuthorizeURL(c *gin.Context) {
 				"IDP is down, redirecting to native fallback\n",
 		)
 		uiBaseURL := "http://localhost:5173"
+
+		if h.cfg.IsStaging {
+			uiBaseURL = "https://staging.guisis.dllbsit2027.com"
+		}
+
 		if h.cfg.IsProduction {
 			uiBaseURL = "https://guisis.dllbsit2027.com"
 		}
