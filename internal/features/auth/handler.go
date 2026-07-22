@@ -263,12 +263,19 @@ func (h *Handler) GetAuthorizeURL(c *gin.Context) {
 		)
 		uiBaseURL := "http://localhost:5173"
 
-		if h.cfg.IsStaging {
-			uiBaseURL = "https://staging.guisis.dllbsit2027.com"
-		}
-
-		if h.cfg.IsProduction {
-			uiBaseURL = "https://guisis.dllbsit2027.com"
+		if referer := c.GetHeader("Referer"); referer != "" {
+			if u, err := url.Parse(referer); err == nil {
+				if u.Scheme != "" && u.Host != "" {
+					uiBaseURL = fmt.Sprintf("%s://%s", u.Scheme, u.Host)
+				}
+			}
+		} else {
+			if h.cfg.IsStaging {
+				uiBaseURL = "https://staging.guisis.dllbsit2027.com"
+			}
+			if h.cfg.IsProduction {
+				uiBaseURL = "https://guisis.dllbsit2027.com"
+			}
 		}
 		fallbackURL := fmt.Sprintf("%s/login?fallback=true", uiBaseURL)
 		c.Redirect(http.StatusFound, fallbackURL)
