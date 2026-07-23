@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -451,4 +452,8 @@ func (h *Handler) PostOTPLogin(c *gin.Context) {
 	h.setAuthCookies(c, accessToken, refreshToken)
 
 	response.SendSuccess(c, gin.H{"userId": userID})
+}
+
+func (h *Handler) IsIDPUp(ctx context.Context) bool {
+	return h.service.IsIDPUp(ctx, h.cfg)
 }

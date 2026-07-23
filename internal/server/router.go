@@ -1,7 +1,10 @@
 package server
 
 import (
+	"context"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -13,6 +16,7 @@ import (
 	docs "github.com/olazo-johnalbert/duckload-api/docs/internal_docs"
 	"github.com/olazo-johnalbert/duckload-api/internal/bootstrap"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/middleware"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/analytics"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/appointments"
@@ -178,6 +182,123 @@ func NewRouter(
 	})
 	apiV1Routes.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
+	})
+
+	superadminHealth := apiV1Routes.Group("/logs/system/health")
+	superadminHealth.Use(middleware.AuthMiddleware(handlers.Redis))
+	superadminHealth.Use(
+		middleware.RoleMiddleware(constants.SuperAdminRoleID),
+	)
+	superadminHealth.GET("", func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(
+			c.Request.Context(), 5*time.Second,
+		)
+		defer cancel()
+
+		type ServiceHealth struct {
+			Name      string `json:"name"`
+			Status    string `json:"status"`
+			IsHealthy bool   `json:"isHealthy"`
+		}
+
+		results := make([]ServiceHealth, 0)
+
+		// 1. API gateway
+		results = append(results, ServiceHealth{
+			Name:      "API Gateway Server",
+			Status:    "Operational",
+			IsHealthy: true,
+		})
+
+		// 2. MySQL Database
+		dbHealthy := true
+		dbStatus := "Connected"
+		if err := db.PingContext(ctx); err != nil {
+			dbHealthy = false
+			dbStatus = "Offline"
+		}
+		results = append(results, ServiceHealth{
+			Name:      "MySQL Database",
+			Status:    dbStatus,
+			IsHealthy: dbHealthy,
+		})
+
+		// 3. Redis Cache Store
+		redisHealthy := true
+		redisStatus := "Connected"
+		if err := handlers.Redis.Client.Ping(ctx).Err(); err != nil {
+			redisHealthy = false
+			redisStatus = "Offline"
+		}
+		results = append(results, ServiceHealth{
+			Name:      "Redis Cache Store",
+			Status:    redisStatus,
+			IsHealthy: redisHealthy,
+		})
+
+		// 4. AI FastAPI Service
+		aiHealthy := true
+		aiStatus := "Operational"
+		aiClient := &http.Client{Timeout: 2 * time.Second}
+		aiReq, err := http.NewRequestWithContext(
+			ctx, "GET", cfg.AIBaseUrl+"/health", nil,
+		)
+		if err != nil {
+			aiHealthy = false
+			aiStatus = "Offline"
+		} else {
+			aiResp, err := aiClient.Do(aiReq)
+			if err != nil || aiResp.StatusCode != http.StatusOK {
+				aiHealthy = false
+				aiStatus = "Offline"
+			} else {
+				aiResp.Body.Close()
+			}
+		}
+		results = append(results, ServiceHealth{
+			Name:      "AI FastAPI Service",
+			Status:    aiStatus,
+			IsHealthy: aiHealthy,
+		})
+
+		// 5. Notification SMTP
+		smtpHealthy := true
+		smtpStatus := "Active"
+		var dialAddr string
+		if cfg.IsProduction || cfg.IsStaging {
+			dialAddr = fmt.Sprintf("%s:%d", cfg.SMTPHost, cfg.SMTPPort)
+		} else {
+			dialAddr = fmt.Sprintf(
+				"%s:%d", cfg.MailPitHost, cfg.MailPitPort,
+			)
+		}
+		d := net.Dialer{Timeout: 2 * time.Second}
+		conn, err := d.DialContext(ctx, "tcp", dialAddr)
+		if err != nil {
+			smtpHealthy = false
+			smtpStatus = "Degraded"
+		} else {
+			conn.Close()
+		}
+		results = append(results, ServiceHealth{
+			Name:      "Notification SMTP",
+			Status:    smtpStatus,
+			IsHealthy: smtpHealthy,
+		})
+
+		// 6. Identity Provider (IDP)
+		idpHealthy := handlers.AuthHandler.IsIDPUp(ctx)
+		idpStatus := "Operational"
+		if !idpHealthy {
+			idpStatus = "Offline"
+		}
+		results = append(results, ServiceHealth{
+			Name:      "Identity Provider (IDP)",
+			Status:    idpStatus,
+			IsHealthy: idpHealthy,
+		})
+
+		c.JSON(http.StatusOK, results)
 	})
 
 	authGroup := apiV1Routes.Group("")
