@@ -3,7 +3,6 @@ package integrations
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/locations"
@@ -62,6 +61,9 @@ func (s *Service) GetStudentByStudentNumber(
 ) (*OGOSStudentDTO, error) {
 	student, err := s.repo.GetStudentByStudentNumber(ctx, studentNumber)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -89,7 +91,7 @@ func (s *Service) GetStudentByEmail(
 	student, err := s.repo.GetStudentByEmail(ctx, email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("student not found")
+			return nil, nil
 		}
 
 		return nil, err
@@ -118,6 +120,9 @@ func (s *Service) GetPersonalInfoByStudentNumber(
 ) (*OGOSStudentPersonalInfoDTO, error) {
 	student, err := s.repo.GetPersonalInfoByStudentNumber(ctx, studentNumber)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -143,14 +148,14 @@ func (s *Service) GetAddressByStudentNumber(
 		studentNumber,
 	)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, err
 	}
 
 	if len(studentAddresses) == 0 {
-		return nil, fmt.Errorf(
-			"no addresses found for student number: %s",
-			studentNumber,
-		)
+		return nil, nil
 	}
 
 	var addresesDTO []OGOSStudentAddressDTO
