@@ -240,8 +240,13 @@ func NewRouter(
 		aiHealthy := true
 		aiStatus := "Operational"
 		aiClient := &http.Client{Timeout: 2 * time.Second}
+		aiHealthURL := cfg.AIBaseUrl + "/health"
+		if u, err := url.Parse(cfg.AIBaseUrl); err == nil {
+			u.Path = "/health"
+			aiHealthURL = u.String()
+		}
 		aiReq, err := http.NewRequestWithContext(
-			ctx, "GET", cfg.AIBaseUrl+"/health", nil,
+			ctx, "GET", aiHealthURL, nil,
 		)
 		if err != nil {
 			aiHealthy = false
