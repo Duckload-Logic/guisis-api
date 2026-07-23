@@ -25,6 +25,7 @@ func RegisterRoutes(
 		// IDP OAuth 2.0 routes
 		authRoutes.GET("/idp/authorize", h.GetAuthorizeURL)
 		authRoutes.POST("/idp/token", h.PostIDPToken)
+		authRoutes.GET("/idp/status", h.GetIDPStatus)
 
 		// OTP Fallback routes
 		authRoutes.POST("/otp/request", h.PostOTPRequest)

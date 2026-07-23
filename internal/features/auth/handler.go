@@ -355,22 +355,46 @@ func (h *Handler) GetMe(c *gin.Context) {
 	response.SendSuccess(c, user)
 }
 
+// verifyFallbackAllowed checks if OTP fallback is permitted in the
+// current environment based on IDP availability.
+func (h *Handler) verifyFallbackAllowed(
+	c *gin.Context,
+	handlerName string,
+) bool {
+	if !h.cfg.IsProduction && !h.cfg.IsStaging {
+		return true
+	}
+
+	if h.service.IsIDPUp(c.Request.Context(), h.cfg) {
+		fmt.Printf(
+			"[%s] {IDP Check}: "+
+				"OTP fallback is only allowed when IDP is down\n",
+			handlerName,
+		)
+		response.SendError(
+			c,
+			"OTP fallback is only allowed when IDP is down",
+			http.StatusForbidden,
+			nil,
+		)
+		return false
+	}
+
+	return true
+}
+
+// GetIDPStatus returns whether the IDP is up.
+func (h *Handler) GetIDPStatus(c *gin.Context) {
+	isUp := h.service.IsIDPUp(c.Request.Context(), h.cfg)
+	response.SendSuccess(c, gin.H{
+		"up": isUp,
+	})
+}
+
 // PostOTPRequest triggers sending the OTP to the user's email.
 func (h *Handler) PostOTPRequest(c *gin.Context) {
-	if h.cfg.IsProduction && !h.cfg.IsStaging {
-		if h.service.IsIDPUp(c.Request.Context(), h.cfg) {
-			fmt.Printf(
-				"[PostOTPRequest] {IDP Check}: " +
-					"OTP fallback is only allowed when IDP is down\n",
-			)
-			response.SendError(
-				c,
-				"OTP fallback is only allowed when IDP is down",
-				http.StatusForbidden,
-				nil,
-			)
-			return
-		}
+	if !h.verifyFallbackAllowed(c, "PostOTPRequest") {
+		return
 	}
 
 	var req OTPRequest
@@ -397,20 +421,8 @@ func (h *Handler) PostOTPRequest(c *gin.Context) {
 
 // PostOTPLogin authenticates the user using email and OTP.
 func (h *Handler) PostOTPLogin(c *gin.Context) {
-	if !h.cfg.IsProduction || h.cfg.IsStaging {
-		if h.service.IsIDPUp(c.Request.Context(), h.cfg) {
-			fmt.Printf(
-				"[PostOTPLogin] {IDP Check}: " +
-					"OTP login is only allowed when IDP is down\n",
-			)
-			response.SendError(
-				c,
-				"OTP login is only allowed when IDP is down",
-				http.StatusForbidden,
-				nil,
-			)
-			return
-		}
+	if !h.verifyFallbackAllowed(c, "PostOTPLogin") {
+		return
 	}
 
 	var req OTPLoginRequest

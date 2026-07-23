@@ -101,28 +101,28 @@ compose-prod:
 # Desc: Build and push production API image
 push-api-prod:
 	docker build --network=host --target prod \
-		-t ghcr.io/olazo-johnalbert/capstone-api:latest .
-	docker push ghcr.io/olazo-johnalbert/capstone-api:latest
+		-t ghcr.io/duckload-logic/guisis-api:main .
+	docker push ghcr.io/duckload-logic/guisis-api:main
 
 # Desc: Build and push staging API image
 push-api-staging:
 	docker build --network=host --target prod \
-		-t ghcr.io/olazo-johnalbert/capstone-staging-api:latest .
-	docker push ghcr.io/olazo-johnalbert/capstone-staging-api:latest
+		-t ghcr.io/duckload-logic/guisis-api:staging .
+	docker push ghcr.io/duckload-logic/guisis-api:staging
 
 # Desc: Build and push production AI image
 push-ai-prod:
 	docker build --network=host \
-		-t ghcr.io/olazo-johnalbert/capstone-ai:latest \
+		-t ghcr.io/duckload-logic/guisis-ai:main \
 		-f ../guisis-ai/Dockerfile ../guisis-ai
-	docker push ghcr.io/olazo-johnalbert/capstone-ai:latest
+	docker push ghcr.io/duckload-logic/guisis-ai:main
 
 # Desc: Build and push staging AI image
 push-ai-staging:
 	docker build --network=host \
-		-t ghcr.io/olazo-johnalbert/capstone-staging-ai:latest \
+		-t ghcr.io/duckload-logic/guisis-ai:staging \
 		-f ../guisis-ai/Dockerfile ../guisis-ai
-	docker push ghcr.io/olazo-johnalbert/capstone-staging-ai:latest
+	docker push ghcr.io/duckload-logic/guisis-ai:staging
 
 # Desc: Push both production images
 push-all-prod: push-api-prod push-ai-prod

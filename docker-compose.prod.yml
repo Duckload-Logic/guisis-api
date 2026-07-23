@@ -87,7 +87,7 @@ services:
             - app-network
 
     ai:
-        image: ghcr.io/olazo-johnalbert/capstone-ai:latest
+        image: ghcr.io/duckload-logic/guisis-ai:main
         container_name: capstone-ai
         deploy:
             resources:

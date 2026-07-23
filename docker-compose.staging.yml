@@ -89,7 +89,7 @@ services:
             - staging-network
 
     ai:
-        image: ghcr.io/olazo-johnalbert/capstone-staging-ai:latest
+        image: ghcr.io/duckload-logic/guisis-ai:staging
         container_name: capstone-staging-ai
         profiles:
             - qa-heavy
