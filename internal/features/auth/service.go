@@ -574,7 +574,7 @@ func (s *Service) Logout(
 	}
 
 	// Fallback redirect for native logout or incomplete IDP sessions
-	return "/", nil
+	return "", nil
 }
 
 // IDP integration methods
