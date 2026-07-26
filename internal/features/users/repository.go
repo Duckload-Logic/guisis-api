@@ -3,6 +3,7 @@ package users
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
@@ -36,11 +37,11 @@ func (r *Repository) GetUserByID(
 	var user User
 
 	query := fmt.Sprintf(`
-		SELECT %s
-		FROM users
-		WHERE id = ?
-		LIMIT 1
-	`, datastore.GetColumns(User{}))
+        SELECT %s
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+    `, datastore.GetColumns(User{}))
 
 	err := r.db.GetContext(ctx, &user, query, userID)
 	if err != nil {
@@ -67,11 +68,11 @@ func (r *Repository) GetUsersByRole(
 ) ([]User, error) {
 	var users []User
 	query := fmt.Sprintf(`
-		SELECT %s
-		FROM users
-		JOIN user_roles ur ON ur.user_id = users.id
-		WHERE ur.role_id = ?
-	`, datastore.GetColumns(User{}))
+        SELECT %s
+        FROM users
+        JOIN user_roles ur ON ur.user_id = users.id
+        WHERE ur.role_id = ?
+    `, datastore.GetColumns(User{}))
 	err := r.db.SelectContext(ctx, &users, query, roleID)
 	return users, err
 }
@@ -92,10 +93,10 @@ func (r *Repository) GetRoleByID(
 ) (*Role, error) {
 	var role Role
 	query := fmt.Sprintf(`
-		SELECT %s
-		FROM roles
-		WHERE id = ?
-	`, datastore.GetColumns(Role{}))
+        SELECT %s
+        FROM roles
+        WHERE id = ?
+    `, datastore.GetColumns(Role{}))
 
 	err := r.db.GetContext(ctx, &role, query, roleID)
 	if err != nil {
@@ -111,11 +112,11 @@ func (r *Repository) GetRolesByUserID(
 ) ([]Role, error) {
 	var roles []Role
 	query := `
-		SELECT r.id, r.name
-		FROM roles r
-		JOIN user_roles ur ON ur.role_id = r.id
-		WHERE ur.user_id = ?
-	`
+        SELECT r.id, r.name
+        FROM roles r
+        JOIN user_roles ur ON ur.role_id = r.id
+        WHERE ur.user_id = ?
+    `
 
 	err := r.db.SelectContext(ctx, &roles, query, userID)
 	if err != nil {
@@ -132,11 +133,11 @@ func (r *Repository) GetUserByEmail(
 	var user User
 
 	query := fmt.Sprintf(`
-		SELECT %s
-		FROM users
-		WHERE email = ? AND auth_type = ?
-		LIMIT 1
-	`, datastore.GetColumns(User{}))
+        SELECT %s
+        FROM users
+        WHERE email = ? AND auth_type = ?
+        LIMIT 1
+    `, datastore.GetColumns(User{}))
 
 	err := r.db.GetContext(ctx, &user, query, email, authType)
 	if err != nil {
@@ -170,10 +171,10 @@ func (r *Repository) CreateUser(
 		exclude,
 	)
 	query := fmt.Sprintf(`
-			INSERT INTO users (id, %s)
-			VALUES (:id, %s)
-			ON DUPLICATE KEY UPDATE %s
-		`, cols, vals, onDuplicateKeyStmt)
+            INSERT INTO users (id, %s)
+            VALUES (:id, %s)
+            ON DUPLICATE KEY UPDATE %s
+        `, cols, vals, onDuplicateKeyStmt)
 
 	_, err := tx.NamedExecContext(ctx, query, user)
 	if err != nil {
@@ -202,13 +203,13 @@ func (r *Repository) GetProfilePictureURLByUserID(
 	var fileURL string
 
 	query := `
-		SELECT f.file_url
-		FROM profile_pictures pp
-		JOIN files f ON f.id = pp.file_id
-		WHERE pp.user_id = ?
-		ORDER BY f.created_at DESC
-		LIMIT 1
-	`
+        SELECT f.file_url
+        FROM profile_pictures pp
+        JOIN files f ON f.id = pp.file_id
+        WHERE pp.user_id = ?
+        ORDER BY f.created_at DESC
+        LIMIT 1
+    `
 
 	err := r.db.GetContext(ctx, &fileURL, query, userID)
 	if err != nil {
@@ -225,12 +226,12 @@ func (r *Repository) GetStudentCORURLByUserID(
 	var fileURL string
 
 	query := `
-		SELECT f.file_url
-		FROM student_cors sc
-		JOIN files f ON f.id = sc.file_id
-		WHERE sc.student_id = ?
-		LIMIT 1
-	`
+        SELECT f.file_url
+        FROM student_cors sc
+        JOIN files f ON f.id = sc.file_id
+        WHERE sc.student_id = ?
+        LIMIT 1
+    `
 
 	err := r.db.GetContext(ctx, &fileURL, query, userID)
 	if err != nil {
@@ -246,14 +247,14 @@ func (r *Repository) CheckStudentCORValidByUserID(
 ) (bool, error) {
 	var valid bool
 	query := `
-		SELECT EXISTS(
-			SELECT 1 FROM student_cors sc
-			JOIN academic_settings ac ON ac.id = 1
-			WHERE sc.student_id = ?
-			  AND sc.year_start = ac.current_year_start
-			  AND sc.term = ac.current_term
-		)
-	`
+        SELECT EXISTS(
+            SELECT 1 FROM student_cors sc
+            JOIN academic_settings ac ON ac.id = 1
+            WHERE sc.student_id = ?
+              AND sc.year_start = ac.current_year_start
+              AND sc.term = ac.current_term
+        )
+    `
 	err := r.db.GetContext(ctx, &valid, query, userID)
 	if err != nil {
 		return false, err
@@ -273,9 +274,9 @@ func (r *Repository) PostProfilePicture(
 	}
 
 	insertQuery := `
-		INSERT INTO profile_pictures (user_id, file_id)
-		VALUES (?, ?)
-	`
+        INSERT INTO profile_pictures (user_id, file_id)
+        VALUES (?, ?)
+    `
 
 	_, err := tx.ExecContext(ctx, insertQuery, userID, fileID)
 	if err != nil {
@@ -321,11 +322,11 @@ func (r *Repository) GetEmailsByRole(
 ) ([]string, error) {
 	var emails []string
 	query := `
-		SELECT u.email
-		FROM users u
-		JOIN user_roles ur ON ur.user_id = u.id
-		WHERE ur.role_id = ? AND u.is_active = 1
-	`
+        SELECT u.email
+        FROM users u
+        JOIN user_roles ur ON ur.user_id = u.id
+        WHERE ur.role_id = ? AND u.is_active = 1
+    `
 	err := r.db.SelectContext(ctx, &emails, query, roleID)
 	return emails, err
 }
@@ -369,11 +370,24 @@ func (r *Repository) ListUsers(
 		return nil, 0, err
 	}
 
+	sortDir := "ASC"
+	if strings.ToLower(params.SortOrder) == "desc" {
+		sortDir = "DESC"
+	}
+
+	orderClause := "ORDER BY u.created_at DESC" 
+	switch params.SortBy {
+	case "userName":
+		orderClause = fmt.Sprintf("ORDER BY u.first_name %s, u.last_name %s", sortDir, sortDir)
+	case "joinedDate":
+		orderClause = fmt.Sprintf("ORDER BY u.created_at %s", sortDir)
+	}
+
 	// Get paginated users
 	selectQuery := fmt.Sprintf(
 		`SELECT DISTINCT %s `,
 		datastore.GetPrefixColumns(User{}, "u")) +
-		baseQuery + whereClause + " ORDER BY u.created_at DESC LIMIT ? OFFSET ?"
+		baseQuery + whereClause + " " + orderClause + " LIMIT ? OFFSET ?"
 
 	limit := params.PageSize
 	offset := (params.Page - 1) * params.PageSize
@@ -395,11 +409,11 @@ func (r *Repository) ListUsers(
 	}
 
 	query, roleArgs, err := sqlx.In(`
-		SELECT ur.user_id, r.id, r.name
-		FROM roles r
-		JOIN user_roles ur ON ur.role_id = r.id
-		WHERE ur.user_id IN (?)
-	`, userIDs)
+        SELECT ur.user_id, r.id, r.name
+        FROM roles r
+        JOIN user_roles ur ON ur.role_id = r.id
+        WHERE ur.user_id IN (?)
+    `, userIDs)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to build role query: %w", err)
 	}
@@ -429,11 +443,11 @@ func (r *Repository) ListUsers(
 
 	// Fetch profile pictures in one go
 	picQuery, picArgs, err := sqlx.In(`
-		SELECT pp.user_id, f.file_url
-		FROM profile_pictures pp
-		JOIN files f ON f.id = pp.file_id
-		WHERE pp.user_id IN (?)
-	`, userIDs)
+        SELECT pp.user_id, f.file_url
+        FROM profile_pictures pp
+        JOIN files f ON f.id = pp.file_id
+        WHERE pp.user_id IN (?)
+    `, userIDs)
 	if err == nil {
 		picQuery = r.db.Rebind(picQuery)
 		var pics []struct {
@@ -462,11 +476,11 @@ func (r *Repository) GetRoleDistribution(
 	ctx context.Context,
 ) ([]RoleDistributionDTO, error) {
 	query := `
-		SELECT r.name as role_name, COUNT(ur.user_id) as count
-		FROM roles r
-		LEFT JOIN user_roles ur ON ur.role_id = r.id
-		GROUP BY r.name
-	`
+        SELECT r.name as role_name, COUNT(ur.user_id) as count
+        FROM roles r
+        LEFT JOIN user_roles ur ON ur.role_id = r.id
+        GROUP BY r.name
+    `
 
 	var distribution []RoleDistributionDTO
 	err := r.db.SelectContext(ctx, &distribution, query)
@@ -483,13 +497,13 @@ func (r *Repository) AssignRole(
 	assignment RoleAssignment,
 ) error {
 	query := `
-		INSERT INTO user_roles (user_id, role_id, assigned_by, reason, reference_id)
-		VALUES (:user_id, :role_id, :assigned_by, :reason, :reference_id)
-		ON DUPLICATE KEY UPDATE
-			assigned_by = VALUES(assigned_by),
-			reason = VALUES(reason),
-			reference_id = VALUES(reference_id)
-	`
+        INSERT INTO user_roles (user_id, role_id, assigned_by, reason, reference_id)
+        VALUES (:user_id, :role_id, :assigned_by, :reason, :reference_id)
+        ON DUPLICATE KEY UPDATE
+            assigned_by = VALUES(assigned_by),
+            reason = VALUES(reason),
+            reference_id = VALUES(reference_id)
+    `
 
 	_, err := tx.NamedExecContext(ctx, query, assignment)
 	return err
@@ -531,11 +545,11 @@ func (r *Repository) ListWhitelist(
 ) ([]WhitelistEntry, error) {
 	var entries []WhitelistEntry
 	query := `
-		SELECT w.email, w.role_id, r.name as role_name, w.created_at
-		FROM whitelists w
-		JOIN roles r ON r.id = w.role_id
-		ORDER BY w.created_at DESC
-	`
+        SELECT w.email, w.role_id, r.name as role_name, w.created_at
+        FROM whitelists w
+        JOIN roles r ON r.id = w.role_id
+        ORDER BY w.created_at DESC
+    `
 	err := r.db.SelectContext(ctx, &entries, query)
 	return entries, err
 }

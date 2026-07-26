@@ -309,9 +309,9 @@ func (s *Service) issueTokens(
 
 func (s *Service) ListClients(
 	ctx context.Context,
-	includeRevoked bool,
+	params ListM2MClientsRequest,
 ) ([]M2MClient, error) {
-	return s.repo.ListClients(ctx, includeRevoked)
+	return s.repo.ListClients(ctx, params)
 }
 
 func (s *Service) GetClientByUserID(

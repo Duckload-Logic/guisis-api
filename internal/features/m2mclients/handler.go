@@ -123,12 +123,13 @@ func (h *Handler) PostM2MTokenRefresh(c *gin.Context) {
 }
 
 func (h *Handler) GetM2MClients(c *gin.Context) {
-	includeRevoked := c.Query("include_revoked")
+	var req ListM2MClientsRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		response.SendError(c, "Invalid query parameters", http.StatusBadRequest, nil)
+		return
+	}
 
-	clients, err := h.service.ListClients(
-		c.Request.Context(),
-		includeRevoked == "true",
-	)
+	clients, err := h.service.ListClients(c.Request.Context(), req)
 	if err != nil {
 		response.SendError(c, err.Error(), http.StatusInternalServerError, nil)
 		return

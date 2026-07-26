@@ -3,6 +3,7 @@ package m2mclients
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
@@ -42,11 +43,11 @@ func (r *Repository) GetByClientID(
 ) (*M2MClient, error) {
 	var client M2MClient
 	query := fmt.Sprintf(`
-		SELECT %s
-		FROM m2m_clients
-		WHERE client_id = ? AND is_active = 1
-		LIMIT 1
-	`, datastore.GetColumns(M2MClient{}))
+        SELECT %s
+        FROM m2m_clients
+        WHERE client_id = ? AND is_active = 1
+        LIMIT 1
+    `, datastore.GetColumns(M2MClient{}))
 
 	err := r.db.GetContext(ctx, &client, query, clientID)
 	return &client, err
@@ -58,11 +59,11 @@ func (r *Repository) GetByID(
 ) (*M2MClient, error) {
 	var client M2MClient
 	query := fmt.Sprintf(`
-		SELECT %s
-		FROM m2m_clients
-		WHERE id = ?
-		LIMIT 1
-	`, datastore.GetColumns(M2MClient{}))
+        SELECT %s
+        FROM m2m_clients
+        WHERE id = ?
+        LIMIT 1
+    `, datastore.GetColumns(M2MClient{}))
 
 	err := r.db.GetContext(ctx, &client, query, id)
 	return &client, err
@@ -74,11 +75,11 @@ func (r *Repository) GetActiveByUserID(
 ) (*M2MClient, error) {
 	var client M2MClient
 	query := fmt.Sprintf(`
-		SELECT %s
-		FROM m2m_clients
-		WHERE user_id = ? AND is_active = 1
-		LIMIT 1
-	`, datastore.GetColumns(M2MClient{}))
+        SELECT %s
+        FROM m2m_clients
+        WHERE user_id = ? AND is_active = 1
+        LIMIT 1
+    `, datastore.GetColumns(M2MClient{}))
 
 	err := r.db.GetContext(ctx, &client, query, userID)
 	return &client, err
@@ -96,17 +97,32 @@ func (r *Repository) DeactivateAllForUser(
 
 func (r *Repository) ListClients(
 	ctx context.Context,
-	includeRevoked bool,
+	params ListM2MClientsRequest,
 ) ([]M2MClient, error) {
 	var clients []M2MClient
 	query := fmt.Sprintf(`
-		SELECT %s
-		FROM m2m_clients
-	`, datastore.GetColumns(M2MClient{}))
+        SELECT %s
+        FROM m2m_clients
+    `, datastore.GetColumns(M2MClient{}))
 
-	if !includeRevoked {
+	if !params.IncludeRevoked {
 		query += ` WHERE is_active = 1`
 	}
+
+	sortDir := "ASC"
+	if strings.ToLower(params.SortOrder) == "desc" {
+		sortDir = "DESC"
+	}
+
+	orderClause := " ORDER BY created_at DESC" 
+	switch params.SortBy {
+	case "clientName":
+		orderClause = fmt.Sprintf(" ORDER BY client_name %s", sortDir)
+	case "createdAt":
+		orderClause = fmt.Sprintf(" ORDER BY created_at %s", sortDir)
+	}
+
+	query += orderClause
 
 	err := r.db.SelectContext(ctx, &clients, query)
 	return clients, err
@@ -134,10 +150,10 @@ func (r *Repository) VerifyByID(
 	hasPersonalInfoAccess bool,
 ) error {
 	query := `
-		UPDATE m2m_clients
-		SET is_verified = 1, has_personal_info_access = ?
-		WHERE id = ?
-	`
+        UPDATE m2m_clients
+        SET is_verified = 1, has_personal_info_access = ?
+        WHERE id = ?
+    `
 	_, err := r.db.ExecContext(ctx, query, hasPersonalInfoAccess, id)
 	return err
 }

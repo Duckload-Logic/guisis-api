@@ -3,6 +3,7 @@ package logs
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
@@ -34,14 +35,14 @@ func (r *Repository) Record(
 	log *SystemLog,
 ) error {
 	query := `
-		INSERT INTO system_logs (
-			level, category, action, message, user_id, target_id, target_type,
-			user_email, target_email, ip_address, user_agent, metadata, trace_id
-		) VALUES (
-			:level, :category, :action, :message, :user_id, :target_id, :target_type,
-			:user_email, :target_email, :ip_address, :user_agent, :metadata, :trace_id
-		)
-	`
+        INSERT INTO system_logs (
+            level, category, action, message, user_id, target_id, target_type,
+            user_email, target_email, ip_address, user_agent, metadata, trace_id
+        ) VALUES (
+            :level, :category, :action, :message, :user_id, :target_id, :target_type,
+            :user_email, :target_email, :ip_address, :user_agent, :metadata, :trace_id
+        )
+    `
 
 	exec := tx
 	if exec == nil {
@@ -59,7 +60,7 @@ func (r *Repository) Record(
 func (r *Repository) List(
 	ctx context.Context, offset, limit int,
 	category, action, userEmail, targetType, targetEmail,
-	search, startDate, endDate, orderBy string,
+	search, startDate, endDate, sortBy, sortOrder string,
 ) ([]SystemLog, error) {
 	query, args := r.applyLogFilters(
 		"SELECT id, level, category, action, message, user_id, target_id, target_type, user_email, target_email, ip_address, user_agent, metadata, trace_id, created_at FROM system_logs WHERE 1=1",
@@ -74,11 +75,26 @@ func (r *Repository) List(
 		endDate,
 	)
 
-	if orderBy == "" {
-		orderBy = "created_at"
+	// Determine Sort Direction
+	sortDir := "DESC" // Default
+	if strings.ToLower(sortOrder) == "asc" {
+		sortDir = "ASC"
 	}
 
-	query += fmt.Sprintf(" ORDER BY %s DESC LIMIT ? OFFSET ?", orderBy)
+	// Map Frontend Keys to Database Columns (Safe against SQL Injection)
+	orderClause := fmt.Sprintf(" ORDER BY created_at %s", sortDir) // Default fallback
+	switch sortBy {
+	case "timestamp":
+		orderClause = fmt.Sprintf(" ORDER BY created_at %s", sortDir)
+	case "message":
+		orderClause = fmt.Sprintf(" ORDER BY message %s", sortDir)
+	case "actor":
+		orderClause = fmt.Sprintf(" ORDER BY user_email %s", sortDir)
+	case "ipAddress":
+		orderClause = fmt.Sprintf(" ORDER BY ip_address %s", sortDir)
+	}
+
+	query += orderClause + " LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 
 	var logs []SystemLog
@@ -193,15 +209,15 @@ func (r *Repository) GetActivityStats(
 	ctx context.Context,
 ) ([]audit.LogActivityDTO, error) {
 	query := `
-		SELECT
-			DATE_FORMAT(created_at, '%Y-%m-%d %H:00') as time,
-			COUNT(CASE WHEN level != 'ERROR' THEN 1 END) as requests,
-			COUNT(CASE WHEN level = 'ERROR' THEN 1 END) as errors
-		FROM system_logs
-		WHERE created_at >= NOW() - INTERVAL 24 HOUR
-		GROUP BY time
-		ORDER BY time ASC
-	`
+        SELECT
+            DATE_FORMAT(created_at, '%Y-%m-%d %H:00') as time,
+            COUNT(CASE WHEN level != 'ERROR' THEN 1 END) as requests,
+            COUNT(CASE WHEN level = 'ERROR' THEN 1 END) as errors
+        FROM system_logs
+        WHERE created_at >= NOW() - INTERVAL 24 HOUR
+        GROUP BY time
+        ORDER BY time ASC
+    `
 
 	var stats []audit.LogActivityDTO
 	err := r.db.SelectContext(ctx, &stats, query)
@@ -217,12 +233,12 @@ func (r *Repository) GetByID(
 	id int64,
 ) (*SystemLog, error) {
 	query := `
-		SELECT id, level, category, action, message, user_id,
-		       target_id, target_type, user_email, target_email,
-		       ip_address, user_agent, metadata, trace_id, created_at
-		FROM system_logs
-		WHERE id = ?
-	`
+        SELECT id, level, category, action, message, user_id,
+               target_id, target_type, user_email, target_email,
+               ip_address, user_agent, metadata, trace_id, created_at
+        FROM system_logs
+        WHERE id = ?
+    `
 	var log SystemLog
 	err := r.db.GetContext(ctx, &log, query, id)
 	if err != nil {
@@ -236,13 +252,13 @@ func (r *Repository) GetByTraceID(
 	traceID string,
 ) ([]SystemLog, error) {
 	query := `
-		SELECT id, level, category, action, message, user_id,
-		       target_id, target_type, user_email, target_email,
-		       ip_address, user_agent, metadata, trace_id, created_at
-		FROM system_logs
-		WHERE trace_id = ?
-		ORDER BY created_at ASC
-	`
+        SELECT id, level, category, action, message, user_id,
+               target_id, target_type, user_email, target_email,
+               ip_address, user_agent, metadata, trace_id, created_at
+        FROM system_logs
+        WHERE trace_id = ?
+        ORDER BY created_at ASC
+    `
 	var logs []SystemLog
 	err := r.db.SelectContext(ctx, &logs, query, traceID)
 	if err != nil {
@@ -258,9 +274,9 @@ func (r *Repository) DeleteLogsOlderThan(
 	excludeCategories []string,
 ) (int64, error) {
 	query := `
-		DELETE FROM system_logs
-		WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)
-	`
+        DELETE FROM system_logs
+        WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)
+    `
 	args := []interface{}{days}
 
 	if len(includeCategories) > 0 {

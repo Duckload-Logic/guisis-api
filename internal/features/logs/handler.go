@@ -36,6 +36,8 @@ func (h *Handler) GetService() *Service {
 // @Param        start_date  query     string false "Filter from date (YYYY-MM-DD)"
 // @Param        end_date    query     string false "Filter to date (YYYY-MM-DD)"
 // @Param        search      query     string false "Search in message, action, or user email"
+// @Param        sort_by     query     string false "Column to sort by (timestamp, message, actor, ipAddress)"
+// @Param        sort_order  query     string false "Direction to sort (asc or desc)"
 // @Success      200         {object}  ListSystemLogsDTO
 // @Failure      400         {object}  map[string]string "Bad request"
 // @Failure      500         {object}  map[string]string "Internal server error"
@@ -207,43 +209,6 @@ func (h *Handler) GetLogsMe(c *gin.Context) {
 
 	response.SendSuccess(c, result)
 }
-
-// PostLogsCleanup godoc
-// @Summary      Clean up old system logs
-// @Description  Deletes logs older than N days. Super Admin only.
-// @Tags         SystemLogs
-// @Param        days query     int    false "Days of logs to keep (default 30)"
-// @Success      200  {object}  map[string]interface{}
-// @Failure      500  {object}  map[string]string
-// @Router       /activity-meta/cleanup [post]
-// func (h *Handler) PostLogsCleanup(c *gin.Context) {
-// 	daysStr := c.DefaultQuery("days", "30")
-// 	var days int
-// 	if _, err := fmt.Sscanf(daysStr, "%d", &days); err != nil {
-// 		response.SendFail(c, gin.H{"error": "Invalid days format"})
-// 		return
-// 	}
-
-// 	rows, err := h.service.DeleteLogsOlderThan(c.Request.Context(), days)
-// 	if err != nil {
-// 		fmt.Printf("[PostLogsCleanup] {Delete Logs}: %v\n", err)
-// 		response.SendError(
-// 			c,
-// 			"Failed to clean up logs",
-// 			http.StatusInternalServerError,
-// 			nil,
-// 		)
-// 		return
-// 	}
-
-// 	response.SendSuccess(c, gin.H{
-// 		"message": fmt.Sprintf(
-// 			"Logs older than %d days cleaned up",
-// 			days,
-// 		),
-// 		"rows_affected": rows,
-// 	})
-// }
 
 // GetLog retrieves a single system log by its ID.
 func (h *Handler) GetLog(c *gin.Context) {
