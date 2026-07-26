@@ -172,8 +172,13 @@ func (s *Service) AddMessage(
 		return nil, fmt.Errorf("failed to create message: %w", err)
 	}
 
-	// Update ticket updated_at
-	_ = s.repo.UpdateTicketStatus(ctx, ticketID, ticket.Status)
+	newStatus := ticket.Status
+	if ticket.Status == "CLOSED" || ticket.Status == "RESOLVED" {
+		newStatus = "OPEN"
+	}
+
+	// Update ticket status and updated_at
+	_ = s.repo.UpdateTicketStatus(ctx, ticketID, newStatus)
 
 	return s.mapMessageToResponse(msg), nil
 }
