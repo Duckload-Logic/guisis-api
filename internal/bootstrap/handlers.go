@@ -15,6 +15,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/features/slips"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students/integrations"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/support"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
@@ -34,6 +35,7 @@ type Handlers struct {
 	NotificationsHandler      *notifications.Handler
 	SystemLogHandler          *logs.Handler
 	FileHandler               *files.Handler
+	SupportHandler            *support.Handler
 	Redis                     *datastore.RedisClient
 }
 
@@ -78,6 +80,7 @@ func getHandlers(
 		NotificationsHandler: notificationsHandler,
 		SystemLogHandler:     systemLogHandler,
 		FileHandler:          files.NewHandler(services.FileService),
+		SupportHandler:       support.NewHandler(services.SupportService),
 		Redis:                redis,
 	}
 }

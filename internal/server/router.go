@@ -30,6 +30,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/features/slips"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students/integrations"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/support"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -346,6 +347,12 @@ func NewRouter(
 	)
 	logs.RegisterRoutes(apiV1Routes, handlers.SystemLogHandler, handlers.Redis)
 	notes.RegisterRoutes(db, apiV1Routes, handlers.NoteHandler, handlers.Redis)
+	support.RegisterRoutes(
+		db,
+		apiV1Routes,
+		handlers.SupportHandler,
+		handlers.Redis,
+	)
 
 	integrations.RegisterRoutes(
 		apiV1Routes,

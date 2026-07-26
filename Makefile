@@ -57,10 +57,9 @@ seed-up:
 	"$(DB_URL)$(if $(filter true,$(DB_TLS)),&,?)x-migrations-table=seed_migrations" up
 
 refresh: migrate-reset
-	migrate -path scripts/migrations -database "$(DB_URL)" up 30
-	$(MAKE) seed-up
 	migrate -path scripts/migrations -database "$(DB_URL)" up
-	$(MAKE) locations
+	"$(MAKE)" seed-up
+	"$(MAKE)" locations
 
 # Desc: To generate swagger docs
 # Usage: make swagger-internal
@@ -86,7 +85,8 @@ swagger-integrations:
 	--instanceName integrations
 
 compose-up:
-	docker compose --env-file $(ENV) up --build
+	docker compose -f docker-compose.dev.yml \
+		--env-file $(ENV) up --build
 
 QA_HEAVY ?= false
 

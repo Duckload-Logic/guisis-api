@@ -24,8 +24,8 @@ func nullStringIf(cond bool, val string) structs.NullableString {
 }
 
 func fakePasswordHash() string {
-	// static hash for all dummy users
-	return "$2a$12$TlVSA8M3/n59G/Dmz0PUge.V45PmL04QtHuOpLt4g6ajLvLbvH0re"
+	// static hash for all dummy users (password is "password")
+	return "$2a$12$C2ZvYgPmtC/fsLd1ZP1sQOp0H8gbSvTHN80jls0JkLoFIMNG9fx0q"
 }
 
 func stringToNullString(s string) structs.NullableString {

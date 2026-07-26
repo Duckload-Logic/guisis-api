@@ -13,6 +13,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/features/slips"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students/integrations"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/support"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 )
 
@@ -29,6 +30,7 @@ type Repositories struct {
 	NotificationRepo       *notifications.Repository
 	SystemLogRepo          *logs.Repository
 	FileRepo               *files.Repository
+	SupportRepo            *support.Repository
 }
 
 func getRepositories(db *sqlx.DB) *Repositories {
@@ -45,5 +47,6 @@ func getRepositories(db *sqlx.DB) *Repositories {
 		NotificationRepo:       notifications.NewRepository(db),
 		SystemLogRepo:          logs.NewRepository(db),
 		FileRepo:               files.NewRepository(db),
+		SupportRepo:            support.NewRepository(db),
 	}
 }

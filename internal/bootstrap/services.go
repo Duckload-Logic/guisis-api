@@ -18,6 +18,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/features/slips"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/students/integrations"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/support"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/gotenberg"
@@ -41,6 +42,7 @@ type Services struct {
 	NotificationsService      *notifications.Service
 	SystemLogService          *logs.Service
 	SessionService            *sessions.Service
+	SupportService            *support.Service
 }
 
 func getServices(
@@ -148,6 +150,11 @@ func getServices(
 		redis,
 		pdfService,
 	)
+	supportService := support.NewService(
+		repos.SupportRepo,
+		notificationsService,
+		userService,
+	)
 
 	return &Services{
 		AuthService:               authService,
@@ -164,5 +171,6 @@ func getServices(
 		NotificationsService:      notificationsService,
 		SystemLogService:          systemLogService,
 		SessionService:            sessionService,
+		SupportService:            supportService,
 	}
 }
