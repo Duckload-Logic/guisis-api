@@ -177,7 +177,8 @@ func (s *Service) ListLogs(
 		req.GetOffset(), req.PageSize,
 		req.Category, req.Action, req.UserEmail,
 		req.TargetType, req.TargetEmail,
-		req.Search, req.StartDate, req.EndDate, req.OrderBy,
+		req.Search, req.StartDate, req.EndDate, 
+		req.SortBy, req.SortOrder, // Now passing the two distinct sorting fields
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list system logs: %w", err)

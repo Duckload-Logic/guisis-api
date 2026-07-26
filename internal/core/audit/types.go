@@ -182,6 +182,8 @@ type ListSystemLogsRequest struct {
 	TargetEmail string `form:"target_email,omitempty"`
 	StartDate   string `form:"start_date,omitempty"`
 	EndDate     string `form:"end_date,omitempty"`
+	SortBy      string `form:"sort_by,omitempty"`
+	SortOrder   string `form:"sort_order,omitempty"`
 }
 
 // ListSystemLogsDTO is the paginated response for system logs

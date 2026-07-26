@@ -13,7 +13,9 @@ type CreateM2MClientRequest struct {
 }
 
 type ListM2MClientsRequest struct {
-	IncludeRevoked bool `form:"include_revoked,omitempty"`
+	IncludeRevoked bool   `form:"include_revoked,omitempty"`
+	SortBy         string `form:"sort_by"`
+	SortOrder      string `form:"sort_order"`
 }
 
 type M2MTokenRequest struct {
