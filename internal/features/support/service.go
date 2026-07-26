@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/TwiN/go-away"
 	"github.com/google/uuid"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
@@ -35,6 +36,8 @@ func (s *Service) OpenTicket(
 	req CreateTicketRequest,
 	authUserID string,
 ) (*TicketResponse, error) {
+	req.Message = goaway.Censor(req.Message)
+
 	ticketID := uuid.New().String()
 	ticket := &SupportTicket{
 		ID:     ticketID,
@@ -135,6 +138,8 @@ func (s *Service) AddMessage(
 	req CreateMessageRequest,
 	senderID string,
 ) (*MessageResponse, error) {
+	req.Message = goaway.Censor(req.Message)
+
 	ticket, err := s.repo.GetTicket(ctx, ticketID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find ticket: %w", err)
