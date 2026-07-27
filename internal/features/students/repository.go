@@ -334,7 +334,12 @@ func (r *Repository) ListStudents(
 		sortColumn = allowedSortColumns["last_name"]
 	}
 
-	query += fmt.Sprintf(" ORDER BY %s ASC, iir_id ASC", sortColumn)
+	sortOrder := strings.ToUpper(req.SortOrder)
+	if sortOrder != "ASC" && sortOrder != "DESC" {
+		sortOrder = "ASC"
+	}
+
+	query += fmt.Sprintf(" ORDER BY %s %s, iir_id %s", sortColumn, sortOrder, sortOrder)
 	query += " LIMIT ? OFFSET ?"
 	args = append(args, req.PageSize, req.GetOffset())
 
