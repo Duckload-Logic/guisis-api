@@ -329,8 +329,9 @@ func (s *Service) RemoveUserFromWhitelist(
 
 func (s *Service) ListWhitelist(
 	ctx context.Context,
+	req ListWhitelistRequest, // <-- Add this parameter!
 ) ([]WhitelistResponse, error) {
-	entries, err := s.repo.ListWhitelist(ctx)
+	entries, err := s.repo.ListWhitelist(ctx, req) // <-- Pass it to the repo!
 	if err != nil {
 		return nil, fmt.Errorf("failed to list whitelist: %w", err)
 	}

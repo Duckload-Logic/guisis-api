@@ -403,7 +403,13 @@ func (h *Handler) PostRemoveUserFromWhitelist(c *gin.Context) {
 }
 
 func (h *Handler) GetWhitelist(c *gin.Context) {
-	entries, err := h.service.ListWhitelist(c.Request.Context())
+	var req ListWhitelistRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+
+	entries, err := h.service.ListWhitelist(c.Request.Context(), req)
 	if err != nil {
 		fmt.Printf("[GetWhitelist] {ListWhitelist}: %v\n", err)
 		response.SendError(
