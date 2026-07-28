@@ -20,6 +20,7 @@ func RegisterRoutes(
 		constants.SuperAdminRoleID,
 		constants.AdminRoleID,
 		constants.StudentRoleID,
+		constants.DeveloperRoleID,
 	))
 
 	userRoutes.GET("/me", h.GetMe)

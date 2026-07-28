@@ -47,7 +47,7 @@ func (h *Handler) setAuthCookies(
 		int(constants.RefreshTokenMaxAge),
 		constants.CookiePathRoot,
 		"",
-		h.cfg.IsProduction,
+		h.cfg.IsProduction || h.cfg.IsStaging,
 		true,
 	)
 	c.SetCookie(
@@ -56,7 +56,7 @@ func (h *Handler) setAuthCookies(
 		int(constants.RefreshTokenMaxAge),
 		constants.CookiePathRoot,
 		"",
-		h.cfg.IsProduction,
+		h.cfg.IsProduction || h.cfg.IsStaging,
 		true,
 	)
 }

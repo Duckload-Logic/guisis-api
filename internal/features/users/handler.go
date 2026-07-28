@@ -1,6 +1,7 @@
 package users
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
 )
 
 type Handler struct {
@@ -466,6 +468,10 @@ func (h *Handler) UploadProfilePicture(c *gin.Context) {
 	)
 	if err != nil {
 		fmt.Printf("[UploadProfilePicture] {UploadProfilePicture}: %v\n", err)
+		if errors.Is(err, files.ErrFileTooLarge) {
+			response.SendFail(c, gin.H{"error": "Profile picture must not exceed 5MB"})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to upload profile picture",

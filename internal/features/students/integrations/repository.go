@@ -36,6 +36,8 @@ func (r *Repository) ListStudents(
 		JOIN student_personal_info sp ON sp.iir_id = i.id
 		JOIN programs p ON sp.program_id = p.id
 		WHERE 1=1
+		AND u.is_active = true
+		AND i.is_submitted = true
 	`
 	var args []interface{}
 	if req.Search != "" {
@@ -112,6 +114,8 @@ func (r *Repository) GetStudentByStudentNumber(
 		JOIN student_personal_info sp ON sp.iir_id = i.id
 		JOIN programs p ON sp.program_id = p.id
 		WHERE sp.student_number = ?
+		AND u.is_active = true
+		AND i.is_submitted = true
 		LIMIT 1
 	`
 
@@ -146,6 +150,8 @@ func (r *Repository) GetStudentByEmail(
 		JOIN student_personal_info sp ON sp.iir_id = i.id
 		JOIN programs p ON sp.program_id = p.id
 		WHERE u.email = ?
+		AND u.is_active = true
+		AND i.is_submitted = true
 		LIMIT 1
 	`
 
@@ -172,7 +178,11 @@ func (r *Repository) GetPersonalInfoByStudentNumber(
 			sp.height_m AS height_m,
 			sp.weight_kg AS weight_kg
 		FROM student_personal_info sp
+		JOIN iir_records i ON sp.iir_id = i.id
+		JOIN users u ON i.user_id = u.id
 		WHERE sp.student_number = ?
+		AND u.is_active = true
+		AND i.is_submitted = true
 		LIMIT 1
 	`
 
@@ -209,7 +219,11 @@ func (r *Repository) GetAddressByStudentNumber(
 		LEFT JOIN provinces p ON a.province_code = p.code
 		JOIN regions r ON a.region_code = r.code
 		JOIN student_personal_info sp ON sp.iir_id = sa.iir_id
+		JOIN iir_records i ON sp.iir_id = i.id
+		JOIN users u ON i.user_id = u.id
 		WHERE sp.student_number = ?
+		AND u.is_active = true
+		AND i.is_submitted = true
 	`
 
 	var addresses []OGOSStudentAddressView

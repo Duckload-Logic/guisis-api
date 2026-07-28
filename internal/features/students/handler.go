@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
 )
 
 type Handler struct {
@@ -286,6 +287,22 @@ func (h *Handler) GetStudentList(c *gin.Context) {
 		response.SendFail(c, gin.H{"error": err.Error()})
 		return
 	}
+
+	// --- NEW: Intercept Export Request for Admin Reports ---
+	exportFormat := c.Query("export")
+	if exportFormat == "csv" {
+		csvData, err := h.service.ExportStudentsCSV(c.Request.Context(), req)
+		if err != nil {
+			log.Printf("[GetStudentList] {Export CSV Error}: %v", err)
+			response.SendError(c, "Failed to generate CSV report", http.StatusInternalServerError, nil)
+			return
+		}
+
+		c.Header("Content-Disposition", "attachment; filename=student_records_report.csv")
+		c.Data(http.StatusOK, "text/csv; charset=utf-8", csvData)
+		return
+	}
+	// -------------------------------------
 
 	resp, err := h.service.ListStudents(c.Request.Context(), req)
 	if err != nil {
@@ -891,6 +908,10 @@ func (h *Handler) PostStudentCOR(c *gin.Context) {
 			response.SendFail(c, gin.H{"error": errStr})
 			return
 		}
+		if errors.Is(err, files.ErrFileTooLarge) {
+			response.SendFail(c, gin.H{"error": "COR file must not exceed 5MB"})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to submit COR",
@@ -943,6 +964,10 @@ func (h *Handler) PostStudentCORByIIRID(c *gin.Context) {
 			errors.Is(err, ErrCOROwnerMismatch) ||
 			strings.Contains(errStr, "valid COR") {
 			response.SendFail(c, gin.H{"error": errStr})
+			return
+		}
+		if errors.Is(err, files.ErrFileTooLarge) {
+			response.SendFail(c, gin.H{"error": "COR file must not exceed 5MB"})
 			return
 		}
 		response.SendError(

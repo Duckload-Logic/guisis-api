@@ -86,7 +86,8 @@ swagger-integrations:
 	--instanceName integrations
 
 compose-up:
-	docker compose --env-file $(ENV) up --build
+	docker compose -f docker-compose.dev.yml \
+		--env-file $(ENV) up --build
 
 QA_HEAVY ?= false
 
