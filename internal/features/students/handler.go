@@ -287,6 +287,22 @@ func (h *Handler) GetStudentList(c *gin.Context) {
 		return
 	}
 
+	// --- NEW: Intercept Export Request for Admin Reports ---
+	exportFormat := c.Query("export")
+	if exportFormat == "csv" {
+		csvData, err := h.service.ExportStudentsCSV(c.Request.Context(), req)
+		if err != nil {
+			log.Printf("[GetStudentList] {Export CSV Error}: %v", err)
+			response.SendError(c, "Failed to generate CSV report", http.StatusInternalServerError, nil)
+			return
+		}
+
+		c.Header("Content-Disposition", "attachment; filename=student_records_report.csv")
+		c.Data(http.StatusOK, "text/csv; charset=utf-8", csvData)
+		return
+	}
+	// -------------------------------------
+
 	resp, err := h.service.ListStudents(c.Request.Context(), req)
 	if err != nil {
 		log.Printf("[GetStudentList] {Service Error}: %v", err)

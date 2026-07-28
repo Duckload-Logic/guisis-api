@@ -1,8 +1,10 @@
 package students
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1628,4 +1630,60 @@ func (s *Service) GetFormattedDate(date string) string {
 		return ""
 	}
 	return t.Format("January 02, 2006")
+}
+
+func (s *Service) ExportStudentsCSV(
+	ctx context.Context, 
+	req ListStudentsRequest,
+) ([]byte, error) {
+	req.Page = 1
+	req.PageSize = 100000
+
+	resp, err := s.ListStudents(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch students for export: %w", err)
+	}
+
+	return s.generateStudentsCSV(resp.Students)
+}
+
+func (s *Service) generateStudentsCSV(students []StudentProfileDTO) ([]byte, error) {
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+
+	headers := []string{
+		"Student Number",
+		"Last Name",
+		"First Name",
+		"Email",
+		"Program",
+		"Year Level",
+		"Status",
+	}
+	if err := writer.Write(headers); err != nil {
+		return nil, fmt.Errorf("error writing csv headers: %w", err)
+	}
+
+	for _, st := range students {
+
+		row := []string{
+		st.StudentNumber,
+		st.LastName,
+		st.FirstName,
+		st.Email,
+		st.Program.Code, 
+		fmt.Sprintf("%d", st.YearLevel),
+		st.Status.Name, 
+		}
+		if err := writer.Write(row); err != nil {
+			return nil, fmt.Errorf("error writing csv row: %w", err)
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return nil, fmt.Errorf("error flushing csv writer: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
