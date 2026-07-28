@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
+	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
 )
 
 type Handler struct {
@@ -907,6 +908,10 @@ func (h *Handler) PostStudentCOR(c *gin.Context) {
 			response.SendFail(c, gin.H{"error": errStr})
 			return
 		}
+		if errors.Is(err, files.ErrFileTooLarge) {
+			response.SendFail(c, gin.H{"error": "COR file must not exceed 5MB"})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to submit COR",
@@ -959,6 +964,10 @@ func (h *Handler) PostStudentCORByIIRID(c *gin.Context) {
 			errors.Is(err, ErrCOROwnerMismatch) ||
 			strings.Contains(errStr, "valid COR") {
 			response.SendFail(c, gin.H{"error": errStr})
+			return
+		}
+		if errors.Is(err, files.ErrFileTooLarge) {
+			response.SendFail(c, gin.H{"error": "COR file must not exceed 5MB"})
 			return
 		}
 		response.SendError(
