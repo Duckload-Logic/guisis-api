@@ -69,11 +69,14 @@ func M2MAuditMiddleware() gin.HandlerFunc {
 			c.Request.Context(),
 			audit.LogEntry{
 				Level:    level,
-				Category: audit.CategorySecurity,
+				Category: audit.CategorySystem,
 				Action:   action,
 				Message:  msg,
 				UserID: structs.StringToNullableString(
 					clientID,
+				),
+				UserEmail: structs.StringToNullableString(
+					clientName,
 				),
 				IPAddress: structs.StringToNullableString(ip),
 				UserAgent: structs.StringToNullableString(ua),
