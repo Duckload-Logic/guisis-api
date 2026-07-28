@@ -241,12 +241,13 @@ func TestSlipLifecycle(t *testing.T) {
 	}
 
 	// 1. Submit Excuse Slip
-	// We set Dates to be safe (not in future for absence, not in past for needed)
+	// Keep absence on the current date and make the requested date future-proof.
 	todayStr := time.Now().Format("2006-01-02")
+	dateNeeded := time.Now().AddDate(0, 0, 1).Format("2006-01-02")
 	req := CreateSlipRequest{
 		Reason:        "Under the weather",
 		DateOfAbsence: todayStr,
-		DateNeeded:    todayStr,
+		DateNeeded:    dateNeeded,
 		CategoryID:    categoryID,
 	}
 

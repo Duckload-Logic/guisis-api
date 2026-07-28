@@ -85,6 +85,8 @@ const (
 	MaxFileSize = 5 * 1024 * 1024 // 5MB limit
 )
 
+var ErrFileTooLarge = errors.New("file exceeds maximum size of 5MB")
+
 var AllowedMimeTypes = map[string]bool{
 	"image/jpeg":      true,
 	"image/png":       true,
@@ -104,7 +106,8 @@ func (s *Service) UploadFiles(
 		// Size Validation
 		if fh.Size > MaxFileSize {
 			return nil, fmt.Errorf(
-				"file %s exceeds maximum size of 5MB",
+				"%w: %s",
+				ErrFileTooLarge,
 				fh.Filename,
 			)
 		}
