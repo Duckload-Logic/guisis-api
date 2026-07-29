@@ -308,6 +308,39 @@ func (r *Repository) ListStudents(
 	ctx context.Context,
 	req ListStudentsRequest,
 ) ([]StudentProfileView, error) {
+	query, args := r.buildStudentsListQuery(req)
+	query += " LIMIT ? OFFSET ?"
+	args = append(args, req.PageSize, req.GetOffset())
+
+	var views []StudentProfileView
+	err := r.db.SelectContext(ctx, &views, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list students: %w", err)
+	}
+
+	return views, nil
+}
+
+// ListAllStudents returns every student matching the request filters and sort.
+// Pagination fields in req are deliberately ignored for exports.
+func (r *Repository) ListAllStudents(
+	ctx context.Context,
+	req ListStudentsRequest,
+) ([]StudentProfileView, error) {
+	query, args := r.buildStudentsListQuery(req)
+
+	var views []StudentProfileView
+	err := r.db.SelectContext(ctx, &views, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list all students: %w", err)
+	}
+
+	return views, nil
+}
+
+func (r *Repository) buildStudentsListQuery(
+	req ListStudentsRequest,
+) (string, []interface{}) {
 	query := fmt.Sprintf(`
 		SELECT %s FROM v_student_profiles WHERE 1 = 1
 	`, datastore.GetColumns(StudentProfileView{}))
@@ -319,33 +352,23 @@ func (r *Repository) ListStudents(
 	)
 
 	allowedSortColumns := map[string]string{
-		"studentName":    "last_name",
-		"studentNumber":  "student_number",
-		"email":          "email",
+		"studentName":   "last_name",
+		"studentNumber": "student_number",
+		"email":         "email",
 	}
 
 	sortColumn, ok := allowedSortColumns[req.SortBy]
 	if !ok || req.SortBy == "" {
-		sortColumn = "last_name" 
+		sortColumn = "last_name"
 	}
 
-	sortOrder := "ASC" 
+	sortOrder := "ASC"
 	if strings.ToLower(req.SortOrder) == "desc" {
 		sortOrder = "DESC"
 	}
 
 	query += fmt.Sprintf(" ORDER BY %s %s, iir_id ASC", sortColumn, sortOrder)
-	query += " LIMIT ? OFFSET ?"
-	
-	args = append(args, req.PageSize, req.GetOffset())
-
-	var views []StudentProfileView
-	err := r.db.SelectContext(ctx, &views, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list students: %w", err)
-	}
-
-	return views, nil
+	return query, args
 }
 
 func (r *Repository) GetStudentBasicInfo(

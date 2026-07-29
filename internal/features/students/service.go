@@ -1633,18 +1633,24 @@ func (s *Service) GetFormattedDate(date string) string {
 }
 
 func (s *Service) ExportStudentsCSV(
-	ctx context.Context, 
+	ctx context.Context,
 	req ListStudentsRequest,
 ) ([]byte, error) {
-	req.Page = 1
-	req.PageSize = 100000
+	// Apply the same sort defaults as the paginated list, but never apply
+	// pagination: an export must include the complete matching dataset.
+	req.SetDefaults("last_name")
 
-	resp, err := s.ListStudents(ctx, req)
+	students, err := s.repo.ListAllStudents(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch students for export: %w", err)
 	}
 
-	return s.generateStudentsCSV(resp.Students)
+	studentDTOs := make([]StudentProfileDTO, len(students))
+	for i, student := range students {
+		studentDTOs[i] = student.ToDTO()
+	}
+
+	return s.generateStudentsCSV(studentDTOs)
 }
 
 func (s *Service) generateStudentsCSV(students []StudentProfileDTO) ([]byte, error) {
@@ -1667,13 +1673,13 @@ func (s *Service) generateStudentsCSV(students []StudentProfileDTO) ([]byte, err
 	for _, st := range students {
 
 		row := []string{
-		st.StudentNumber,
-		st.LastName,
-		st.FirstName,
-		st.Email,
-		st.Program.Code, 
-		fmt.Sprintf("%d", st.YearLevel),
-		st.Status.Name, 
+			st.StudentNumber,
+			st.LastName,
+			st.FirstName,
+			st.Email,
+			st.Program.Code,
+			fmt.Sprintf("%d", st.YearLevel),
+			st.Status.Name,
 		}
 		if err := writer.Write(row); err != nil {
 			return nil, fmt.Errorf("error writing csv row: %w", err)
