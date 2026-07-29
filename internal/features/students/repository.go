@@ -319,33 +319,24 @@ func (r *Repository) ListStudents(
 	)
 
 	allowedSortColumns := map[string]string{
-		"last_name":      "last_name",
-		"first_name":     "first_name",
-		"year_level":     "year_level",
-		"program_id":     "program_id",
-		"created_at":     "created_at",
-		"updated_at":     "updated_at",
-		"student_number": "student_number",
-		"iir_id":         "iir_id",
+		"studentName":    "last_name",
+		"studentNumber":  "student_number",
+		"email":          "email",
 	}
 
-	sortColumn, ok := allowedSortColumns[req.OrderBy]
-	if !ok {
-		sortColumn = allowedSortColumns["last_name"]
+	sortColumn, ok := allowedSortColumns[req.SortBy]
+	if !ok || req.SortBy == "" {
+		sortColumn = "last_name" 
 	}
 
-	sortDirection := "ASC"
-	if strings.EqualFold(req.SortOrder, "desc") {
-		sortDirection = "DESC"
+	sortOrder := "ASC" 
+	if strings.ToLower(req.SortOrder) == "desc" {
+		sortOrder = "DESC"
 	}
 
-	query += fmt.Sprintf(
-		" ORDER BY %s %s, iir_id %s",
-		sortColumn,
-		sortDirection,
-		sortDirection,
-	)
+	query += fmt.Sprintf(" ORDER BY %s %s, iir_id ASC", sortColumn, sortOrder)
 	query += " LIMIT ? OFFSET ?"
+	
 	args = append(args, req.PageSize, req.GetOffset())
 
 	var views []StudentProfileView

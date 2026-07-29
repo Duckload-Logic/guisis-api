@@ -10,10 +10,12 @@ import (
 // List Students
 type ListStudentsRequest struct {
 	structs.PaginationRequest
-	ProgramID int `form:"program_id,omitempty"`
-	GenderID  int `form:"gender_id,omitempty"`
-	YearLevel int `form:"year_level,omitempty"`
-	StatusID  int `form:"status_id,omitempty"`
+	ProgramID int    `form:"program_id,omitempty"`
+	GenderID  int    `form:"gender_id,omitempty"`
+	YearLevel int    `form:"year_level,omitempty"`
+	StatusID  int    `form:"status_id,omitempty"`
+	SortBy    string `form:"sort_by,omitempty"`
+	SortOrder string `form:"sort_order,omitempty"`
 }
 
 type ListStudentsResponse struct {

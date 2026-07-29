@@ -82,3 +82,10 @@ func (u *UserResponse) FullName() string {
     }
     return u.FirstName + " " + u.LastName
 }
+
+type ListWhitelistRequest struct {
+	Search    string `form:"search"`
+	RoleID    int    `form:"role_id"`
+	SortBy    string `form:"sort_by"`
+	SortOrder string `form:"sort_order"`
+}

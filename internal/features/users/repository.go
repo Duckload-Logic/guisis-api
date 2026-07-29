@@ -542,14 +542,46 @@ func (r *Repository) RemoveUserFromWhitelist(
 
 func (r *Repository) ListWhitelist(
 	ctx context.Context,
+	req ListWhitelistRequest,
 ) ([]WhitelistEntry, error) {
 	var entries []WhitelistEntry
-	query := `
-        SELECT w.email, w.role_id, r.name as role_name, w.created_at
-        FROM whitelists w
-        JOIN roles r ON r.id = w.role_id
-        ORDER BY w.created_at DESC
-    `
-	err := r.db.SelectContext(ctx, &entries, query)
+	
+	baseQuery := `
+		SELECT w.email, w.role_id, r.name as role_name, w.created_at
+		FROM whitelists w
+		JOIN roles r ON r.id = w.role_id
+		WHERE 1=1
+	`
+	var args []interface{}
+
+	if req.Search != "" {
+		baseQuery += " AND w.email LIKE ?"
+		args = append(args, "%"+req.Search+"%")
+	}
+
+	if req.RoleID > 0 {
+		baseQuery += " AND w.role_id = ?"
+		args = append(args, req.RoleID)
+	}
+
+	allowedSortColumns := map[string]string{
+		"email":     "w.email",
+		"roleName":  "r.name",
+		"createdAt": "w.created_at",
+	}
+
+	sortColumn, ok := allowedSortColumns[req.SortBy]
+	if !ok || req.SortBy == "" {
+		sortColumn = "w.created_at" 
+	}
+
+	sortOrder := "DESC" 
+	if strings.ToLower(req.SortOrder) == "asc" {
+		sortOrder = "ASC"
+	}
+
+	baseQuery += fmt.Sprintf(" ORDER BY %s %s, w.email ASC", sortColumn, sortOrder)
+
+	err := r.db.SelectContext(ctx, &entries, baseQuery, args...)
 	return entries, err
 }
