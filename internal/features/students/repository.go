@@ -261,6 +261,118 @@ func (r *Repository) GetTotalStudentsCount(
 	return total, nil
 }
 
+func (r *Repository) GetStudentFilterCounts(
+	ctx context.Context,
+	req ListStudentsRequest,
+) (StudentFilterCounts, error) {
+	statusReq := req
+	statusReq.StatusID = 0
+	statuses, err := r.getStudentStatusCounts(ctx, statusReq)
+	if err != nil {
+		return StudentFilterCounts{}, fmt.Errorf(
+			"failed to get student status counts: %w",
+			err,
+		)
+	}
+
+	programReq := req
+	programReq.ProgramID = 0
+	programs, err := r.getStudentProgramCounts(ctx, programReq)
+	if err != nil {
+		return StudentFilterCounts{}, fmt.Errorf(
+			"failed to get student program counts: %w",
+			err,
+		)
+	}
+
+	yearReq := req
+	yearReq.YearLevel = 0
+	yearLevels, err := r.getStudentYearLevelCounts(ctx, yearReq)
+	if err != nil {
+		return StudentFilterCounts{}, fmt.Errorf(
+			"failed to get student year-level counts: %w",
+			err,
+		)
+	}
+
+	return StudentFilterCounts{
+		Statuses:   statuses,
+		Programs:   programs,
+		YearLevels: yearLevels,
+	}, nil
+}
+
+func (r *Repository) getStudentStatusCounts(
+	ctx context.Context,
+	req ListStudentsRequest,
+) ([]StudentFilterCountItem, error) {
+	query, args := r.applyStudentFilters(`
+		SELECT
+			status_id AS id,
+			status_name AS name,
+			'' AS code,
+			COUNT(*) AS count
+		FROM v_student_profiles
+		WHERE 1 = 1
+	`, nil, req)
+	query += " GROUP BY status_id, status_name ORDER BY status_name ASC"
+
+	counts := make([]StudentFilterCountItem, 0)
+	if err := r.db.SelectContext(ctx, &counts, query, args...); err != nil {
+		return nil, err
+	}
+	return counts, nil
+}
+
+func (r *Repository) getStudentProgramCounts(
+	ctx context.Context,
+	req ListStudentsRequest,
+) ([]StudentFilterCountItem, error) {
+	query, args := r.applyStudentFilters(`
+		SELECT
+			program_id AS id,
+			program_name AS name,
+			program_code AS code,
+			COUNT(*) AS count
+		FROM v_student_profiles
+		WHERE 1 = 1
+	`, nil, req)
+	query += " GROUP BY program_id, program_name, program_code ORDER BY program_code ASC"
+
+	counts := make([]StudentFilterCountItem, 0)
+	if err := r.db.SelectContext(ctx, &counts, query, args...); err != nil {
+		return nil, err
+	}
+	return counts, nil
+}
+
+func (r *Repository) getStudentYearLevelCounts(
+	ctx context.Context,
+	req ListStudentsRequest,
+) ([]StudentFilterCountItem, error) {
+	query, args := r.applyStudentFilters(`
+		SELECT
+			year_level AS id,
+			CONCAT(year_level, CASE
+				WHEN year_level = 1 THEN 'st Year'
+				WHEN year_level = 2 THEN 'nd Year'
+				WHEN year_level = 3 THEN 'rd Year'
+				ELSE 'th Year'
+			END) AS name,
+			'' AS code,
+			COUNT(*) AS count
+		FROM v_student_profiles
+		WHERE 1 = 1
+	`, nil, req)
+	query += " GROUP BY year_level ORDER BY year_level ASC"
+
+	counts := make([]StudentFilterCountItem, 0)
+	if err := r.db.SelectContext(ctx, &counts, query, args...); err != nil {
+		return nil, err
+	}
+	return counts, nil
+}
+
 func (r *Repository) applyStudentFilters(
 	query string,
 	args []interface{},

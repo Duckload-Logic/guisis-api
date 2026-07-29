@@ -19,8 +19,22 @@ type ListStudentsRequest struct {
 }
 
 type ListStudentsResponse struct {
-	Students []StudentProfileDTO        `json:"students"`
-	Meta     structs.PaginationMetadata `json:"meta"`
+	Students     []StudentProfileDTO        `json:"students"`
+	Meta         structs.PaginationMetadata `json:"meta"`
+	FilterCounts StudentFilterCounts        `json:"filterCounts"`
+}
+
+type StudentFilterCountItem struct {
+	ID    int    `db:"id"    json:"id"`
+	Name  string `db:"name"  json:"name"`
+	Code  string `db:"code"  json:"code,omitempty"`
+	Count int    `db:"count" json:"count"`
+}
+
+type StudentFilterCounts struct {
+	Statuses   []StudentFilterCountItem `json:"statuses"`
+	Programs   []StudentFilterCountItem `json:"programs"`
+	YearLevels []StudentFilterCountItem `json:"yearLevels"`
 }
 
 type StudentProfileDTO struct {
@@ -98,7 +112,7 @@ type StudentPersonalInfoDTO struct {
 	WeightKg              float64                `json:"weightKg"                        binding:"required"`
 	Complexion            string                 `json:"complexion"                      binding:"required"`
 	HighSchoolGWA         float64                `json:"highSchoolGWA"                   binding:"required"`
-	Program Program `json:"program" binding:"required"`
+	Program               Program                `json:"program" binding:"required"`
 	YearLevel             int                    `json:"yearLevel"                       binding:"required"`
 	Section               int                    `json:"section"                         binding:"required"`
 	PlaceOfBirth          string                 `json:"placeOfBirth"                    binding:"required"`

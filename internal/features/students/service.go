@@ -383,6 +383,14 @@ func (s *Service) ListStudents(
 		)
 	}
 
+	filterCounts, err := s.repo.GetStudentFilterCounts(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get student filter counts: %w",
+			err,
+		)
+	}
+
 	return &ListStudentsResponse{
 		Students: studentDTOs,
 		Meta: structs.CalculateMetadata(
@@ -390,6 +398,7 @@ func (s *Service) ListStudents(
 			req.Page,
 			req.PageSize,
 		),
+		FilterCounts: filterCounts,
 	}, nil
 }
 
