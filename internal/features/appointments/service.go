@@ -1,7 +1,9 @@
 package appointments
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"fmt"
 	"net/http"
 	"strings"
@@ -403,6 +405,49 @@ func (s *Service) ListAppointments(
 		Appointments: dtos,
 		Meta:         structs.CalculateMetadata(total, req.Page, req.PageSize),
 	}, nil
+}
+
+func (s *Service) ExportAppointmentsCSV(
+	ctx context.Context,
+	req ListAppointmentsRequest,
+) ([]byte, error) {
+	req.SetDefaults("created_at")
+
+	statusIDs := req.StatusID
+	appointments, err := s.repo.ListAll(
+		ctx,
+		req.Search, req.OrderBy, req.SortOrder, statusIDs,
+		req.StartDate, req.EndDate,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch appointments for export: %w", err)
+	}
+
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	if err := writer.Write([]string{
+		"Appointment Date", "Time Slot", "Student Number", "Student Name",
+		"Email", "Category", "Status", "Urgency", "Reason", "Created At",
+	}); err != nil {
+		return nil, fmt.Errorf("failed to write CSV headers: %w", err)
+	}
+
+	for _, appointment := range appointments {
+		if err := writer.Write([]string{
+			appointment.WhenDate, appointment.TimeSlotTime, appointment.StudentNumber,
+			appointment.FullName(), appointment.UserEmail, appointment.CategoryName,
+			appointment.StatusName, appointment.UrgencyLevel, appointment.Reason.String,
+			appointment.CreatedAt.Format("2006-01-02 15:04:05"),
+		}); err != nil {
+			return nil, fmt.Errorf("failed to write CSV row: %w", err)
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return nil, fmt.Errorf("failed to flush CSV writer: %w", err)
+	}
+	return buf.Bytes(), nil
 }
 
 func (s *Service) GetAppointmentsByUserID(

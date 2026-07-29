@@ -236,6 +236,30 @@ func (r *Repository) List(
 	offset, limit int,
 	search, orderBy, sortOrder, statusIDs, startDate, endDate string,
 ) ([]AppointmentWithDetailsView, error) {
+	query, args := r.buildListQuery(
+		search, orderBy, sortOrder, statusIDs, startDate, endDate,
+	)
+	query += " LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	return r.selectAppointments(ctx, query, args)
+}
+
+// ListAll returns every appointment matching the supplied filters and sort.
+func (r *Repository) ListAll(
+	ctx context.Context,
+	search, orderBy, sortOrder, statusIDs, startDate, endDate string,
+) ([]AppointmentWithDetailsView, error) {
+	query, args := r.buildListQuery(
+		search, orderBy, sortOrder, statusIDs, startDate, endDate,
+	)
+
+	return r.selectAppointments(ctx, query, args)
+}
+
+func (r *Repository) buildListQuery(
+	search, orderBy, sortOrder, statusIDs, startDate, endDate string,
+) (string, []interface{}) {
 	query := appointmentsBaseQuery + " WHERE 1=1"
 	var args []interface{}
 
@@ -255,13 +279,15 @@ func (r *Repository) List(
 	)
 
 	orderClause := buildAppointmentOrderClause(orderBy, sortOrder)
-	query += fmt.Sprintf(
-		" ORDER BY %s LIMIT %d OFFSET %d",
-		orderClause,
-		limit,
-		offset,
-	)
+	query += fmt.Sprintf(" ORDER BY %s", orderClause)
+	return query, args
+}
 
+func (r *Repository) selectAppointments(
+	ctx context.Context,
+	query string,
+	args []interface{},
+) ([]AppointmentWithDetailsView, error) {
 	expandedQuery, expandedArgs, err := sqlx.In(query, args...)
 	if err != nil {
 		return nil, err

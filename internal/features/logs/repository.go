@@ -59,12 +59,53 @@ func (r *Repository) Record(
 
 func (r *Repository) List(
 	ctx context.Context, offset, limit int,
-	category, action, userEmail, targetType, targetEmail,
+	level, category, action, userEmail, targetType, targetEmail,
 	search, startDate, endDate, sortBy, sortOrder string,
 ) ([]SystemLog, error) {
+	query, args := r.buildListQuery(
+		level, category, action, userEmail, targetType, targetEmail,
+		search, startDate, endDate, sortBy, sortOrder,
+	)
+	query += " LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	var logs []SystemLog
+	err := r.db.SelectContext(ctx, &logs, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list system logs: %w", err)
+	}
+
+	return logs, nil
+}
+
+// ListAll returns all logs matching the supplied filters and sort order.
+func (r *Repository) ListAll(
+	ctx context.Context,
+	level, category, action, userEmail, targetType, targetEmail,
+	search, startDate, endDate, sortBy, sortOrder string,
+) ([]SystemLog, error) {
+	query, args := r.buildListQuery(
+		level, category, action, userEmail, targetType, targetEmail,
+		search, startDate, endDate, sortBy, sortOrder,
+	)
+
+	var logs []SystemLog
+	err := r.db.SelectContext(ctx, &logs, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list all system logs: %w", err)
+	}
+
+	return logs, nil
+}
+
+func (r *Repository) buildListQuery(
+	level, category, action, userEmail, targetType, targetEmail,
+	search, startDate, endDate, sortBy, sortOrder string,
+) (string, []interface{}) {
 	query, args := r.applyLogFilters(
 		"SELECT id, level, category, action, message, user_id, target_id, target_type, user_email, target_email, ip_address, user_agent, metadata, trace_id, created_at FROM system_logs WHERE 1=1",
 		nil,
+		level,
 		category,
 		action,
 		userEmail,
@@ -94,28 +135,19 @@ func (r *Repository) List(
 		orderClause = fmt.Sprintf(" ORDER BY ip_address %s", sortDir)
 	}
 
-	query += orderClause + " LIMIT ? OFFSET ?"
-	args = append(args, limit, offset)
-
-	var logs []SystemLog
-	err := r.db.SelectContext(ctx, &logs, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list system logs: %w", err)
-	}
-
-	return logs, nil
+	return query + orderClause, args
 }
 
 // GetTotalCount returns the total count of system log entries matching filters
 func (r *Repository) GetTotalCount(
 	ctx context.Context,
-	category, action, userEmail, targetType, targetEmail,
+	level, category, action, userEmail, targetType, targetEmail,
 	search, startDate, endDate string,
 ) (int, error) {
 	query, args := r.applyLogFilters(
 		"SELECT COUNT(*) FROM system_logs WHERE 1=1",
 		nil,
-		category, action, userEmail, targetType, targetEmail,
+		level, category, action, userEmail, targetType, targetEmail,
 		search, startDate, endDate,
 	)
 
@@ -131,11 +163,15 @@ func (r *Repository) GetTotalCount(
 func (r *Repository) applyLogFilters(
 	query string,
 	args []interface{},
-	category, action, userEmail, targetType, targetEmail,
+	level, category, action, userEmail, targetType, targetEmail,
 	search, startDate, endDate string,
 ) (string, []interface{}) {
 	if args == nil {
 		args = []interface{}{}
+	}
+	if level != "" {
+		query += " AND level = ?"
+		args = append(args, level)
 	}
 
 	if category != "" {
@@ -190,7 +226,7 @@ func (r *Repository) GetStats(
 	query, args := r.applyLogFilters(
 		"SELECT category, COUNT(*) as count FROM system_logs WHERE 1=1",
 		nil,
-		"", "", "", "", "", "", startDate, endDate,
+		"", "", "", "", "", "", "", startDate, endDate,
 	)
 
 	query += " GROUP BY category ORDER BY category"
