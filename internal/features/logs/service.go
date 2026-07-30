@@ -58,7 +58,10 @@ func (s *Service) Record(
 		status := "Success"
 		if level == audit.LevelError ||
 			level == audit.LevelCritical ||
-			entry.Metadata.Error != "" {
+			entry.Metadata.Error != "" ||
+			strings.Contains(strings.ToUpper(entry.Action), "FAIL") ||
+			strings.Contains(strings.ToUpper(entry.Action), "DENI") ||
+			strings.Contains(strings.ToUpper(entry.Action), "INVALID") {
 			status = "Failed"
 		}
 

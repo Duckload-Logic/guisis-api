@@ -67,6 +67,10 @@ func (s *Service) GenerateM2MToken(
 	expireSeconds int,
 ) (string, *Claims, error) {
 	claims := &Claims{
+		UserID:                userID,
+		UserEmail:             userEmail,
+		ClientName:            userEmail,
+		RoleIDs:               roleIDs,
 		TokenType:             tokenType,
 		M2MClientID:           m2mClientID,
 		HasPersonalInfoAccess: hasPersonalInfoAccess,

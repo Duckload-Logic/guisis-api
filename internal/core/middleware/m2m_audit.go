@@ -51,7 +51,7 @@ func M2MAuditMiddleware() gin.HandlerFunc {
 
 		action := audit.ActionM2MDataAccess
 		level := audit.LevelInfo
-		if status >= http.StatusForbidden {
+		if status == http.StatusUnauthorized || status == http.StatusForbidden {
 			action = audit.ActionM2MDataAccessDenied
 			level = audit.LevelWarning
 		}
