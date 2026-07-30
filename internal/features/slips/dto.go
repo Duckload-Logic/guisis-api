@@ -9,10 +9,11 @@ import (
 
 type ListSlipsRequest struct {
 	structs.PaginationRequest
-	StatusID  int    `form:"status_id"`
-	StartDate string `form:"start_date"`
-	EndDate   string `form:"end_date"`
-	SortBy    string `form:"sort_by"`
+	StatusID   int    `form:"status_id"`
+	StartDate  string `form:"start_date"`
+	EndDate    string `form:"end_date"`
+	SortBy     string `form:"sort_by"`
+	CategoryID int    `form:"category_id"`
 }
 
 type ListSlipsResponse struct {

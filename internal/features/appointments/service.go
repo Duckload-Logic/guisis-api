@@ -358,6 +358,8 @@ func (s *Service) ListAppointments(
 		strings.Join(statusIDs, ","),
 		req.StartDate,
 		req.EndDate,
+		req.CategoryID,
+		req.Urgency,
 	)
 	if err != nil {
 		return nil, err
@@ -395,6 +397,8 @@ func (s *Service) ListAppointments(
 		req.StatusID,
 		req.StartDate,
 		req.EndDate,
+		req.CategoryID,
+		req.Urgency,
 		nil,
 	)
 	if err != nil {
@@ -417,7 +421,7 @@ func (s *Service) ExportAppointmentsCSV(
 	appointments, err := s.repo.ListAll(
 		ctx,
 		req.Search, req.OrderBy, req.SortOrder, statusIDs,
-		req.StartDate, req.EndDate,
+		req.StartDate, req.EndDate, req.CategoryID, req.Urgency,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch appointments for export: %w", err)
@@ -467,6 +471,8 @@ func (s *Service) GetAppointmentsByUserID(
 		req.StatusID,
 		req.StartDate,
 		req.EndDate,
+		req.CategoryID,
+		req.Urgency,
 	)
 	if err != nil {
 		return nil, err
@@ -491,6 +497,8 @@ func (s *Service) GetAppointmentsByUserID(
 		req.StatusID,
 		req.StartDate,
 		req.EndDate,
+		req.CategoryID,
+		req.Urgency,
 		&userID,
 	)
 	if err != nil {
@@ -523,6 +531,8 @@ func (s *Service) GetAppointmentsByIIRID(
 		req.StatusID,
 		req.StartDate,
 		req.EndDate,
+		req.CategoryID,
+		req.Urgency,
 	)
 	if err != nil {
 		return nil, err
@@ -547,6 +557,8 @@ func (s *Service) GetAppointmentsByIIRID(
 		req.StatusID,
 		req.StartDate,
 		req.EndDate,
+		req.CategoryID,
+		req.Urgency,
 		&iirID,
 	)
 	if err != nil {
@@ -569,6 +581,8 @@ func (s *Service) GetAppointmentStats(
 		req.StatusID,
 		req.StartDate,
 		req.EndDate,
+		req.CategoryID,
+		req.Urgency,
 		iirID,
 	)
 }

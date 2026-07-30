@@ -162,7 +162,7 @@ func (r *Repository) GetDailyStatusCount(
 
 func (r *Repository) GetTotalAppointmentsCount(
 	ctx context.Context,
-	search, statusID, startDate, endDate string,
+	search, statusID, startDate, endDate, categoryID, urgency string,
 	iirID *string,
 ) (int, error) {
 	baseQuery := `SELECT COUNT(*) FROM appointments a
@@ -177,6 +177,8 @@ func (r *Repository) GetTotalAppointmentsCount(
 		statusID,
 		startDate,
 		endDate,
+		categoryID,
+		urgency,
 		iirID,
 	)
 
@@ -194,7 +196,7 @@ func (r *Repository) GetTotalAppointmentsCount(
 func (r *Repository) applyFilters(
 	query string,
 	args []interface{},
-	search, statusID, startDate, endDate string,
+	search, statusID, startDate, endDate, categoryID, urgency string,
 	iirID *string,
 ) (string, []interface{}) {
 	if args == nil {
@@ -204,6 +206,14 @@ func (r *Repository) applyFilters(
 	if statusID != "" {
 		query += " AND a.status_id = ?"
 		args = append(args, statusID)
+	}
+	if categoryID != "" {
+		query += " AND a.appointment_category_id = ?"
+		args = append(args, categoryID)
+	}
+	if urgency != "" {
+		query += " AND a.urgency_level = ?"
+		args = append(args, urgency)
 	}
 	if startDate != "" {
 		query += filterWhenDateGe
@@ -234,10 +244,12 @@ func (r *Repository) applyFilters(
 func (r *Repository) List(
 	ctx context.Context,
 	offset, limit int,
-	search, orderBy, sortOrder, statusIDs, startDate, endDate string,
+	search, orderBy, sortOrder, statusIDs, startDate, endDate,
+	categoryID, urgency string,
 ) ([]AppointmentWithDetailsView, error) {
 	query, args := r.buildListQuery(
 		search, orderBy, sortOrder, statusIDs, startDate, endDate,
+		categoryID, urgency,
 	)
 	query += " LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
@@ -248,17 +260,20 @@ func (r *Repository) List(
 // ListAll returns every appointment matching the supplied filters and sort.
 func (r *Repository) ListAll(
 	ctx context.Context,
-	search, orderBy, sortOrder, statusIDs, startDate, endDate string,
+	search, orderBy, sortOrder, statusIDs, startDate, endDate,
+	categoryID, urgency string,
 ) ([]AppointmentWithDetailsView, error) {
 	query, args := r.buildListQuery(
 		search, orderBy, sortOrder, statusIDs, startDate, endDate,
+		categoryID, urgency,
 	)
 
 	return r.selectAppointments(ctx, query, args)
 }
 
 func (r *Repository) buildListQuery(
-	search, orderBy, sortOrder, statusIDs, startDate, endDate string,
+	search, orderBy, sortOrder, statusIDs, startDate, endDate,
+	categoryID, urgency string,
 ) (string, []interface{}) {
 	query := appointmentsBaseQuery + " WHERE 1=1"
 	var args []interface{}
@@ -275,6 +290,8 @@ func (r *Repository) buildListQuery(
 		"", // statusIDs handled separately with IN clause
 		startDate,
 		endDate,
+		categoryID,
+		urgency,
 		nil,
 	)
 
@@ -430,7 +447,7 @@ func (r *Repository) ListByUserID(
 	userID string,
 	offset, limit int,
 	orderBy, sortOrder string,
-	statusID, startDate, endDate string,
+	statusID, startDate, endDate, categoryID, urgency string,
 ) ([]AppointmentWithDetailsView, error) {
 	query, args := r.applyFilters(
 		appointmentsBaseQuery+" WHERE ir.user_id = ?",
@@ -439,6 +456,8 @@ func (r *Repository) ListByUserID(
 		statusID,
 		startDate,
 		endDate,
+		categoryID,
+		urgency,
 		nil,
 	)
 
@@ -463,7 +482,7 @@ func (r *Repository) ListByIIRID(
 	iirID string,
 	offset, limit int,
 	orderBy, sortOrder string,
-	statusID, startDate, endDate string,
+	statusID, startDate, endDate, categoryID, urgency string,
 ) ([]AppointmentWithDetailsView, error) {
 	query, args := r.applyFilters(
 		appointmentsBaseQuery+" WHERE a.iir_id = ?",
@@ -472,6 +491,8 @@ func (r *Repository) ListByIIRID(
 		statusID,
 		startDate,
 		endDate,
+		categoryID,
+		urgency,
 		nil,
 	)
 
@@ -494,7 +515,7 @@ func (r *Repository) ListByIIRID(
 
 func (r *Repository) GetAppointmentStats(
 	ctx context.Context,
-	statusID, startDate, endDate string,
+	statusID, startDate, endDate, categoryID, urgency string,
 	iirID *string,
 ) ([]StatusCount, error) {
 	joinCondition := "a.status_id = as2.id"
@@ -503,6 +524,16 @@ func (r *Repository) GetAppointmentStats(
 	if statusID != "" {
 		joinCondition += " AND a.status_id = ?"
 		args = append(args, statusID)
+	}
+
+	if categoryID != "" {
+		joinCondition += " AND a.appointment_category_id = ?"
+		args = append(args, categoryID)
+	}
+
+	if urgency != "" {
+		joinCondition += " AND a.urgency_level = ?"
+		args = append(args, urgency)
 	}
 
 	if startDate != "" {

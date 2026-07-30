@@ -9,9 +9,11 @@ import (
 
 type ListAppointmentsRequest struct {
 	structs.PaginationRequest
-	StatusID  string `form:"status_id"`
-	StartDate string `form:"start_date"`
-	EndDate   string `form:"end_date"`
+	StatusID   string `form:"status_id"`
+	StartDate  string `form:"start_date"`
+	EndDate    string `form:"end_date"`
+	CategoryID string `form:"category_id"`
+	Urgency    string `form:"urgency"`
 }
 
 type ListAppointmentsResponse struct {

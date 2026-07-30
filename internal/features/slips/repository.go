@@ -222,6 +222,11 @@ func (r *Repository) applyFilters(
 		args = append(args, req.StatusID)
 	}
 
+	if req.CategoryID != 0 {
+		query += " AND slp.category_id = ?"
+		args = append(args, req.CategoryID)
+	}
+
 	if req.StartDate != "" {
 		query += " AND slp.date_needed >= ?"
 		args = append(args, req.StartDate)
