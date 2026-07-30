@@ -69,7 +69,7 @@ func M2MAuditMiddleware() gin.HandlerFunc {
 			c.Request.Context(),
 			audit.LogEntry{
 				Level:    level,
-				Category: audit.CategorySystem,
+				Category: audit.CategoryM2M,
 				Action:   action,
 				Message:  msg,
 				UserID: structs.StringToNullableString(

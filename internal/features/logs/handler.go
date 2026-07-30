@@ -3,10 +3,13 @@ package logs
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 )
 
 type Handler struct {
@@ -144,6 +147,35 @@ func (h *Handler) GetLogsSecurity(c *gin.Context) {
 		response.SendError(
 			c,
 			"Failed to retrieve security logs",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, result)
+}
+
+// GetLogsM2M returns only M2M category logs
+func (h *Handler) GetLogsM2M(c *gin.Context) {
+	var req audit.ListSystemLogsRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		fmt.Printf("[GetLogsM2M] {Bind Query}: %v\n", err)
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+
+	req.Category = audit.CategoryM2M
+	if h.exportLogsCSV(c, req) {
+		return
+	}
+
+	result, err := h.service.ListLogs(c.Request.Context(), req)
+	if err != nil {
+		fmt.Printf("[GetLogsM2M] {Fetch Logs}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to retrieve M2M logs",
 			http.StatusInternalServerError,
 			nil,
 		)
@@ -291,4 +323,57 @@ func (h *Handler) GetTraceTracks(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, result)
+}
+
+type BackupLogRequest struct {
+	Status  string `json:"status" binding:"required,oneof=SUCCESS FAILED"`
+	Message string `json:"message" binding:"required"`
+}
+
+func (h *Handler) PostBackupLog(c *gin.Context) {
+	expectedToken := os.Getenv("BACKUP_TOKEN")
+	if expectedToken == "" {
+		response.SendError(
+			c,
+			"Backup logging is not configured (BACKUP_TOKEN is empty)",
+			http.StatusForbidden,
+			nil,
+		)
+		return
+	}
+
+	authHeader := c.GetHeader("Authorization")
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	if token != expectedToken {
+		response.SendError(
+			c,
+			"Unauthorized backup token",
+			http.StatusUnauthorized,
+			nil,
+		)
+		return
+	}
+
+	var req BackupLogRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SendFail(c, gin.H{"error": err.Error()})
+		return
+	}
+
+	level := audit.LevelInfo
+	action := "BACKUP_COMPLETED"
+	if req.Status == "FAILED" {
+		level = audit.LevelError
+		action = "BACKUP_FAILED"
+	}
+
+	h.service.Record(c.Request.Context(), nil, audit.LogEntry{
+		Level:    level,
+		Category: audit.CategorySystem,
+		Action:   action,
+		Message:  req.Message,
+		UserID:   structs.StringToNullableString("System"),
+	})
+
+	response.SendSuccess(c, gin.H{"status": "recorded"})
 }

@@ -21,6 +21,7 @@ const (
 	CategorySystem   = "SYSTEM"
 	CategorySecurity = "SECURITY"
 	CategoryConsent  = "CONSENT"
+	CategoryM2M      = "M2M"
 )
 
 // Audit log actions — track data changes and admin operations
@@ -174,8 +175,9 @@ type LogMetadata struct {
 // ListSystemLogsRequest holds query parameters for listing system logs
 type ListSystemLogsRequest struct {
 	structs.PaginationRequest
-	Level       string `form:"level,omitempty"        binding:"omitempty,oneof=INFO WARNING ERROR CRITICAL"`
-	Category    string `form:"category,omitempty"     binding:"omitempty,oneof=AUDIT SYSTEM SECURITY"`
+	Level string `form:"level,omitempty"        binding:"omitempty,oneof=INFO WARNING ERROR CRITICAL"`
+	// Exceeds 80 chars: Go struct tag must be a single-line literal.
+	Category    string `form:"category" binding:"omitempty,oneof=AUDIT SYSTEM SECURITY CONSENT M2M"`
 	Action      string `form:"action,omitempty"`
 	UserEmail   string `form:"user_email,omitempty"`
 	TargetType  string `form:"target_type,omitempty"`

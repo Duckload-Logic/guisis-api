@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"sync"
 
@@ -26,14 +25,14 @@ func NewIPRateLimiter(r rate.Limit, b int) *IPRateLimiter {
 	}
 }
 
-func (i *IPRateLimiter) GetLimiter(ip string) *rate.Limiter {
+func (i *IPRateLimiter) GetLimiter(key string) *rate.Limiter {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	limiter, exists := i.ips[ip]
+	limiter, exists := i.ips[key]
 	if !exists {
 		limiter = rate.NewLimiter(i.r, i.b)
-		i.ips[ip] = limiter
+		i.ips[key] = limiter
 	}
 
 	return limiter
@@ -41,26 +40,25 @@ func (i *IPRateLimiter) GetLimiter(ip string) *rate.Limiter {
 
 func RateLimitMiddleware(limiter *IPRateLimiter) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ip, _, err := net.SplitHostPort(c.Request.RemoteAddr)
-		if err != nil {
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
+		clientIP := c.ClientIP()
+		limitKey := clientIP
+		if authHeader := c.GetHeader("Authorization"); authHeader != "" {
+			limitKey = authHeader
 		}
 
-		if !limiter.GetLimiter(ip).Allow() {
+		if !limiter.GetLimiter(limitKey).Allow() {
 			if logSvc, ok := c.Get(SecurityLoggerContextKey); ok {
 				if svc, ok := logSvc.(SecurityLogger); ok {
 					svc.RecordSecurity(
 						c.Request.Context(),
 						"RATE_LIMIT_EXCEEDED",
 						fmt.Sprintf(
-							"Rate limit exceeded from IP %s on %s %s",
-							ip,
+							"Rate limit exceeded on %s %s",
 							c.Request.Method,
 							c.Request.URL.Path,
 						),
 						"",
-						ip,
+						clientIP,
 						c.Request.UserAgent(),
 					)
 				}

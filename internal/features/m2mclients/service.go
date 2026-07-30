@@ -133,7 +133,7 @@ func (s *Service) CreateClient(
 		audit.DispatchParams{
 			Log: &audit.LogParams{
 				Level:    audit.LevelInfo,
-				Category: audit.CategoryAudit,
+				Category: audit.CategoryM2M,
 				Action:   audit.ActionM2MClientCreated,
 				Message: fmt.Sprintf(
 					"M2M Client %s requested by user %s",
@@ -392,7 +392,7 @@ func (s *Service) Verify(
 		audit.DispatchParams{
 			Log: &audit.LogParams{
 				Level:    audit.LevelInfo,
-				Category: audit.CategoryAudit,
+				Category: audit.CategoryM2M,
 				Action:   audit.ActionM2MClientVerified,
 				Message:  fmt.Sprintf("M2M Client %s verified", id),
 			},
@@ -452,7 +452,7 @@ func (s *Service) Reject(ctx context.Context, id string) error {
 		audit.DispatchParams{
 			Log: &audit.LogParams{
 				Level:    audit.LevelInfo,
-				Category: audit.CategoryAudit,
+				Category: audit.CategoryM2M,
 				Action:   audit.ActionM2MClientRevoked,
 				Message:  fmt.Sprintf("M2M Client %s rejected", id),
 			},

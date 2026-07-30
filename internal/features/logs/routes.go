@@ -12,6 +12,9 @@ func RegisterRoutes(
 	h *Handler,
 	redis *datastore.RedisClient,
 ) {
+	// Public/Token-authenticated backup route
+	rg.POST("/logs/system/backup", h.PostBackupLog)
+
 	// Base group for all activity logs
 	activityGroup := rg.Group("/logs")
 	activityGroup.Use(middleware.AuthMiddleware(redis))
@@ -27,6 +30,7 @@ func RegisterRoutes(
 		adminOnly.GET("/audit", h.GetLogsAudit)
 		adminOnly.GET("/system", h.GetLogsSystem)
 		adminOnly.GET("/security", h.GetLogsSecurity)
+		adminOnly.GET("/m2m", h.GetLogsM2M)
 		adminOnly.GET("/stats", h.GetLogsStats)
 		adminOnly.GET("/activity", h.GetLogsActivity)
 		adminOnly.GET("/trace/:traceId", h.GetTraceTracks)

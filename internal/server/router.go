@@ -110,7 +110,7 @@ func NewRouter(
 
 	g.Use(middleware.TraceMiddleware())
 
-	limiter := middleware.NewIPRateLimiter(5, 30)
+	limiter := middleware.NewIPRateLimiter(20, 100)
 	g.Use(middleware.RateLimitMiddleware(limiter))
 
 	g.Use(func() gin.HandlerFunc {
