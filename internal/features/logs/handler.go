@@ -49,6 +49,9 @@ func (h *Handler) GetLogs(c *gin.Context) {
 		response.SendFail(c, gin.H{"error": err.Error()})
 		return
 	}
+	if h.exportLogsCSV(c, req) {
+		return
+	}
 
 	result, err := h.service.ListLogs(c.Request.Context(), req)
 	if err != nil {
@@ -74,6 +77,9 @@ func (h *Handler) GetLogsAudit(c *gin.Context) {
 	}
 
 	req.Category = audit.CategoryAudit
+	if h.exportLogsCSV(c, req) {
+		return
+	}
 
 	result, err := h.service.ListLogs(c.Request.Context(), req)
 	if err != nil {
@@ -99,6 +105,9 @@ func (h *Handler) GetLogsSystem(c *gin.Context) {
 	}
 
 	req.Category = audit.CategorySystem
+	if h.exportLogsCSV(c, req) {
+		return
+	}
 
 	result, err := h.service.ListLogs(c.Request.Context(), req)
 	if err != nil {
@@ -125,6 +134,9 @@ func (h *Handler) GetLogsSecurity(c *gin.Context) {
 	}
 
 	req.Category = audit.CategorySecurity
+	if h.exportLogsCSV(c, req) {
+		return
+	}
 
 	result, err := h.service.ListLogs(c.Request.Context(), req)
 	if err != nil {
@@ -139,6 +151,26 @@ func (h *Handler) GetLogsSecurity(c *gin.Context) {
 	}
 
 	response.SendSuccess(c, result)
+}
+
+func (h *Handler) exportLogsCSV(
+	c *gin.Context,
+	req audit.ListSystemLogsRequest,
+) bool {
+	if c.Query("export") != "csv" {
+		return false
+	}
+
+	csvData, err := h.service.ExportLogsCSV(c.Request.Context(), req)
+	if err != nil {
+		fmt.Printf("[GetLogs] {Export CSV}: %v\n", err)
+		response.SendError(c, "Failed to generate CSV report", http.StatusInternalServerError, nil)
+		return true
+	}
+
+	c.Header("Content-Disposition", "attachment; filename=system_logs_report.csv")
+	c.Data(http.StatusOK, "text/csv; charset=utf-8", csvData)
+	return true
 }
 
 // GetLogStats returns log counts by category

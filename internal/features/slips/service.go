@@ -3,6 +3,7 @@ package slips
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
 	"fmt"
 	"mime"
 	"mime/multipart"
@@ -210,6 +211,47 @@ func (s *Service) GetAllExcuseSlips(
 		Slips: slipDTOs,
 		Meta:  structs.CalculateMetadata(total, req.Page, req.PageSize),
 	}, nil
+}
+
+func (s *Service) ExportSlipsCSV(
+	ctx context.Context,
+	req ListSlipsRequest,
+) ([]byte, error) {
+	req.SetDefaults("date_needed")
+	if req.SortBy != "" {
+		req.OrderBy = req.SortBy
+	}
+
+	slips, err := s.repo.GetAllUnpaginated(ctx, &req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch slips for export: %w", err)
+	}
+
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	if err := writer.Write([]string{
+		"Date Needed", "Date of Absence", "Student Number", "Student Name",
+		"Email", "Category", "Status", "Reason", "Ticket Code", "Created At",
+	}); err != nil {
+		return nil, fmt.Errorf("failed to write CSV headers: %w", err)
+	}
+
+	for _, slip := range slips {
+		if err := writer.Write([]string{
+			slip.DateNeeded, slip.DateOfAbsence, slip.StudentNumber,
+			slip.UserFirstName + " " + slip.UserLastName, slip.UserEmail,
+			slip.CategoryName, slip.StatusName, slip.Reason, slip.TicketCode.String,
+			slip.CreatedAt.Format("2006-01-02 15:04:05"),
+		}); err != nil {
+			return nil, fmt.Errorf("failed to write CSV row: %w", err)
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return nil, fmt.Errorf("failed to flush CSV writer: %w", err)
+	}
+	return buf.Bytes(), nil
 }
 
 func (s *Service) GetExcuseSlipsByIIRID(
@@ -424,7 +466,6 @@ func (s *Service) SubmitExcuseSlip(
 			"an active excuse slip already exists for this absence date",
 		)
 	}
-
 
 	// Unified File Implementation: Use files features
 	uploadedFiles, err := s.filesService.UploadFiles(ctx, allFiles, "slips")
@@ -682,7 +723,6 @@ func (s *Service) UpdateExcuseSlip(
 			"an active excuse slip already exists for this absence date",
 		)
 	}
-
 
 	// Delete old attachments NOT in KeepFileIDs
 	oldAttachments, err := s.repo.GetSlipAttachments(ctx, slipID)

@@ -227,6 +227,17 @@ func (h *Handler) GetAppointments(c *gin.Context) {
 		response.SendFail(c, gin.H{"error": "Invalid query parameters"})
 		return
 	}
+	if c.Query("export") == "csv" {
+		csvData, err := h.service.ExportAppointmentsCSV(c.Request.Context(), req)
+		if err != nil {
+			fmt.Printf("[GetAppointments] {Export CSV}: %v\n", err)
+			response.SendError(c, "Failed to generate CSV report", http.StatusInternalServerError, nil)
+			return
+		}
+		c.Header("Content-Disposition", "attachment; filename=appointments_report.csv")
+		c.Data(http.StatusOK, "text/csv; charset=utf-8", csvData)
+		return
+	}
 
 	appts, err := h.service.ListAppointments(c.Request.Context(), req)
 	if err != nil {

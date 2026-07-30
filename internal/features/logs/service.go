@@ -1,7 +1,9 @@
 package logs
 
 import (
+	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -175,9 +177,9 @@ func (s *Service) ListLogs(
 	results, err := s.repo.List(
 		ctx,
 		req.GetOffset(), req.PageSize,
-		req.Category, req.Action, req.UserEmail,
+		req.Level, req.Category, req.Action, req.UserEmail,
 		req.TargetType, req.TargetEmail,
-		req.Search, req.StartDate, req.EndDate, 
+		req.Search, req.StartDate, req.EndDate,
 		req.SortBy, req.SortOrder, // Now passing the two distinct sorting fields
 	)
 	if err != nil {
@@ -188,7 +190,7 @@ func (s *Service) ListLogs(
 
 	total, err := s.repo.GetTotalCount(
 		ctx,
-		req.Category, req.Action, req.UserEmail,
+		req.Level, req.Category, req.Action, req.UserEmail,
 		req.TargetType, req.TargetEmail,
 		req.Search, req.StartDate, req.EndDate,
 	)
@@ -314,4 +316,47 @@ func (s *Service) sanitizeValue(val interface{}) {
 			}
 		}
 	}
+}
+
+func (s *Service) ExportLogsCSV(
+	ctx context.Context,
+	req audit.ListSystemLogsRequest,
+) ([]byte, error) {
+	req.SetDefaults("created_at")
+
+	logs, err := s.repo.ListAll(
+		ctx,
+		req.Level, req.Category, req.Action, req.UserEmail,
+		req.TargetType, req.TargetEmail,
+		req.Search, req.StartDate, req.EndDate,
+		req.SortBy, req.SortOrder,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch logs for export: %w", err)
+	}
+
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+	if err := writer.Write([]string{
+		"Timestamp", "Level", "Category", "Action", "Message", "User Email",
+		"Target Email", "Target Type", "IP Address", "Trace ID",
+	}); err != nil {
+		return nil, fmt.Errorf("failed to write CSV headers: %w", err)
+	}
+
+	for _, log := range logs {
+		if err := writer.Write([]string{
+			log.CreatedAt.Format("2006-01-02 15:04:05"), log.Level, log.Category,
+			log.Action, log.Message, log.UserEmail.String, log.TargetEmail.String,
+			log.TargetType.String, log.IPAddress.String, log.TraceID.String,
+		}); err != nil {
+			return nil, fmt.Errorf("failed to write CSV row: %w", err)
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return nil, fmt.Errorf("failed to flush CSV writer: %w", err)
+	}
+	return buf.Bytes(), nil
 }

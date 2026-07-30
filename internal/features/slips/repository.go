@@ -367,19 +367,8 @@ func (r *Repository) GetAll(
 	ctx context.Context,
 	req *ListSlipsRequest,
 ) ([]SlipWithDetailsView, error) {
-	query, args := r.applyFilters(
-		slipsBaseQuery+" WHERE 1=1",
-		nil,
-		req,
-		nil,
-	)
-
-	orderCol, orderDir := sanitizeSort(req.OrderBy, req.SortOrder)
-	query += fmt.Sprintf(
-		" ORDER BY %s %s LIMIT ? OFFSET ?",
-		orderCol,
-		orderDir,
-	)
+	query, args := r.buildGetAllQuery(req)
+	query += " LIMIT ? OFFSET ?"
 	args = append(args, req.PageSize, req.GetOffset())
 
 	var slips []SlipWithDetailsView
@@ -389,6 +378,36 @@ func (r *Repository) GetAll(
 	}
 
 	return slips, nil
+}
+
+// GetAllUnpaginated returns every slip matching the supplied filters and sort.
+func (r *Repository) GetAllUnpaginated(
+	ctx context.Context,
+	req *ListSlipsRequest,
+) ([]SlipWithDetailsView, error) {
+	query, args := r.buildGetAllQuery(req)
+
+	var slips []SlipWithDetailsView
+	err := r.db.SelectContext(ctx, &slips, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all excuse slips: %w", err)
+	}
+
+	return slips, nil
+}
+
+func (r *Repository) buildGetAllQuery(
+	req *ListSlipsRequest,
+) (string, []interface{}) {
+	query, args := r.applyFilters(
+		slipsBaseQuery+" WHERE 1=1",
+		nil,
+		req,
+		nil,
+	)
+
+	orderCol, orderDir := sanitizeSort(req.OrderBy, req.SortOrder)
+	return fmt.Sprintf("%s ORDER BY %s %s", query, orderCol, orderDir), args
 }
 
 func (r *Repository) GetByIIRID(
@@ -721,7 +740,6 @@ func (r *Repository) HasActiveSlipForDate(
 	}
 	return count > 0, nil
 }
-
 
 func sanitizeSort(orderBy, sortOrder string) (string, string) {
 	allowed := map[string]string{
