@@ -540,6 +540,12 @@ const docTemplateintegrations = `{
                 "dateOfBirth": {
                     "type": "string"
                 },
+                "emergencyContactName": {
+                    "type": "string"
+                },
+                "emergencyContactNumber": {
+                    "type": "string"
+                },
                 "gender": {
                     "$ref": "#/definitions/students.Gender"
                 },

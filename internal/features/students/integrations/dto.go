@@ -41,11 +41,13 @@ type OGOSStudentDTO struct {
 type OGOSStudentPersonalInfoDTO struct {
 	StudentNumber string `json:"studentNumber"`
 
-	Gender       students.Gender `json:"gender"`
-	DateOfBirth  string          `json:"dateOfBirth"`
-	PlaceOfBirth string          `json:"placeOfBirth"`
-	HeightM      float32         `json:"heightM"`
-	WeightKg     float32         `json:"weightKg"`
+	Gender                 students.Gender `json:"gender"`
+	DateOfBirth            string          `json:"dateOfBirth"`
+	PlaceOfBirth           string          `json:"placeOfBirth"`
+	HeightM                float32         `json:"heightM"`
+	WeightKg               float32         `json:"weightKg"`
+	EmergencyContactName   string          `json:"emergencyContactName"`
+	EmergencyContactNumber string          `json:"emergencyContactNumber"`
 }
 
 type OGOSStudentAddressDTO struct {

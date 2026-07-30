@@ -132,10 +132,12 @@ func (s *Service) GetPersonalInfoByStudentNumber(
 			ID:   student.GenderID,
 			Name: student.GenderName,
 		},
-		DateOfBirth:  student.DateOfBirth,
-		PlaceOfBirth: student.PlaceOfBirth,
-		HeightM:      float32(student.HeightM),
-		WeightKg:     student.WeightKg,
+		DateOfBirth:            student.DateOfBirth,
+		PlaceOfBirth:           student.PlaceOfBirth,
+		HeightM:                float32(student.HeightM),
+		WeightKg:               student.WeightKg,
+		EmergencyContactName:   student.EmergencyContactName,
+		EmergencyContactNumber: student.EmergencyContactNumber,
 	}, nil
 }
 
