@@ -18,6 +18,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/csvutil"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/datetime"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/files"
@@ -227,6 +228,10 @@ func (s *Service) ExportSlipsCSV(
 		return nil, fmt.Errorf("failed to fetch slips for export: %w", err)
 	}
 
+	return generateSlipsCSV(slips)
+}
+
+func generateSlipsCSV(slips []SlipWithDetailsView) ([]byte, error) {
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
 	if err := writer.Write([]string{
@@ -238,9 +243,15 @@ func (s *Service) ExportSlipsCSV(
 
 	for _, slip := range slips {
 		if err := writer.Write([]string{
-			slip.DateNeeded, slip.DateOfAbsence, slip.StudentNumber,
-			slip.UserFirstName + " " + slip.UserLastName, slip.UserEmail,
-			slip.CategoryName, slip.StatusName, slip.Reason, slip.TicketCode.String,
+			csvutil.EscapeCell(slip.DateNeeded),
+			csvutil.EscapeCell(slip.DateOfAbsence),
+			csvutil.EscapeCell(slip.StudentNumber),
+			csvutil.EscapeCell(fullName(slip.UserFirstName, slip.UserMiddleName.String, slip.UserLastName)),
+			csvutil.EscapeCell(slip.UserEmail),
+			csvutil.EscapeCell(slip.CategoryName),
+			csvutil.EscapeCell(slip.StatusName),
+			csvutil.EscapeCell(slip.Reason),
+			csvutil.EscapeCell(slip.TicketCode.String),
 			slip.CreatedAt.Format("2006-01-02 15:04:05"),
 		}); err != nil {
 			return nil, fmt.Errorf("failed to write CSV row: %w", err)
@@ -252,6 +263,16 @@ func (s *Service) ExportSlipsCSV(
 		return nil, fmt.Errorf("failed to flush CSV writer: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+func fullName(parts ...string) string {
+	nameParts := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part = strings.TrimSpace(part); part != "" {
+			nameParts = append(nameParts, part)
+		}
+	}
+	return strings.Join(nameParts, " ")
 }
 
 func (s *Service) GetExcuseSlipsByIIRID(
