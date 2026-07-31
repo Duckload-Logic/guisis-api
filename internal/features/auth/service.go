@@ -621,6 +621,12 @@ func (s *Service) PostIDPTokenExchange(
 		)
 	}
 
+	if userInfo.ID == "" {
+		return "", "", fmt.Errorf(
+			"[AuthService] {IDP Login}: IDP user ID is empty",
+		)
+	}
+
 	// Whitelist Check: Authoritative role source for IDP users.
 	// We check this on every login to support dynamic role changes (promotions).
 	whitelistRoleIDs, whitelistErr := s.repo.CheckUserWhitelist(
