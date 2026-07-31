@@ -1335,10 +1335,12 @@ CREATE TABLE `users` (
   `password_hash` varchar(255) DEFAULT NULL,
   `auth_type` varchar(20) NOT NULL DEFAULT 'native',
   `is_active` tinyint(1) DEFAULT '1',
+  `idp_uuid` varchar(255) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `idx_users_email_auth_type` (`email`,`auth_type`)
+  UNIQUE KEY `idx_users_email_auth_type` (`email`,`auth_type`),
+  UNIQUE KEY `idx_users_idp_uuid` (`idp_uuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
