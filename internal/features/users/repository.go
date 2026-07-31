@@ -158,6 +158,39 @@ func (r *Repository) GetUserByEmail(
 	return &user, nil
 }
 
+// GetUserByIDPUUID fetches a user by their IDP UUID.
+func (r *Repository) GetUserByIDPUUID(
+	ctx context.Context,
+	idpUUID string,
+) (*User, error) {
+	var user User
+
+	query := fmt.Sprintf(`
+        SELECT %s
+        FROM users
+        WHERE idp_uuid = ? AND auth_type = 'idp'
+        LIMIT 1
+    `, datastore.GetColumns(User{}))
+
+	err := r.db.GetContext(ctx, &user, query, idpUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	roles, err := r.GetRolesByUserID(ctx, user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch user roles: %w", err)
+	}
+	user.Roles = roles
+
+	profileURL, err := r.GetProfilePictureURLByUserID(ctx, user.ID)
+	if err == nil {
+		user.ProfilePicture = structs.StringToNullableString(profileURL)
+	}
+
+	return &user, nil
+}
+
 // CreateUser inserts or updates a user.
 func (r *Repository) CreateUser(
 	ctx context.Context,

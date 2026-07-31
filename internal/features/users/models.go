@@ -35,6 +35,7 @@ type User struct {
 	PasswordHash   structs.NullableString `db:"password_hash" json:"-"`
 	AuthType       string                 `db:"auth_type"     json:"authType"`
 	IsActive       bool                   `db:"is_active"     json:"isActive"`
+	IDPUUID        structs.NullableString `db:"idp_uuid"      json:"idpUuid"`
 	CreatedAt      structs.NullableTime   `db:"created_at"    json:"createdAt"`
 	UpdatedAt      structs.NullableTime   `db:"updated_at"    json:"updatedAt"`
 	ProfilePicture structs.NullableString `db:"-"             json:"profilePicture"`
