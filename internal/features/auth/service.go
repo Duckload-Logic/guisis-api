@@ -628,12 +628,51 @@ func (s *Service) PostIDPTokenExchange(
 		userInfo.Email,
 	)
 
-	// User Existence Check
-	localUser, err := s.repo.GetUserByEmail(
-		ctx,
-		userInfo.Email,
-		string(constants.AuthTypeIDP),
-	)
+	// User Existence Check by IDP UUID
+	localUser, err := s.repo.GetUserByIDPUUID(ctx, userInfo.ID)
+	if err == sql.ErrNoRows {
+		// Fallback to checking by email for pre-existing accounts
+		localUser, err = s.repo.GetUserByEmail(
+			ctx,
+			userInfo.Email,
+			string(constants.AuthTypeIDP),
+		)
+		if err == nil {
+			// Link the IDP UUID to the existing user record
+			localUser.IDPUUID = structs.StringToNullableString(
+				userInfo.ID,
+			)
+			err = s.repo.WithTransaction(
+				ctx,
+				func(tx datastore.DB) error {
+					return s.repo.CreateUser(ctx, tx, *localUser)
+				},
+			)
+			if err != nil {
+				return "", "", fmt.Errorf(
+					"[AuthService] {Link IDP UUID}: %w",
+					err,
+				)
+			}
+		}
+	} else if err == nil {
+		// User found by IDP UUID. Check if their email has changed.
+		if localUser.Email != userInfo.Email {
+			localUser.Email = userInfo.Email
+			err = s.repo.WithTransaction(
+				ctx,
+				func(tx datastore.DB) error {
+					return s.repo.CreateUser(ctx, tx, *localUser)
+				},
+			)
+			if err != nil {
+				return "", "", fmt.Errorf(
+					"[AuthService] {Update Email}: %w",
+					err,
+				)
+			}
+		}
+	}
 
 	// Determine target roles from whitelist or defaults
 	var targetRoleIDs []int
@@ -667,6 +706,7 @@ func (s *Service) PostIDPTokenExchange(
 			LastName:     userInfo.LastName,
 			MiddleName:   structs.StringToNullableString(userInfo.MiddleName),
 			SuffixName:   structs.StringToNullableString(userInfo.SuffixName),
+			IDPUUID:      structs.StringToNullableString(userInfo.ID),
 			AuthType:     string(constants.AuthTypeIDP),
 			PasswordHash: structs.NullableString{Valid: false},
 			IsActive:     true,
