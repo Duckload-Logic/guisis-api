@@ -74,6 +74,7 @@ jobs:
                   key: ${{ secrets.SSH_PRIVATE_KEY }}
                   port: ${{ secrets.SSH_PORT }}
                   script: |
+                      set -e
                       ENV_NAME="staging"
                       if [ "${{ github.ref_name }}" = "main" ]; then
                         ENV_NAME="prod"
