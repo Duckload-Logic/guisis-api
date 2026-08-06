@@ -90,7 +90,7 @@ jobs:
                         --password-stdin
 
                       # Pull the newly pushed images
-                      docker compose -f docker-compose.yml pull
+                      docker compose -f docker-compose.yml pull api
 
                       # Recreate containers
                       docker compose -f docker-compose.yml \

@@ -637,22 +637,15 @@ func (s *Service) PostIDPTokenExchange(
 	// User Existence Check by IDP UUID
 	localUser, err := s.repo.GetUserByIDPUUID(ctx, userInfo.ID)
 	if err == sql.ErrNoRows {
-		// Fallback to checking by email for pre-existing accounts
+		// Fallback to checking by email for pre-existing native accounts
 		localUser, err = s.repo.GetUserByEmail(
 			ctx,
 			userInfo.Email,
-			string(constants.AuthTypeIDP),
+			string(constants.AuthTypeNative),
 		)
-		if err == nil {
-			// Link the IDP UUID to the existing user record
-			localUser.IDPUUID = structs.StringToNullableString(
-				userInfo.ID,
-			)
-		}
 	}
 
 	if err == nil {
-		// User exists in the local database. Sync email and names.
 		var changed bool
 		if localUser.Email != userInfo.Email {
 			localUser.Email = userInfo.Email
@@ -682,6 +675,11 @@ func (s *Service) PostIDPTokenExchange(
 		if localUser.SuffixName.String != newSuffix.String ||
 			localUser.SuffixName.Valid != newSuffix.Valid {
 			localUser.SuffixName = newSuffix
+			changed = true
+		}
+
+		if localUser.AuthType != string(constants.AuthTypeIDP) {
+			localUser.AuthType = string(constants.AuthTypeIDP)
 			changed = true
 		}
 
