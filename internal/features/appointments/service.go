@@ -12,6 +12,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/csvutil"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/datetime"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/features/notes"
@@ -427,6 +428,10 @@ func (s *Service) ExportAppointmentsCSV(
 		return nil, fmt.Errorf("failed to fetch appointments for export: %w", err)
 	}
 
+	return generateAppointmentsCSV(appointments)
+}
+
+func generateAppointmentsCSV(appointments []AppointmentWithDetailsView) ([]byte, error) {
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
 	if err := writer.Write([]string{
@@ -438,9 +443,15 @@ func (s *Service) ExportAppointmentsCSV(
 
 	for _, appointment := range appointments {
 		if err := writer.Write([]string{
-			appointment.WhenDate, appointment.TimeSlotTime, appointment.StudentNumber,
-			appointment.FullName(), appointment.UserEmail, appointment.CategoryName,
-			appointment.StatusName, appointment.UrgencyLevel, appointment.Reason.String,
+			csvutil.EscapeCell(appointment.WhenDate),
+			csvutil.EscapeCell(appointment.TimeSlotTime),
+			csvutil.EscapeCell(appointment.StudentNumber),
+			csvutil.EscapeCell(appointment.FullName()),
+			csvutil.EscapeCell(appointment.UserEmail),
+			csvutil.EscapeCell(appointment.CategoryName),
+			csvutil.EscapeCell(appointment.StatusName),
+			csvutil.EscapeCell(appointment.UrgencyLevel),
+			csvutil.EscapeCell(appointment.Reason.String),
 			appointment.CreatedAt.Format("2006-01-02 15:04:05"),
 		}); err != nil {
 			return nil, fmt.Errorf("failed to write CSV row: %w", err)
