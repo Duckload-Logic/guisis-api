@@ -648,23 +648,52 @@ func (s *Service) PostIDPTokenExchange(
 			localUser.IDPUUID = structs.StringToNullableString(
 				userInfo.ID,
 			)
-			err = s.repo.WithTransaction(
-				ctx,
-				func(tx datastore.DB) error {
-					return s.repo.CreateUser(ctx, tx, *localUser)
-				},
-			)
-			if err != nil {
-				return "", "", fmt.Errorf(
-					"[AuthService] {Link IDP UUID}: %w",
-					err,
-				)
-			}
 		}
-	} else if err == nil {
-		// User found by IDP UUID. Check if their email has changed.
+	}
+
+	if err == nil {
+		// User exists in the local database. Sync email and names.
+		var changed bool
 		if localUser.Email != userInfo.Email {
 			localUser.Email = userInfo.Email
+			changed = true
+		}
+		if localUser.FirstName != userInfo.FirstName {
+			localUser.FirstName = userInfo.FirstName
+			changed = true
+		}
+		if localUser.LastName != userInfo.LastName {
+			localUser.LastName = userInfo.LastName
+			changed = true
+		}
+
+		newMiddle := structs.StringToNullableString(
+			userInfo.MiddleName,
+		)
+		if localUser.MiddleName.String != newMiddle.String ||
+			localUser.MiddleName.Valid != newMiddle.Valid {
+			localUser.MiddleName = newMiddle
+			changed = true
+		}
+
+		newSuffix := structs.StringToNullableString(
+			userInfo.SuffixName,
+		)
+		if localUser.SuffixName.String != newSuffix.String ||
+			localUser.SuffixName.Valid != newSuffix.Valid {
+			localUser.SuffixName = newSuffix
+			changed = true
+		}
+
+		if localUser.IDPUUID.String != userInfo.ID ||
+			!localUser.IDPUUID.Valid {
+			localUser.IDPUUID = structs.StringToNullableString(
+				userInfo.ID,
+			)
+			changed = true
+		}
+
+		if changed {
 			err = s.repo.WithTransaction(
 				ctx,
 				func(tx datastore.DB) error {
@@ -673,7 +702,7 @@ func (s *Service) PostIDPTokenExchange(
 			)
 			if err != nil {
 				return "", "", fmt.Errorf(
-					"[AuthService] {Update Email}: %w",
+					"[PostIDPTokenExchange] {Update User Info}: %w",
 					err,
 				)
 			}
