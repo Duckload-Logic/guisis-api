@@ -51,6 +51,13 @@ func (c *Client) ConvertHTML(
 		)
 	}
 
+	if err := writer.WriteField("waitDelay", "1s"); err != nil {
+		return nil, fmt.Errorf(
+			"failed to write field waitDelay: %w",
+			err,
+		)
+	}
+
 	if err := writer.Close(); err != nil {
 		return nil, fmt.Errorf("failed to close multipart writer: %w", err)
 	}
