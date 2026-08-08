@@ -223,3 +223,105 @@ func TestPostIDPTokenExchange_NativeEmailLink(t *testing.T) {
 		t.Errorf("Linked user fields were not updated: %+v", linkedUser)
 	}
 }
+
+func TestPostIDPTokenExchange_IDPEmailLink(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	defer db.Close()
+
+	redisClient := setupTestRedis(t)
+
+	var mockIDPUser idp.IDPUserInfo
+	idpServer := httptest.NewServer(http.HandlerFunc(func(
+		w http.ResponseWriter,
+		r *http.Request,
+	) {
+		if r.URL.Path == "/auth/token" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(idp.IDPTokenResponse{
+				AccessToken: "mock-token",
+				TokenType:   "Bearer",
+				ExpiresIn:   3600,
+			})
+			return
+		}
+		if r.URL.Path == "/me" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(mockIDPUser)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer idpServer.Close()
+
+	cfg := &config.Config{
+		IDPBaseUrl:      idpServer.URL,
+		IDPClientID:     "client-id",
+		IDPClientSecret: "client-secret",
+	}
+
+	userRepo := users.NewRepository(db)
+	sessionSvc := sessions.NewService(redisClient)
+	svc := NewService(
+		userRepo,
+		redisClient,
+		sessionSvc,
+		&mockEmailer{},
+		&mockLogger{},
+	)
+
+	ctx := context.Background()
+
+	// Seed pre-existing IDP user with NULL idp_uuid
+	_, err := db.Exec(`
+		INSERT INTO users (
+			id, email, first_name, last_name, auth_type, is_active
+		) VALUES (
+			'idp-user-id', 'idp_linked@test.com', 'OldFirst', 'OldLast',
+			'idp', 1
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to seed IDP user: %v", err)
+	}
+
+	// IDP login with same email and new idp-uuid
+	mockIDPUser = idp.IDPUserInfo{
+		ID:         "idp-uuid-888",
+		Email:      "idp_linked@test.com",
+		FirstName:  "NewFirst",
+		LastName:   "NewLast",
+		MiddleName: "NewMiddle",
+		SuffixName: "NewSuffix",
+	}
+
+	_, _, err = svc.PostIDPTokenExchange(
+		ctx,
+		"code888",
+		cfg,
+		"127.0.0.1",
+		"test-agent",
+	)
+	if err != nil {
+		t.Fatalf("Failed IDP token exchange for IDP link: %v", err)
+	}
+
+	// Verify that the IDP user record was linked/updated correctly
+	linkedUser, err := userRepo.GetUserByIDPUUID(ctx, "idp-uuid-888")
+	if err != nil {
+		t.Fatalf("Failed to fetch linked user: %v", err)
+	}
+
+	if linkedUser.ID != "idp-user-id" {
+		t.Errorf(
+			"Expected linked user ID to be idp-user-id, got %s",
+			linkedUser.ID,
+		)
+	}
+
+	if linkedUser.FirstName != "NewFirst" ||
+		linkedUser.LastName != "NewLast" ||
+		linkedUser.MiddleName.String != "NewMiddle" ||
+		linkedUser.SuffixName.String != "NewSuffix" {
+		t.Errorf("Linked user fields were not updated: %+v", linkedUser)
+	}
+}

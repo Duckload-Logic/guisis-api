@@ -637,12 +637,20 @@ func (s *Service) PostIDPTokenExchange(
 	// User Existence Check by IDP UUID
 	localUser, err := s.repo.GetUserByIDPUUID(ctx, userInfo.ID)
 	if err == sql.ErrNoRows {
-		// Fallback to checking by email for pre-existing native accounts
+		// Check by email for pre-existing IDP accounts first
 		localUser, err = s.repo.GetUserByEmail(
 			ctx,
 			userInfo.Email,
-			string(constants.AuthTypeNative),
+			string(constants.AuthTypeIDP),
 		)
+		if err == sql.ErrNoRows {
+			// Fallback to checking by email for native accounts
+			localUser, err = s.repo.GetUserByEmail(
+				ctx,
+				userInfo.Email,
+				string(constants.AuthTypeNative),
+			)
+		}
 	}
 
 	if err == nil {
