@@ -349,6 +349,22 @@
             padding-left: 30px;
         }
     </style>
+    <script>
+        window.onload = function() {
+            var elements = document.querySelectorAll('.dynamic-text');
+            elements.forEach(function(el) {
+                var fontSize = 11;
+                el.style.fontSize = fontSize + 'pt';
+                el.style.whiteSpace = 'nowrap';
+                var parentWidth = el.offsetWidth;
+                while (el.scrollWidth > parentWidth && fontSize > 7) {
+                    fontSize -= 0.5;
+                    el.style.fontSize = fontSize + 'pt';
+                }
+                el.style.whiteSpace = 'normal';
+            });
+        };
+    </script>
 </head>
 
 <body>
@@ -449,7 +465,7 @@
         <div class="flex-row mt-5">
             <div class="flex-2 flex-row-no-gap align-end">
                 <span class="field-label">City Address:</span>
-                <span class="field-fill">
+                <span class="field-fill dynamic-text">
                     {{range .Addresses}}{{if eq .AddressType "Residential"}}
 
                     {{.Address.StreetDetail}}{{if and .Address.StreetDetail .Address.Barangay.Name}}, {{end}}
@@ -467,7 +483,7 @@
         <div class="flex-row mt-5">
             <div class="flex-2 flex-row-no-gap align-end">
                 <span class="field-label">Provincial Address:</span>
-                <span class="field-fill">
+                <span class="field-fill dynamic-text">
                     {{range .Addresses}}{{if eq .AddressType "Provincial"}}
                     {{.Address.StreetDetail}}{{if and .Address.StreetDetail .Address.Barangay.Name}}, {{end}}
                     Barangay {{.Address.Barangay.Name}}{{if and .Address.Barangay.Name .Address.City.Name}}, {{end}}
@@ -505,7 +521,7 @@
 
         <div class="row align-end mt-5">
             <span class="field-label">If working, please indicate the name and address of employer:</span>
-            <span class="field-fill">
+            <span class="field-fill dynamic-text">
                 {{if .IsEmployed}}{{.EmployerName.String}}, {{.EmployerAddress.String}}{{end}}
             </span>
             <div class="w-200 flex-row-no-gap align-end ml-10">
@@ -522,7 +538,7 @@
         <div class="flex-row mt-5">
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Address:</span>
-                <span class="field-fill">
+                <span class="field-fill dynamic-text">
                     {{.EmergencyContact.Address.StreetDetail}}{{if and .EmergencyContact.Address.StreetDetail .EmergencyContact.Address.Barangay.Name}}, {{end}}
                     Barangay {{.EmergencyContact.Address.Barangay.Name}}, {{.EmergencyContact.Address.City.Name}}{{if .EmergencyContact.Address.Province}}, {{.EmergencyContact.Address.Province.Name}}{{end}}
                 </span>
@@ -616,17 +632,17 @@
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Occupation:</span>
-                <span class="field-fill">{{if $father}}{{$father.Occupation.String}}{{end}}</span>
+                <span class="field-fill dynamic-text">{{if $father}}{{$father.Occupation.String}}{{end}}</span>
             </div>
         </div>
         <div class="flex-row">
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Name of Employer:</span>
-                <span class="field-fill">{{if $father}}{{$father.EmployerName.String}}{{end}}</span>
+                <span class="field-fill dynamic-text">{{if $father}}{{$father.EmployerName.String}}{{end}}</span>
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Address of Employer:</span>
-                <span class="field-fill">{{if $father}}{{$father.EmployerAddress.String}}{{end}}</span>
+                <span class="field-fill dynamic-text">{{if $father}}{{$father.EmployerAddress.String}}{{end}}</span>
             </div>
         </div>
 
@@ -657,17 +673,17 @@
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Occupation:</span>
-                <span class="field-fill">{{if $mother}}{{$mother.Occupation.String}}{{end}}</span>
+                <span class="field-fill dynamic-text">{{if $mother}}{{$mother.Occupation.String}}{{end}}</span>
             </div>
         </div>
         <div class="flex-row">
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Name of Employer:</span>
-                <span class="field-fill">{{if $mother}}{{$mother.EmployerName.String}}{{end}}</span>
+                <span class="field-fill dynamic-text">{{if $mother}}{{$mother.EmployerName.String}}{{end}}</span>
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Address of Employer:</span>
-                <span class="field-fill">{{if $mother}}{{$mother.EmployerAddress.String}}{{end}}</span>
+                <span class="field-fill dynamic-text">{{if $mother}}{{$mother.EmployerAddress.String}}{{end}}</span>
             </div>
         </div>
 
@@ -694,17 +710,17 @@
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Occupation:</span>
-                <span class="field-fill">{{if $guardian}}{{$guardian.Occupation.String}}{{end}}</span>
+                <span class="field-fill dynamic-text">{{if $guardian}}{{$guardian.Occupation.String}}{{end}}</span>
             </div>
         </div>
         <div class="flex-row">
             <div class="flex-1 flex-row-no-gap align-end">
                 <span class="field-label">Name of Employer:</span>
-                <span class="field-fill">{{if $guardian}}{{$guardian.EmployerName.String}}{{end}}</span>
+                <span class="field-fill dynamic-text">{{if $guardian}}{{$guardian.EmployerName.String}}{{end}}</span>
             </div>
             <div class="flex-1 flex-row-no-gap align-end ml-10">
                 <span class="field-label">Address of Employer:</span>
-                <span class="field-fill">{{if $guardian}}{{$guardian.EmployerAddress.String}}{{end}}</span>
+                <span class="field-fill dynamic-text">{{if $guardian}}{{$guardian.EmployerAddress.String}}{{end}}</span>
             </div>
         </div>
 
