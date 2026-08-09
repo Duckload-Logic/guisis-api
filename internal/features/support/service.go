@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/TwiN/go-away"
+	goaway "github.com/TwiN/go-away"
 	"github.com/google/uuid"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
@@ -151,7 +151,7 @@ func (s *Service) AddMessage(
 		if err == nil && user != nil {
 			senderName = fmt.Sprintf("%s %s", user.FirstName, user.LastName)
 		} else {
-			senderName = "Staff"
+			senderName = "Admin"
 		}
 	} else {
 		if ticket.GuestName.Valid && ticket.GuestName.String != "" {
