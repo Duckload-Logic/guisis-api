@@ -169,6 +169,11 @@ func RegisterRoutes(
 		studentRoutes.GET("/records/iir/draft", h.GetStudentIIRDraft)
 		studentRoutes.POST("/records/iir/draft", h.PostStudentIIRDraft)
 
+		studentRoutes.GET(
+			"/records/iir/check-number",
+			h.GetStudentNumberUniqueness,
+		)
+
 		studentRoutes.POST("/records/iir", h.PostStudentIIR)
 
 		// COR management
