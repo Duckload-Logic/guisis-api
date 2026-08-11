@@ -132,6 +132,26 @@ func (s *Service) sendNotificationsToUserIDs(
 	}
 }
 
+func (s *Service) notifyUserOfNewMessage(
+	ctx context.Context,
+	userID string,
+	ticketID string,
+	senderName string,
+) {
+	notif := audit.NotificationEntry{
+		ReceiverID: structs.StringToNullableString(userID),
+		Title:      "Support Message",
+		Message: fmt.Sprintf(
+			"%s replied to your support ticket",
+			senderName,
+		),
+		Type:       "System",
+		TargetID:   structs.StringToNullableString(ticketID),
+		TargetType: structs.StringToNullableString("SupportTicket"),
+	}
+	_ = s.notifSvc.Send(ctx, notif)
+}
+
 func (s *Service) AddMessage(
 	ctx context.Context,
 	ticketID string,
@@ -175,6 +195,17 @@ func (s *Service) AddMessage(
 	err = s.repo.CreateMessage(ctx, msg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create message: %w", err)
+	}
+
+	if ticket.UserID.Valid &&
+		ticket.UserID.String != "" &&
+		senderID != ticket.UserID.String {
+		go s.notifyUserOfNewMessage(
+			context.Background(),
+			ticket.UserID.String,
+			ticketID,
+			senderName,
+		)
 	}
 
 	newStatus := ticket.Status
