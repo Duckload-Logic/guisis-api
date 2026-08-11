@@ -154,6 +154,7 @@ func getServices(
 		repos.SupportRepo,
 		notificationsService,
 		userService,
+		emailer,
 	)
 
 	return &Services{

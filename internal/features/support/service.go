@@ -17,17 +17,20 @@ type Service struct {
 	repo     *Repository
 	notifSvc *notifications.Service
 	usersSvc *users.Service
+	emailer  audit.Emailer
 }
 
 func NewService(
 	repo *Repository,
 	notifSvc *notifications.Service,
 	usersSvc *users.Service,
+	emailer audit.Emailer,
 ) *Service {
 	return &Service{
 		repo:     repo,
 		notifSvc: notifSvc,
 		usersSvc: usersSvc,
+		emailer:  emailer,
 	}
 }
 
@@ -206,6 +209,27 @@ func (s *Service) AddMessage(
 			ticketID,
 			senderName,
 		)
+		go s.sendReplyEmailToUser(
+			context.Background(),
+			ticket.UserID.String,
+			ticketID,
+			req.Message,
+		)
+	} else if !ticket.UserID.Valid && senderID != "" {
+		if ticket.GuestEmail.Valid && ticket.GuestEmail.String != "" {
+			recipientEmail := ticket.GuestEmail.String
+			recipientName := "Guest"
+			if ticket.GuestName.Valid && ticket.GuestName.String != "" {
+				recipientName = ticket.GuestName.String
+			}
+			go s.sendReplyEmail(
+				context.Background(),
+				recipientEmail,
+				recipientName,
+				ticketID,
+				req.Message,
+			)
+		}
 	}
 
 	newStatus := ticket.Status
@@ -407,5 +431,75 @@ func (s *Service) mapMessageToResponse(m *SupportMessage) *MessageResponse {
 		SenderName: m.SenderName,
 		Message:    m.Message,
 		CreatedAt:  m.CreatedAt,
+	}
+}
+
+func (s *Service) sendReplyEmailToUser(
+	ctx context.Context,
+	userID string,
+	ticketID string,
+	message string,
+) {
+	user, err := s.usersSvc.GetUserByID(ctx, userID)
+	if err != nil || user == nil {
+		fmt.Printf(
+			"[SupportService] {EmailToUser - GetUser}: %v\n",
+			err,
+		)
+		return
+	}
+
+	name := fmt.Sprintf("%s %s", user.FirstName, user.LastName)
+	s.sendReplyEmail(ctx, user.Email, name, ticketID, message)
+}
+
+func (s *Service) sendReplyEmail(
+	ctx context.Context,
+	email string,
+	name string,
+	ticketID string,
+	message string,
+) {
+	ticketShort := ticketID
+	if len(ticketShort) > 8 {
+		ticketShort = ticketShort[:8]
+	}
+
+	body := fmt.Sprintf(`
+<div style="font-family: sans-serif; padding: 20px; color: #333; `+
+		`max-width: 600px; margin: 0 auto; border: 1px solid #eee; `+
+		`border-radius: 8px;">
+	<h2 style="color: #800000; border-bottom: 2px solid #800000; `+
+		`padding-bottom: 10px; margin-top: 0;">GuiSIS Support</h2>
+	<p>Hi %s,</p>
+	<p>A support representative has replied to your ticket `+
+		`(<strong>#%s</strong>):</p>
+	<div style="background-color: #f9f9f9; border-left: 4px solid `+
+		`#800000; padding: 12px 15px; margin: 15px 0; `+
+		`font-style: italic; white-space: pre-wrap;">%s</div>
+	<p>To view the full conversation or reply, please visit the `+
+		`GuiSIS portal.</p>
+	<hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+	<p style="font-size: 11px; color: #888; text-align: center; `+
+		`margin-bottom: 0;">This is an automated notification. `+
+		`Please do not reply directly to this email.</p>
+</div>
+`, name, ticketShort, message)
+
+	emailEntry := audit.EmailEntry{
+		To: []string{email},
+		Subject: fmt.Sprintf(
+			"GuiSIS Support - Ticket #%s Reply",
+			ticketShort,
+		),
+		Body: body,
+	}
+
+	err := s.emailer.Send(ctx, emailEntry)
+	if err != nil {
+		fmt.Printf(
+			"[SupportService] {SendReplyEmail - Send}: %v\n",
+			err,
+		)
 	}
 }
