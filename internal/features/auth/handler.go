@@ -157,12 +157,12 @@ func (h *Handler) GetLogout(c *gin.Context) {
 	c.SetCookie(
 		constants.AccessTokenCookieName,
 		"", -1, constants.CookiePathRoot, "",
-		h.cfg.IsProduction, true,
+		h.cfg.IsProduction || h.cfg.IsStaging, true,
 	)
 	c.SetCookie(
 		constants.RefreshTokenCookieName,
 		"", -1, constants.CookiePathRoot, "",
-		h.cfg.IsProduction, true,
+		h.cfg.IsProduction || h.cfg.IsStaging, true,
 	)
 
 	// Determine redirection target (fallback to frontend)
