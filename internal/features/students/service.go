@@ -1067,6 +1067,11 @@ func (s *Service) saveComprehensiveProfile(
 		iirID = uuid.New().String()
 	}
 
+	isCompleted := true
+	if req.IsCompleted != nil {
+		isCompleted = *req.IsCompleted
+	}
+
 	if ok, err := s.repo.ValidateCivilStatusExists(
 		ctx, tx, req.Student.CivilStatus.ID,
 	); err != nil {
@@ -1110,33 +1115,35 @@ func (s *Service) saveComprehensiveProfile(
 		}
 	}
 
-	if ok, err := s.repo.ValidateParentalStatusExists(
-		ctx, tx, req.Family.ParentalStatus.ID,
-	); err != nil {
-		return "", fmt.Errorf(
-			"[StudentService] {saveComprehensiveProfile}: %w", err,
-		)
-	} else if !ok {
-		return "", &ValidationError{
-			Message: fmt.Sprintf(
-				"invalid parental status ID: %d",
-				req.Family.ParentalStatus.ID,
-			),
+	if isCompleted {
+		if ok, err := s.repo.ValidateParentalStatusExists(
+			ctx, tx, req.Family.ParentalStatus.ID,
+		); err != nil {
+			return "", fmt.Errorf(
+				"[StudentService] {saveComprehensiveProfile}: %w", err,
+			)
+		} else if !ok {
+			return "", &ValidationError{
+				Message: fmt.Sprintf(
+					"invalid parental status ID: %d",
+					req.Family.ParentalStatus.ID,
+				),
+			}
 		}
-	}
 
-	if ok, err := s.repo.ValidateNatureOfResidenceExists(
-		ctx, tx, req.Family.NatureOfResidence.ID,
-	); err != nil {
-		return "", fmt.Errorf(
-			"[StudentService] {saveComprehensiveProfile}: %w", err,
-		)
-	} else if !ok {
-		return "", &ValidationError{
-			Message: fmt.Sprintf(
-				"invalid nature of residence ID: %d",
-				req.Family.NatureOfResidence.ID,
-			),
+		if ok, err := s.repo.ValidateNatureOfResidenceExists(
+			ctx, tx, req.Family.NatureOfResidence.ID,
+		); err != nil {
+			return "", fmt.Errorf(
+				"[StudentService] {saveComprehensiveProfile}: %w", err,
+			)
+		} else if !ok {
+			return "", &ValidationError{
+				Message: fmt.Sprintf(
+					"invalid nature of residence ID: %d",
+					req.Family.NatureOfResidence.ID,
+				),
+			}
 		}
 	}
 
@@ -1148,11 +1155,6 @@ func (s *Service) saveComprehensiveProfile(
 		return "", &ValidationError{
 			Message: err.Error(),
 		}
-	}
-
-	isCompleted := true
-	if req.IsCompleted != nil {
-		isCompleted = *req.IsCompleted
 	}
 
 	_, err := s.repo.UpsertIIRRecord(ctx, tx, &IIRRecord{
@@ -1270,6 +1272,10 @@ func (s *Service) saveComprehensiveProfile(
 		}
 	}
 
+	if !isCompleted {
+		return iirID, nil
+	}
+
 	// 5. Family Background
 	fbID, err := s.repo.UpsertFamilyBackground(ctx, tx, &FamilyBackground{
 		IIRID:                 iirID,
@@ -1372,7 +1378,7 @@ func (s *Service) saveComprehensiveProfile(
 	// 8. Finance
 	sfID, err := s.repo.UpsertStudentFinance(ctx, tx, &StudentFinance{
 		IIRID:           iirID,
-		IncomeRangeID:   req.Family.Finance.MonthlyFamilyIncomeRange.ID,
+		IncomeRangeID:   req.Family.Finance.IncomeRange.ID,
 		OtherIncome:     req.Family.Finance.OtherIncomeDetails,
 		WeeklyAllowance: req.Family.Finance.WeeklyAllowance,
 	})

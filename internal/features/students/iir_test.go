@@ -182,7 +182,7 @@ func TestIIRLifecycle(t *testing.T) {
 	req.Family.EmployedSiblings = &zero
 	req.Family.OrdinalPosition = 1
 
-	req.Family.Finance.MonthlyFamilyIncomeRange.ID = incomeRangeID
+	req.Family.Finance.IncomeRange.ID = incomeRangeID
 	req.Family.Finance.WeeklyAllowance = 500.0
 
 	req.Family.RelatedPersons = []RelatedPersonDTO{

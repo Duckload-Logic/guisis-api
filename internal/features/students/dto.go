@@ -166,26 +166,27 @@ type StudentAddressDTO struct {
 
 type EducationalBackgroundDTO struct {
 	ID                 int                    `json:"id,omitempty"`
-	NatureOfSchooling  string                 `json:"natureOfSchooling"            binding:"required"`
+	NatureOfSchooling  string                 `json:"natureOfSchooling"            binding:"omitempty"`
 	InterruptedDetails structs.NullableString `json:"interruptedDetails,omitempty"`
-	School             []SchoolDetailsDTO     `json:"schools"                      binding:"required"`
+	School             []SchoolDetailsDTO     `json:"schools"                      binding:"omitempty"`
 	CreatedAt          time.Time              `json:"createdAt,omitempty"`
 	UpdatedAt          time.Time              `json:"updatedAt,omitempty"`
 }
 
 type SchoolDetailsDTO struct {
 	ID               int                    `json:"id,omitempty"`
-	EducationalLevel EducationalLevel       `json:"educationalLevel"        binding:"required"`
-	SchoolName       string                 `json:"schoolName"              binding:"required"`
+	EducationalLevel EducationalLevel       `json:"educationalLevel"        binding:"omitempty"`
+	SchoolName       string                 `json:"schoolName"              binding:"omitempty"`
 	SchoolAddress    string                 `json:"schoolAddress,omitempty"`
-	SchoolType       string                 `json:"schoolType"              binding:"required"`
+	SchoolType       string                 `json:"schoolType"              binding:"omitempty"`
 	YearStarted      int                    `json:"yearStarted,omitempty"`
-	YearCompleted    int                    `json:"yearCompleted"           binding:"required"`
+	YearCompleted    int                    `json:"yearCompleted"           binding:"omitempty"`
 	Awards           structs.NullableString `json:"awards,omitempty"`
 }
 
 type RelType = StudentRelationshipType
 type EduAttain = EducationalAttainment
+type NatResType = NatureOfResidenceType
 
 type RelatedPersonDTO struct {
 	ID int `json:"id,omitempty"`
@@ -219,17 +220,17 @@ type RelatedPersonDTO struct {
 
 type FamilyBackgroundDTO struct {
 	ID                    int                    `json:"id,omitempty"`
-	ParentalStatus        ParentalStatusType     `json:"parentalStatus"                  binding:"required"`
+	ParentalStatus        ParentalStatusType     `json:"parentalStatus" binding:"omitempty"`
 	ParentalStatusDetails structs.NullableString `json:"parentalStatusDetails,omitempty"`
-	Brothers              *int                   `json:"brothers"                        binding:"required"`
-	Sisters               *int                   `json:"sisters"                         binding:"required"`
-	EmployedSiblings      *int                   `json:"employedSiblings"                binding:"required"`
-	OrdinalPosition       int                    `json:"ordinalPosition"                 binding:"required"`
+	Brothers              *int                   `json:"brothers" binding:"omitempty"`
+	Sisters               *int                   `json:"sisters" binding:"omitempty"`
+	EmployedSiblings      *int                   `json:"employedSiblings" binding:"omitempty"`
+	OrdinalPosition       int                    `json:"ordinalPosition" binding:"omitempty"`
 	HaveQuietPlaceToStudy bool                   `json:"haveQuietPlaceToStudy"`
 	SiblingSupportTypes   []SibilingSupportType  `json:"siblingSupportTypes"`
 	IsSharingRoom         bool                   `json:"isSharingRoom"`
 	RoomSharingDetails    structs.NullableString `json:"roomSharingDetails,omitempty"`
-	NatureOfResidence     NatureOfResidenceType  `json:"natureOfResidence"               binding:"required"`
+	NatureOfResidence     NatResType             `json:"natureOfResidence" binding:"omitempty"`
 }
 
 type EducationalBGDTO struct {
@@ -243,11 +244,11 @@ type EducationalBGDTO struct {
 }
 
 type StudentFinanceDTO struct {
-	ID                       int                    `json:"id,omitempty"`
-	MonthlyFamilyIncomeRange IncomeRange            `json:"monthlyFamilyIncomeRange"        binding:"required"`
-	OtherIncomeDetails       structs.NullableString `json:"otherIncomeDetails,omitempty"`
-	FinancialSupportTypes    []StudentSupportType   `json:"financialSupportTypes,omitempty"`
-	WeeklyAllowance          float64                `json:"weeklyAllowance"                 binding:"required"`
+	ID                    int                  `json:"id,omitempty"`
+	IncomeRange           IncomeRange          `json:"monthlyFamilyIncomeRange" binding:"omitempty"`
+	OtherIncomeDetails    structs.NullableString `json:"otherIncomeDetails,omitempty"`
+	FinancialSupportTypes []StudentSupportType `json:"financialSupportTypes,omitempty"`
+	WeeklyAllowance       float64              `json:"weeklyAllowance" binding:"omitempty"`
 }
 
 type StudentHealthRecordDTO struct {
@@ -443,7 +444,7 @@ func (view *StudentFinanceView) ToDTO(
 ) StudentFinanceDTO {
 	return StudentFinanceDTO{
 		ID: view.ID,
-		MonthlyFamilyIncomeRange: IncomeRange{
+		IncomeRange: IncomeRange{
 			ID:   view.IncomeRangeID,
 			Text: view.IncomeRangeText,
 		},
