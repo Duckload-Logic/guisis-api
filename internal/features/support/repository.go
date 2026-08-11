@@ -91,10 +91,21 @@ type TicketQueryResult struct {
 func (r *Repository) GetTickets(
 	ctx context.Context,
 	staffUserID string,
+	status string,
 	limit int,
 	offset int,
 ) ([]TicketQueryResult, error) {
-	query := `
+	statusFilter := ""
+	var args []interface{}
+	args = append(args, staffUserID)
+
+	if status != "" {
+		statusFilter = "WHERE t.status = ?"
+		args = append(args, status)
+	}
+	args = append(args, limit, offset)
+
+	query := fmt.Sprintf(`
 		SELECT 
 			t.id, t.user_id, t.guest_name, t.guest_email, t.status, 
 			t.created_at, t.updated_at,
@@ -116,17 +127,17 @@ func (r *Repository) GetTickets(
 			ORDER BY created_at DESC 
 			LIMIT 1
 		)
+		%s
 		ORDER BY t.updated_at DESC
 		LIMIT ? OFFSET ?
-	`
+	`, statusFilter)
+
 	var tickets []TicketQueryResult
 	err := r.db.SelectContext(
 		ctx,
 		&tickets,
 		query,
-		staffUserID,
-		limit,
-		offset,
+		args...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get support tickets: %w", err)
@@ -136,10 +147,16 @@ func (r *Repository) GetTickets(
 
 func (r *Repository) GetTicketsCount(
 	ctx context.Context,
+	status string,
 ) (int, error) {
 	var count int
 	query := "SELECT COUNT(*) FROM support_tickets"
-	err := r.db.GetContext(ctx, &count, query)
+	var args []interface{}
+	if status != "" {
+		query += " WHERE status = ?"
+		args = append(args, status)
+	}
+	err := r.db.GetContext(ctx, &count, query, args...)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count support tickets: %w", err)
 	}

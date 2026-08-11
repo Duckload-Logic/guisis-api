@@ -11,6 +11,11 @@ type ListTicketsResponse struct {
 	Meta    structs.PaginationMetadata `json:"meta"`
 }
 
+type GetTicketsRequest struct {
+	structs.PaginationRequest
+	Status string `json:"status" form:"status"`
+}
+
 type CreateTicketRequest struct {
 	GuestName  *string `json:"guestName"`
 	GuestEmail *string `json:"guestEmail"`

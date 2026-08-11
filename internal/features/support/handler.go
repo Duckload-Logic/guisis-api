@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
-	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
 )
 
@@ -23,14 +22,19 @@ func NewHandler(service *Service) *Handler {
 func (h *Handler) PostSupportTicket(c *gin.Context) {
 	var req CreateTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		fmt.Printf("[SupportHandler] {PostSupportTicket - BindJSON}: %v\n", err)
-		response.SendError(c, "Invalid request body", http.StatusBadRequest, nil)
+		fmt.Printf(
+			"[PostSupportTicket] {BindJSON}: %v\n",
+			err,
+		)
+		response.SendError(
+			c, "Invalid request body", http.StatusBadRequest, nil,
+		)
 		return
 	}
 
 	if len(strings.Fields(req.Message)) > 100 {
 		fmt.Println(
-			"[SupportHandler] {PostSupportTicket - ValidateMessage}: " +
+			"[PostSupportTicket] {ValidateMessage}: " +
 				"Message exceeds 100 words limit",
 		)
 		response.SendError(
@@ -43,9 +47,14 @@ func (h *Handler) PostSupportTicket(c *gin.Context) {
 	}
 
 	authUserID := h.getOptionalUserID(c)
-	res, err := h.service.OpenTicket(c.Request.Context(), req, authUserID)
+	res, err := h.service.OpenTicket(
+		c.Request.Context(), req, authUserID,
+	)
 	if err != nil {
-		fmt.Printf("[SupportHandler] {PostSupportTicket - OpenTicket}: %v\n", err)
+		fmt.Printf(
+			"[PostSupportTicket] {OpenTicket}: %v\n",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to open support ticket",
@@ -61,8 +70,12 @@ func (h *Handler) PostSupportTicket(c *gin.Context) {
 func (h *Handler) PostSupportMessage(c *gin.Context) {
 	ticketID := c.Param("id")
 	if ticketID == "" {
-		fmt.Println("[SupportHandler] {PostSupportMessage}: Missing ID")
-		response.SendError(c, "Ticket ID is required", http.StatusBadRequest, nil)
+		fmt.Println(
+			"[PostSupportMessage] {ValidateID}: Ticket ID is required",
+		)
+		response.SendError(
+			c, "Ticket ID is required", http.StatusBadRequest, nil,
+		)
 		return
 	}
 
@@ -72,14 +85,19 @@ func (h *Handler) PostSupportMessage(c *gin.Context) {
 
 	var req CreateMessageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		fmt.Printf("[SupportHandler] {PostSupportMessage}: %v\n", err)
-		response.SendError(c, "Invalid request body", http.StatusBadRequest, nil)
+		fmt.Printf(
+			"[PostSupportMessage] {BindJSON}: %v\n",
+			err,
+		)
+		response.SendError(
+			c, "Invalid request body", http.StatusBadRequest, nil,
+		)
 		return
 	}
 
 	if len(strings.Fields(req.Message)) > 100 {
 		fmt.Println(
-			"[SupportHandler] {PostSupportMessage - ValidateMessage}: " +
+			"[PostSupportMessage] {ValidateMessage}: " +
 				"Message exceeds 100 words limit",
 		)
 		response.SendError(
@@ -99,7 +117,10 @@ func (h *Handler) PostSupportMessage(c *gin.Context) {
 		authUserID,
 	)
 	if err != nil {
-		fmt.Printf("[SupportHandler] {PostSupportMessage}: %v\n", err)
+		fmt.Printf(
+			"[PostSupportMessage] {AddMessage}: %v\n",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to send message",
@@ -115,8 +136,12 @@ func (h *Handler) PostSupportMessage(c *gin.Context) {
 func (h *Handler) GetSupportTicketMessages(c *gin.Context) {
 	ticketID := c.Param("id")
 	if ticketID == "" {
-		fmt.Println("[SupportHandler] {GetSupportTicketMessages}: Missing ID")
-		response.SendError(c, "Ticket ID is required", http.StatusBadRequest, nil)
+		fmt.Println(
+			"[GetSupportTicketMessages] {ValidateID}: Ticket ID is required",
+		)
+		response.SendError(
+			c, "Ticket ID is required", http.StatusBadRequest, nil,
+		)
 		return
 	}
 
@@ -124,10 +149,12 @@ func (h *Handler) GetSupportTicketMessages(c *gin.Context) {
 		return
 	}
 
-	res, err := h.service.GetTicketMessages(c.Request.Context(), ticketID)
+	res, err := h.service.GetTicketMessages(
+		c.Request.Context(), ticketID,
+	)
 	if err != nil {
 		fmt.Printf(
-			"[SupportHandler] {GetSupportTicketMessages}: %v\n",
+			"[GetSupportTicketMessages] {GetTicketMessages}: %v\n",
 			err,
 		)
 		response.SendError(
@@ -154,10 +181,10 @@ func (h *Handler) GetSupportTickets(c *gin.Context) {
 		return
 	}
 
-	var req structs.PaginationRequest
+	var req GetTicketsRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		fmt.Printf(
-			"[SupportHandler] {GetSupportTickets - BindQuery}: %v\n",
+			"[GetSupportTickets] {BindQuery}: %v\n",
 			err,
 		)
 		response.SendFail(c, gin.H{"error": "Invalid query parameters"})
@@ -165,14 +192,25 @@ func (h *Handler) GetSupportTickets(c *gin.Context) {
 	}
 	req.SetDefaults("updated_at")
 
+	var statusFilter string
+	switch strings.ToLower(req.Status) {
+	case "open":
+		statusFilter = "OPEN"
+	case "resolved", "closed":
+		statusFilter = "CLOSED"
+	default:
+		statusFilter = ""
+	}
+
 	res, err := h.service.GetTickets(
 		c.Request.Context(),
 		staffUserID,
-		req,
+		req.PaginationRequest,
+		statusFilter,
 	)
 	if err != nil {
 		fmt.Printf(
-			"[SupportHandler] {GetSupportTickets - GetTickets}: %v\n",
+			"[GetSupportTickets] {GetTickets}: %v\n",
 			err,
 		)
 		response.SendError(
@@ -217,7 +255,7 @@ func (h *Handler) PatchSupportTicketRead(c *gin.Context) {
 	)
 	if err != nil {
 		fmt.Printf(
-			"[SupportHandler] {PatchSupportTicketRead}: %v\n",
+			"[PatchSupportTicketRead] {MarkTicketAsRead}: %v\n",
 			err,
 		)
 		response.SendError(
@@ -253,7 +291,7 @@ func (h *Handler) GetMySupportTickets(c *gin.Context) {
 	)
 	if err != nil {
 		fmt.Printf(
-			"[SupportHandler] {GetMySupportTickets}: %v\n",
+			"[GetMySupportTickets] {GetTicketsByUserID}: %v\n",
 			err,
 		)
 		response.SendError(
@@ -271,15 +309,19 @@ func (h *Handler) GetMySupportTickets(c *gin.Context) {
 func (h *Handler) PatchSupportTicketStatus(c *gin.Context) {
 	ticketID := c.Param("id")
 	if ticketID == "" {
-		fmt.Println("[SupportHandler] {PatchSupportTicketStatus - Param}: Missing ID")
-		response.SendError(c, "Ticket ID is required", http.StatusBadRequest, nil)
+		fmt.Println(
+			"[PatchSupportTicketStatus] {ValidateID}: Ticket ID is required",
+		)
+		response.SendError(
+			c, "Ticket ID is required", http.StatusBadRequest, nil,
+		)
 		return
 	}
 
 	err := h.service.CloseTicket(c.Request.Context(), ticketID)
 	if err != nil {
 		fmt.Printf(
-			"[SupportHandler] {PatchSupportTicketStatus - CloseTicket}: %v\n",
+			"[PatchSupportTicketStatus] {CloseTicket}: %v\n",
 			err,
 		)
 		response.SendError(
@@ -333,7 +375,7 @@ func (h *Handler) validateTicketAccess(
 	)
 	if err != nil {
 		fmt.Printf(
-			"[SupportHandler] {validateTicketAccess}: %v\n",
+			"[validateTicketAccess] {GetTicket}: %v\n",
 			err,
 		)
 		response.SendError(
