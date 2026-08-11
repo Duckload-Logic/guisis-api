@@ -105,14 +105,58 @@ func (s *Service) notifyAdminsOfNewTicket(
 		ctx, int(constants.AdminRoleID),
 	)
 	if err == nil {
-		s.sendNotificationsToUserIDs(ctx, adminIDs, ticketID, senderName)
+		s.sendNotificationsToUserIDs(
+			ctx,
+			adminIDs,
+			ticketID,
+			"New Support Chat",
+			fmt.Sprintf("New support ticket from %s", senderName),
+		)
 	}
 
 	saIDs, err := s.usersSvc.GetUserIDsByRole(
 		ctx, int(constants.SuperAdminRoleID),
 	)
 	if err == nil {
-		s.sendNotificationsToUserIDs(ctx, saIDs, ticketID, senderName)
+		s.sendNotificationsToUserIDs(
+			ctx,
+			saIDs,
+			ticketID,
+			"New Support Chat",
+			fmt.Sprintf("New support ticket from %s", senderName),
+		)
+	}
+
+	adminEmails, err1 := s.usersSvc.GetEmailsByRole(
+		ctx, int(constants.AdminRoleID),
+	)
+	saEmails, err2 := s.usersSvc.GetEmailsByRole(
+		ctx, int(constants.SuperAdminRoleID),
+	)
+
+	emailsMap := make(map[string]bool)
+	if err1 == nil {
+		for _, email := range adminEmails {
+			if email != "" {
+				emailsMap[email] = true
+			}
+		}
+	}
+	if err2 == nil {
+		for _, email := range saEmails {
+			if email != "" {
+				emailsMap[email] = true
+			}
+		}
+	}
+
+	for email := range emailsMap {
+		go s.sendNewTicketEmail(
+			context.Background(),
+			email,
+			ticketID,
+			senderName,
+		)
 	}
 }
 
@@ -120,13 +164,14 @@ func (s *Service) sendNotificationsToUserIDs(
 	ctx context.Context,
 	userIDs []string,
 	ticketID string,
-	senderName string,
+	title string,
+	message string,
 ) {
 	for _, uid := range userIDs {
 		notif := audit.NotificationEntry{
 			ReceiverID: structs.StringToNullableString(uid),
-			Title:      "New Support Chat",
-			Message:    fmt.Sprintf("New support ticket from %s", senderName),
+			Title:      title,
+			Message:    message,
 			Type:       "System",
 			TargetID:   structs.StringToNullableString(ticketID),
 			TargetType: structs.StringToNullableString("SupportTicket"),
@@ -200,6 +245,10 @@ func (s *Service) AddMessage(
 		return nil, fmt.Errorf("failed to create message: %w", err)
 	}
 
+	isStudentReply := ticket.UserID.Valid &&
+		senderID == ticket.UserID.String
+	isGuestReply := !ticket.UserID.Valid && senderID == ""
+
 	if ticket.UserID.Valid &&
 		ticket.UserID.String != "" &&
 		senderID != ticket.UserID.String {
@@ -230,6 +279,12 @@ func (s *Service) AddMessage(
 				req.Message,
 			)
 		}
+	} else if isStudentReply || isGuestReply {
+		go s.notifyAdminsOfReply(
+			context.Background(),
+			ticketID,
+			senderName,
+		)
 	}
 
 	newStatus := ticket.Status
@@ -263,20 +318,28 @@ func (s *Service) GetTickets(
 	ctx context.Context,
 	staffUserID string,
 	req structs.PaginationRequest,
+	status string,
 ) (*ListTicketsResponse, error) {
-	total, err := s.repo.GetTicketsCount(ctx)
+	total, err := s.repo.GetTicketsCount(ctx, status)
 	if err != nil {
-		return nil, fmt.Errorf("failed to count support tickets: %w", err)
+		return nil, fmt.Errorf(
+			"failed to count support tickets: %w",
+			err,
+		)
 	}
 
 	tickets, err := s.repo.GetTickets(
 		ctx,
 		staffUserID,
+		status,
 		req.PageSize,
 		req.GetOffset(),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list support tickets: %w", err)
+		return nil, fmt.Errorf(
+			"failed to list support tickets: %w",
+			err,
+		)
 	}
 
 	dtos := make([]TicketResponse, len(tickets))
@@ -286,7 +349,9 @@ func (s *Service) GetTickets(
 
 	return &ListTicketsResponse{
 		Tickets: dtos,
-		Meta:    structs.CalculateMetadata(total, req.Page, req.PageSize),
+		Meta: structs.CalculateMetadata(
+			total, req.Page, req.PageSize,
+		),
 	}, nil
 }
 
@@ -499,6 +564,88 @@ func (s *Service) sendReplyEmail(
 	if err != nil {
 		fmt.Printf(
 			"[SupportService] {SendReplyEmail - Send}: %v\n",
+			err,
+		)
+	}
+}
+
+func (s *Service) notifyAdminsOfReply(
+	ctx context.Context,
+	ticketID string,
+	senderName string,
+) {
+	title := "Support Message"
+	message := fmt.Sprintf("%s replied to support ticket", senderName)
+
+	adminIDs, err := s.usersSvc.GetUserIDsByRole(
+		ctx, int(constants.AdminRoleID),
+	)
+	if err == nil {
+		s.sendNotificationsToUserIDs(
+			ctx,
+			adminIDs,
+			ticketID,
+			title,
+			message,
+		)
+	}
+
+	saIDs, err := s.usersSvc.GetUserIDsByRole(
+		ctx, int(constants.SuperAdminRoleID),
+	)
+	if err == nil {
+		s.sendNotificationsToUserIDs(
+			ctx,
+			saIDs,
+			ticketID,
+			title,
+			message,
+		)
+	}
+}
+
+func (s *Service) sendNewTicketEmail(
+	ctx context.Context,
+	email string,
+	ticketID string,
+	senderName string,
+) {
+	ticketShort := ticketID
+	if len(ticketShort) > 8 {
+		ticketShort = ticketShort[:8]
+	}
+
+	body := fmt.Sprintf(`
+<div style="font-family: sans-serif; padding: 20px; color: #333; `+
+		`max-width: 600px; margin: 0 auto; border: 1px solid #eee; `+
+		`border-radius: 8px;">
+	<h2 style="color: #800000; border-bottom: 2px solid #800000; `+
+		`padding-bottom: 10px; margin-top: 0;">GuiSIS Support</h2>
+	<p>Hello Admin,</p>
+	<p>A new support ticket has been opened by <strong>%s</strong> `+
+		`(<strong>#%s</strong>).</p>
+	<p>To view and respond to this ticket, please log in to the `+
+		`GuiSIS portal.</p>
+	<hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+	<p style="font-size: 11px; color: #888; text-align: center; `+
+		`margin-bottom: 0;">This is an automated notification. `+
+		`Please do not reply directly to this email.</p>
+</div>
+`, senderName, ticketShort)
+
+	emailEntry := audit.EmailEntry{
+		To: []string{email},
+		Subject: fmt.Sprintf(
+			"GuiSIS Support - New Ticket #%s",
+			ticketShort,
+		),
+		Body: body,
+	}
+
+	err := s.emailer.Send(ctx, emailEntry)
+	if err != nil {
+		fmt.Printf(
+			"[SupportService] {SendNewTicketEmail - Send}: %v\n",
 			err,
 		)
 	}
