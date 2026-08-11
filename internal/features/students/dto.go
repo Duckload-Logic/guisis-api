@@ -60,6 +60,7 @@ type ComprehensiveProfileDTO struct {
 	IIRID             string `json:"iirId,omitempty"`
 	StudentCORURL     string `json:"studentCorUrl,omitempty"`
 	IsStudentCORValid bool   `json:"isStudentCorValid"`
+	IsCompleted       *bool  `json:"isCompleted,omitempty"`
 	Student           struct {
 		BasicInfo              StudentBasicInfoViewDTO `json:"basicInfo"`
 		StudentPersonalInfoDTO `json:"personalInfo"`
@@ -300,12 +301,11 @@ type TestResultDTO struct {
 	Description string `json:"description,omitempty"`
 }
 
-// UpdateAcademicSettingDTO is the request body for the SuperAdmin-only
-// PUT /students/settings/academic endpoint.
 type UpdateAcademicSettingDTO struct {
-	CurrentYearStart int `json:"currentYearStart" binding:"required,min=1900,max=2100"`
-	CurrentYearEnd   int `json:"currentYearEnd"   binding:"required,min=1900,max=2100"`
-	CurrentTerm      int `json:"currentTerm"      binding:"required,min=1,max=3"`
+	CurrentYearStart  int   `json:"currentYearStart" binding:"required,min=1900,max=2100"`
+	CurrentYearEnd    int   `json:"currentYearEnd"   binding:"required,min=1900,max=2100"`
+	CurrentTerm       int   `json:"currentTerm"      binding:"required,min=1,max=3"`
+	AllowExpeditedIIR *bool `json:"allowExpeditedIIR" binding:"required"`
 }
 
 // ============================================================================

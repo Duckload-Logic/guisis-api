@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 
@@ -293,6 +294,51 @@ func (r *Repository) CheckStudentCORValidByUserID(
 		return false, err
 	}
 	return valid, nil
+}
+
+func (r *Repository) GetIIRStatusAndSettings(
+	ctx context.Context,
+	userID string,
+) (isSub bool, isComp bool, allowExp bool, err error) {
+	queryIIR := `
+		SELECT is_submitted, is_completed
+		FROM iir_records
+		WHERE user_id = ?
+		LIMIT 1
+	`
+	var iir struct {
+		IsSubmitted bool `db:"is_submitted"`
+		IsCompleted bool `db:"is_completed"`
+	}
+	err = r.db.GetContext(ctx, &iir, queryIIR, userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			isSub = false
+			isComp = false
+		} else {
+			return false, false, false, err
+		}
+	} else {
+		isSub = iir.IsSubmitted
+		isComp = iir.IsCompleted
+	}
+
+	querySettings := `
+		SELECT allow_expedited_iir
+		FROM academic_settings
+		WHERE id = 1
+		LIMIT 1
+	`
+	err = r.db.GetContext(ctx, &allowExp, querySettings)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			allowExp = false
+		} else {
+			return false, false, false, err
+		}
+	}
+
+	return isSub, isComp, allowExp, nil
 }
 
 func (r *Repository) PostProfilePicture(

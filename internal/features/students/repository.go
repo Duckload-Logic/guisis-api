@@ -1683,15 +1683,24 @@ func (r *Repository) UpdateAcademicSetting(
 	ctx context.Context,
 	tx datastore.DB,
 	yearStart, yearEnd, term int,
+	allowExpeditedIIR bool,
 ) error {
 	query := `
 		UPDATE academic_settings
 		SET current_year_start = ?,
 		    current_year_end   = ?,
-		    current_term       = ?
+		    current_term       = ?,
+		    allow_expedited_iir = ?
 		WHERE id = 1
 	`
-	_, err := tx.ExecContext(ctx, query, yearStart, yearEnd, term)
+	_, err := tx.ExecContext(
+		ctx,
+		query,
+		yearStart,
+		yearEnd,
+		term,
+		allowExpeditedIIR,
+	)
 	if err != nil {
 		return fmt.Errorf(
 			"[Repository] {UpdateAcademicSetting}: %w", err,

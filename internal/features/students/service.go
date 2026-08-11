@@ -263,6 +263,7 @@ func (s *Service) UpdateAcademicSetting(
 			req.CurrentYearStart,
 			req.CurrentYearEnd,
 			req.CurrentTerm,
+			*req.AllowExpeditedIIR,
 		)
 	})
 	if err != nil {
@@ -1149,11 +1150,16 @@ func (s *Service) saveComprehensiveProfile(
 		}
 	}
 
-	// 1. IIR Record Header
+	isCompleted := true
+	if req.IsCompleted != nil {
+		isCompleted = *req.IsCompleted
+	}
+
 	_, err := s.repo.UpsertIIRRecord(ctx, tx, &IIRRecord{
 		ID:          iirID,
 		UserID:      userID,
 		IsSubmitted: true,
+		IsCompleted: isCompleted,
 	})
 	if err != nil {
 		return "", fmt.Errorf(
