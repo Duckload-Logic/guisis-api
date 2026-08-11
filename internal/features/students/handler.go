@@ -363,6 +363,39 @@ func (h *Handler) GetStudentBasicInfo(c *gin.Context) {
 	response.SendSuccess(c, basicInfo)
 }
 
+func (h *Handler) GetStudentNumberUniqueness(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+	studentNumber := c.Query("student_number")
+	if studentNumber == "" {
+		response.SendFail(
+			c,
+			gin.H{"error": "student_number query parameter is required"},
+		)
+		return
+	}
+
+	exists, err := h.service.CheckStudentNumberExists(
+		c.Request.Context(),
+		studentNumber,
+		userID,
+	)
+	if err != nil {
+		log.Printf(
+			"[GetStudentNumberUniqueness] {Service Call}: %v",
+			err,
+		)
+		response.SendError(
+			c,
+			"Failed to check student number uniqueness",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{"exists": exists})
+}
+
 func (h *Handler) GetStudentIIRDraft(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 	draft, err := h.service.GetIIRDraft(c.Request.Context(), userID)

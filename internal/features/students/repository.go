@@ -1023,6 +1023,30 @@ func (r *Repository) UpsertIIRRecord(
 	return iir.ID, err
 }
 
+func (r *Repository) CheckStudentNumberExists(
+	ctx context.Context,
+	studentNumber string,
+	currentUserID string,
+) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1
+			FROM student_personal_info spi
+			JOIN iir_records ir ON spi.iir_id = ir.id
+			WHERE spi.student_number = ? AND ir.user_id != ?
+		)
+	`
+	var exists bool
+	err := r.db.GetContext(
+		ctx,
+		&exists,
+		query,
+		studentNumber,
+		currentUserID,
+	)
+	return exists, err
+}
+
 func (r *Repository) UpsertStudentPersonalInfo(
 	ctx context.Context,
 	tx datastore.DB,

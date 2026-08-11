@@ -63,6 +63,19 @@ func NewService(
 	}
 }
 
+// CheckStudentNumberExists checks if a student number is already taken.
+func (s *Service) CheckStudentNumberExists(
+	ctx context.Context,
+	studentNumber string,
+	currentUserID string,
+) (bool, error) {
+	return s.repo.CheckStudentNumberExists(
+		ctx,
+		studentNumber,
+		currentUserID,
+	)
+}
+
 func (s *Service) GetLatestCORsByUserIDs(
 	ctx context.Context,
 	userIDs []string,
