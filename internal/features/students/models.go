@@ -144,6 +144,7 @@ type IIRRecord struct {
 	ID          string    `db:"id"           json:"id"`
 	UserID      string    `db:"user_id"      json:"userId"`
 	IsSubmitted bool      `db:"is_submitted" json:"isSubmitted"`
+	IsCompleted bool      `db:"is_completed" json:"isCompleted"`
 	CreatedAt   time.Time `db:"created_at"   json:"createdAt"`
 	UpdatedAt   time.Time `db:"updated_at"   json:"updatedAt"`
 }
@@ -408,14 +409,13 @@ type StudentCOR struct {
 	ValidUntil    structs.NullableTime `db:"valid_until"    json:"validUntil,omitempty"`
 }
 
-// AcademicSetting holds the single-row global academic year + term setting
-// managed by the SuperAdmin. Used to validate uploaded student CORs.
 type AcademicSetting struct {
-	ID               int       `db:"id"                 json:"id"`
-	CurrentYearStart int       `db:"current_year_start" json:"currentYearStart"`
-	CurrentYearEnd   int       `db:"current_year_end"   json:"currentYearEnd"`
-	CurrentTerm      int       `db:"current_term"       json:"currentTerm"`
-	UpdatedAt        time.Time `db:"updated_at"         json:"updatedAt"`
+	ID                int       `db:"id"                 json:"id"`
+	CurrentYearStart  int       `db:"current_year_start" json:"currentYearStart"`
+	CurrentYearEnd    int       `db:"current_year_end"   json:"currentYearEnd"`
+	CurrentTerm       int       `db:"current_term"       json:"currentTerm"`
+	AllowExpeditedIIR bool      `db:"allow_expedited_iir" json:"allowExpeditedIIR"`
+	UpdatedAt         time.Time `db:"updated_at"         json:"updatedAt"`
 }
 
 // StudentPersonalInfoView holds joined personal info and emergency details.

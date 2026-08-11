@@ -20,6 +20,9 @@ type MeResponse struct {
 	Roles             []users.Role `json:"roles"`
 	StudentCORURL     string       `json:"studentCorUrl,omitempty"`
 	IsStudentCORValid bool         `json:"isStudentCorValid"`
+	IsIIRSubmitted    bool         `json:"isIIRSubmitted"`
+	IsIIRCompleted    bool         `json:"isIIRCompleted"`
+	AllowExpeditedIIR bool         `json:"allowExpeditedIIR"`
 	Type              string       `json:"type"` // "native" or "idp"
 }
 

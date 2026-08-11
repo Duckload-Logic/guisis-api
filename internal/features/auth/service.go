@@ -508,20 +508,41 @@ func (s *Service) GetMe(
 		log.Printf("[GetMe] {Profile Picture Fetch}: %v", err)
 	}
 
-	// Fetch COR for students
+	// Fetch COR and IIR status for students
 	for _, role := range user.Roles {
 		if role.ID == int(constants.StudentRoleID) {
 			corURL, err := s.repo.GetStudentCORURLByUserID(ctx, userID)
 			if err == nil {
 				resp.StudentCORURL = corURL
-				valid, err := s.repo.CheckStudentCORValidByUserID(ctx, userID)
+				valid, err := s.repo.CheckStudentCORValidByUserID(
+					ctx,
+					userID,
+				)
 				if err == nil {
 					resp.IsStudentCORValid = valid
 				} else {
-					log.Printf("[GetMe] {Student COR Validity Fetch}: %v", err)
+					log.Printf(
+						"[GetMe] {Student COR Validity Fetch}: %v",
+						err,
+					)
 				}
 			} else if err != sql.ErrNoRows {
 				log.Printf("[GetMe] {Student COR Fetch}: %v", err)
+			}
+
+			sub, comp, exp, err := s.repo.GetIIRStatusAndSettings(
+				ctx,
+				userID,
+			)
+			if err == nil {
+				resp.IsIIRSubmitted = sub
+				resp.IsIIRCompleted = comp
+				resp.AllowExpeditedIIR = exp
+			} else {
+				log.Printf(
+					"[GetMe] {Student IIR Status Fetch}: %v",
+					err,
+				)
 			}
 			break
 		}

@@ -27,6 +27,7 @@ CREATE TABLE `academic_settings` (
   `current_year_start` int NOT NULL,
   `current_year_end` int NOT NULL,
   `current_term` int NOT NULL,
+  `allow_expedited_iir` tinyint(1) NOT NULL DEFAULT '0',
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   CONSTRAINT `chk_academic_settings_id` CHECK ((`id` = 1))
@@ -484,6 +485,7 @@ CREATE TABLE `iir_records` (
   `id` char(36) NOT NULL,
   `user_id` char(36) NOT NULL,
   `is_submitted` tinyint(1) DEFAULT '0',
+  `is_completed` tinyint(1) NOT NULL DEFAULT '1',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
