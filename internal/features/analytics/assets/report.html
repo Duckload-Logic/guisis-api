@@ -141,8 +141,8 @@
 		<div style="text-align: center; margin: 1rem">
 			<strong>
 				PROFILE OF FRESHMEN
-				{{if .CourseName}}
-				IN {{.CourseName}} ({{.CourseCode}})
+				{{if .ProgramName}}
+				IN {{.ProgramName}} ({{.ProgramCode}})
 				{{end}}
 			</strong>
 			<br />
@@ -151,8 +151,8 @@
 
 		<div class="summary">
 			&nbsp;&nbsp;&nbsp;&nbsp;The freshmen population
-			{{if .CourseName}}
-			enrolled in {{.CourseName}} ({{.CourseCode}})
+			{{if .ProgramName}}
+			enrolled in {{.ProgramName}} ({{.ProgramCode}})
 			{{end}}
 			covered by this profile is made up of a total of
 			<strong>{{.Data.TotalStudents}}</strong>
