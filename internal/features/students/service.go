@@ -1044,14 +1044,16 @@ func (s *Service) validateDate(dateStr string, fieldName string) error {
 	if dateStr == "" {
 		return fmt.Errorf("%s is required", fieldName)
 	}
-	t, err := time.Parse("2006-01-02", dateStr)
+	manilaOffset := 8 * 60 * 60
+	loc := time.FixedZone("PHT", manilaOffset)
+	t, err := time.ParseInLocation("2006-01-02", dateStr, loc)
 	if err != nil {
 		return fmt.Errorf(
 			"invalid date format for %s: must be YYYY-MM-DD",
 			fieldName,
 		)
 	}
-	if t.After(time.Now()) {
+	if t.After(time.Now().In(loc)) {
 		return fmt.Errorf("%s cannot be in the future", fieldName)
 	}
 	return nil
