@@ -3,6 +3,7 @@ package students
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	_ "embed"
 	"encoding/csv"
 	"encoding/json"
@@ -1064,7 +1065,24 @@ func (s *Service) saveComprehensiveProfile(
 ) (string, error) {
 	iirID := req.IIRID
 	if iirID == "" {
-		iirID = uuid.New().String()
+		var existingID string
+		err := tx.GetContext(
+			ctx,
+			&existingID,
+			"SELECT id FROM iir_records WHERE user_id = ? LIMIT 1",
+			userID,
+		)
+		if err != nil && err != sql.ErrNoRows {
+			return "", fmt.Errorf(
+				"[StudentService] {saveComprehensiveProfile}: %w",
+				err,
+			)
+		}
+		if existingID != "" {
+			iirID = existingID
+		} else {
+			iirID = uuid.New().String()
+		}
 	}
 
 	isCompleted := true
