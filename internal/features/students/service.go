@@ -1435,14 +1435,16 @@ func (s *Service) saveComprehensiveProfile(
 			hasGuardian = true
 			if strings.TrimSpace(rpDTO.FirstName) == "" ||
 				strings.TrimSpace(rpDTO.LastName) == "" {
-				return "", fmt.Errorf(
-					"guardian first and last name are required",
-				)
+				return "", &ValidationError{
+					Message: "guardian first and last name are required",
+				}
 			}
 		}
 	}
 	if !hasGuardian {
-		return "", fmt.Errorf("guardian information is required")
+		return "", &ValidationError{
+			Message: "guardian information is required",
+		}
 	}
 
 	for _, rpDTO := range req.Family.RelatedPersons {
@@ -1463,11 +1465,13 @@ func (s *Service) saveComprehensiveProfile(
 			}
 		} else {
 			// If it's mandatory in DB, we MUST provide a valid date.
-			return "", fmt.Errorf(
-				"date of birth is required for related person: %s %s",
-				rpDTO.FirstName,
-				rpDTO.LastName,
-			)
+			return "", &ValidationError{
+				Message: fmt.Sprintf(
+					"date of birth is required for related person: %s %s",
+					rpDTO.FirstName,
+					rpDTO.LastName,
+				),
+			}
 		}
 
 		eduID := structs.Int64ToNullableInt64(

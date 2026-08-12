@@ -126,7 +126,7 @@ type StudentPersonalInfoDTO struct {
 	EmployerContactNumber structs.NullableString `json:"employerContactNumber,omitempty"`
 	OtherReligionText     structs.NullableString `json:"otherReligionText"`
 	TwoByTwoPhotoDataUrl  string                 `json:"twoByTwoPhotoDataUrl,omitempty"`
-	Status                StudentStatus          `json:"status"                          binding:"required"`
+	Status                StudentStatus          `json:"status" binding:"omitempty"`
 	GraduationYear        *int                   `json:"graduationYear,omitempty"`
 	EmergencyContact      EmergencyContactDTO    `json:"emergencyContact,omitempty"`
 }
@@ -187,6 +187,7 @@ type SchoolDetailsDTO struct {
 type RelType = StudentRelationshipType
 type EduAttain = EducationalAttainment
 type NatResType = NatureOfResidenceType
+type FinSupport = StudentSupportType
 
 type RelatedPersonDTO struct {
 	ID int `json:"id,omitempty"`
@@ -244,11 +245,11 @@ type EducationalBGDTO struct {
 }
 
 type StudentFinanceDTO struct {
-	ID                    int                  `json:"id,omitempty"`
-	IncomeRange           IncomeRange          `json:"monthlyFamilyIncomeRange" binding:"omitempty"`
+	ID                    int                    `json:"id,omitempty"`
+	IncomeRange           IncomeRange            `json:"monthlyFamilyIncomeRange" binding:"omitempty"`
 	OtherIncomeDetails    structs.NullableString `json:"otherIncomeDetails,omitempty"`
-	FinancialSupportTypes []StudentSupportType `json:"financialSupportTypes,omitempty"`
-	WeeklyAllowance       float64              `json:"weeklyAllowance" binding:"omitempty"`
+	FinancialSupportTypes []FinSupport           `json:"financialSupportTypes,omitempty"`
+	WeeklyAllowance       float64                `json:"weeklyAllowance" binding:"omitempty"`
 }
 
 type StudentHealthRecordDTO struct {
