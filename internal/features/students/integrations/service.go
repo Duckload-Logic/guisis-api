@@ -35,6 +35,7 @@ func (s *Service) ListStudents(
 			FirstName:     student.FirstName,
 			MiddleName:    structs.FromSqlNull(student.MiddleName),
 			LastName:      student.LastName,
+			SuffixName:    student.SuffixName.String,
 			Email:         student.Email,
 			MobileNumber:  student.MobileNumber,
 			Program: students.Program{
@@ -72,6 +73,7 @@ func (s *Service) GetStudentByStudentNumber(
 		FirstName:     student.FirstName,
 		MiddleName:    structs.FromSqlNull(student.MiddleName),
 		LastName:      student.LastName,
+		SuffixName:    student.SuffixName.String,
 		Email:         student.Email,
 		MobileNumber:  student.MobileNumber,
 		Program: students.Program{
@@ -102,6 +104,7 @@ func (s *Service) GetStudentByEmail(
 		FirstName:     student.FirstName,
 		MiddleName:    structs.FromSqlNull(student.MiddleName),
 		LastName:      student.LastName,
+		SuffixName:    student.SuffixName.String,
 		Email:         student.Email,
 		MobileNumber:  student.MobileNumber,
 		Program: students.Program{

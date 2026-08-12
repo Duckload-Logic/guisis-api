@@ -12,6 +12,7 @@ type OGOSStudentView struct {
 	FirstName  string         `db:"first_name"`
 	MiddleName sql.NullString `db:"middle_name,omitempty"`
 	LastName   string         `db:"last_name"`
+	SuffixName sql.NullString `db:"suffix_name,omitempty"`
 
 	Email        string `db:"email"`
 	MobileNumber string `db:"mobile_number"`
