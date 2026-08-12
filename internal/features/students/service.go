@@ -427,7 +427,10 @@ func (s *Service) GetStudentProfile(
 		return nil, fmt.Errorf("failed to fetch IIR record: %w", err)
 	}
 
-	profile := &ComprehensiveProfileDTO{IIRID: iirID}
+	profile := &ComprehensiveProfileDTO{
+		IIRID:       iirID,
+		IsCompleted: &iir.IsCompleted,
+	}
 
 	// Fetch COR URL
 	corMap, _ := s.repo.GetLatestCORsByUserIDs(ctx, []string{iir.UserID})

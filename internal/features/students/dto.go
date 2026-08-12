@@ -54,6 +54,7 @@ type StudentProfileDTO struct {
 	StudentCORURL     string                 `json:"studentCorUrl,omitempty"`
 	IsStudentCORValid bool                   `json:"isStudentCorValid"`
 	ProfilePicture    string                 `json:"profilePicture,omitempty"`
+	IsCompleted       bool                   `json:"isCompleted"`
 }
 
 type ComprehensiveProfileDTO struct {
@@ -341,6 +342,7 @@ func (st *StudentProfileView) ToDTO() StudentProfileDTO {
 			ID:   st.StatusID,
 			Name: st.StatusName,
 		},
+		IsCompleted: st.IsCompleted,
 	}
 }
 
