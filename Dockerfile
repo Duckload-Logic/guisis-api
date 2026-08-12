@@ -53,7 +53,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 ################################################################################
 # Production stage
 FROM alpine:latest AS prod
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates tzdata
+ENV TZ=Asia/Manila
 WORKDIR /root/
 COPY --from=builder /app/main .
 COPY --from=builder /app/scripts/migrations ./scripts/migrations/
