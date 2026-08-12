@@ -44,12 +44,16 @@ func IIRLoggerMiddleware() gin.HandlerFunc {
 		}
 
 		var action string
-		isDraft := strings.Contains(path, "/draft")
 		isCOR := strings.Contains(path, "/cor") ||
 			strings.Contains(path, "/cors")
 		isPDF := strings.Contains(path, "/download")
-		isCheckNum := strings.Contains(path, "/check-number")
-		isProfile := strings.Contains(path, "/profile")
+		isDraft := strings.Contains(path, "/draft")
+
+		// Skip read-only queries (GET) except PDF downloads,
+		// and skip draft auto-saves to prevent DB log bloat.
+		if (method == http.MethodGet && !isPDF) || isDraft {
+			return
+		}
 
 		var level string
 		if status == http.StatusInternalServerError {
@@ -61,13 +65,7 @@ func IIRLoggerMiddleware() gin.HandlerFunc {
 		// Map to appropriate Action constants
 		switch method {
 		case http.MethodPost:
-			if isDraft {
-				if status == http.StatusInternalServerError {
-					action = "IIR_DRAFT_SAVE_FAILED"
-				} else {
-					action = audit.ActionIIRDraftSaved
-				}
-			} else if isCOR {
+			if isCOR {
 				if status == http.StatusInternalServerError {
 					action = "IIR_COR_SUBMIT_FAILED"
 				} else {
@@ -87,52 +85,12 @@ func IIRLoggerMiddleware() gin.HandlerFunc {
 				action = audit.ActionIIRUpdated
 			}
 		case http.MethodGet:
-			if isDraft {
-				if status == http.StatusInternalServerError {
-					action = "IIR_DRAFT_FETCH_FAILED"
-				} else if status == http.StatusNotFound {
-					action = "IIR_DRAFT_NOT_FOUND"
-				} else {
-					action = "IIR_DRAFT_RETRIEVED"
-				}
-			} else if isCOR {
-				if status == http.StatusInternalServerError {
-					action = "IIR_COR_FETCH_FAILED"
-				} else if status == http.StatusNotFound {
-					action = "IIR_COR_NOT_FOUND"
-				} else {
-					action = "IIR_COR_RETRIEVED"
-				}
-			} else if isPDF {
-				if status == http.StatusInternalServerError {
-					action = "IIR_PDF_DOWNLOAD_FAILED"
-				} else if status == http.StatusNotFound {
-					action = "IIR_PDF_NOT_FOUND"
-				} else {
-					action = "IIR_PDF_DOWNLOADED"
-				}
-			} else if isCheckNum {
-				if status == http.StatusInternalServerError {
-					action = "IIR_STUDENT_NUMBER_CHECK_FAILED"
-				} else {
-					action = "IIR_STUDENT_NUMBER_CHECKED"
-				}
-			} else if isProfile {
-				if status == http.StatusInternalServerError {
-					action = "IIR_PROFILE_FETCH_FAILED"
-				} else if status == http.StatusNotFound {
-					action = "IIR_PROFILE_NOT_FOUND"
-				} else {
-					action = "IIR_PROFILE_RETRIEVED"
-				}
+			if status == http.StatusInternalServerError {
+				action = "IIR_PDF_DOWNLOAD_FAILED"
+			} else if status == http.StatusNotFound {
+				action = "IIR_PDF_NOT_FOUND"
 			} else {
-				if status == http.StatusInternalServerError {
-					action = "IIR_FETCH_FAILED"
-				} else if status == http.StatusNotFound {
-					action = "IIR_NOT_FOUND"
-				} else {
-					action = "IIR_RETRIEVED"
-				}
+				action = "IIR_PDF_DOWNLOADED"
 			}
 		default:
 			action = "IIR_ACTION"
