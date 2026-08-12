@@ -247,7 +247,7 @@ func (r *Repository) GetTotalStudentsCount(
 	req ListStudentsRequest,
 ) (int, error) {
 	query, args := r.applyStudentFilters(
-		"SELECT COUNT(iir_id) FROM v_student_profiles WHERE 1=1 AND is_completed = true",
+		"SELECT COUNT(iir_id) FROM v_student_profiles WHERE 1=1",
 		nil,
 		req,
 	)
