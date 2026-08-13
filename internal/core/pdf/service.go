@@ -334,5 +334,22 @@ func getConsultHelpers() template.FuncMap {
 			}
 			return nil
 		},
+		"getConsultationsByType": func(
+			consults interface{}, profType string,
+		) []interface{} {
+			v := reflect.ValueOf(consults)
+			if v.Kind() != reflect.Slice {
+				return nil
+			}
+			var res []interface{}
+			for i := 0; i < v.Len(); i++ {
+				c := v.Index(i)
+				ctype := c.FieldByName("ProfessionalType").String()
+				if ctype == profType {
+					res = append(res, c.Interface())
+				}
+			}
+			return res
+		},
 	}
 }
