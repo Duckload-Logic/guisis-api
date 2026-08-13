@@ -17,6 +17,7 @@ func RegisterRoutes(
 	// Root group: /api/v1/students
 	routes := rg.Group("/students")
 	routes.Use(middleware.AuthMiddleware(redis))
+	routes.Use(middleware.AuditContextMiddleware())
 	routes.Use(middleware.HydrateStudentIIRContext(db))
 
 	// Define lookups
@@ -54,6 +55,7 @@ func RegisterRoutes(
 	}
 
 	inventoryRoutes := routes.Group("/inventory")
+	inventoryRoutes.Use(IIRLoggerMiddleware())
 
 	counselorRoutes := inventoryRoutes.Group("/")
 	counselorRoutes.Use(middleware.RoleMiddleware(

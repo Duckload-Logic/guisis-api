@@ -128,6 +128,7 @@ type StudentProfileView struct {
 	ProfilePicture structs.NullableString `db:"profile_picture"`
 	ProgramCode    string                 `db:"program_code"`
 	ProgramName    string                 `db:"program_name"`
+	IsCompleted    bool                   `db:"is_completed"`
 }
 
 // IIRDraft represents an unsubmitted draft of the student's IIR form.
