@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -333,6 +334,50 @@ func getConsultHelpers() template.FuncMap {
 				}
 			}
 			return nil
+		},
+		"getConsultationsByType": func(
+			consults interface{}, profType string,
+		) []interface{} {
+			v := reflect.ValueOf(consults)
+			if v.Kind() != reflect.Slice {
+				return nil
+			}
+			var res []interface{}
+			for i := 0; i < v.Len(); i++ {
+				c := v.Index(i)
+				ctype := c.FieldByName("ProfessionalType").String()
+				if ctype == profType {
+					res = append(res, c.Interface())
+				}
+			}
+			sort.Slice(res, func(i, j int) bool {
+				valI := reflect.ValueOf(res[i]).FieldByName("WhenDate")
+				valJ := reflect.ValueOf(res[j]).FieldByName("WhenDate")
+				strI := ""
+				if valI.IsValid() {
+					if valI.Kind() == reflect.Struct {
+						strI = valI.FieldByName("String").String()
+					} else {
+						strI = valI.String()
+					}
+				}
+				strJ := ""
+				if valJ.IsValid() {
+					if valJ.Kind() == reflect.Struct {
+						strJ = valJ.FieldByName("String").String()
+					} else {
+						strJ = valJ.String()
+					}
+				}
+				if strI == "" {
+					return false
+				}
+				if strJ == "" {
+					return true
+				}
+				return strI < strJ
+			})
+			return res
 		},
 	}
 }

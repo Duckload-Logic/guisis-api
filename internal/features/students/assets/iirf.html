@@ -1018,14 +1018,28 @@
             {{$consults := .Consultations}}
             {{$profTypes := makeSlice "Psychiatrist" "Psychologist" "Counselor"}}
             {{range $profType := $profTypes}}
-            {{$c := getConsultation $consults $profType}}
-            <tr>
-                <td>{{$profType}}</td>
-                <td class="text-center">{{if and $c $c.HasConsulted}}✓{{end}}</td>
-                <td class="text-center">{{if and $c (not $c.HasConsulted)}}✓{{end}}</td>
-                <td class="text-center">{{if $c}}{{$c.WhenDate.String}}{{end}}</td>
-                <td>{{if $c}}{{$c.ForWhat.String}}{{end}}</td>
-            </tr>
+                {{$sessions := getConsultationsByType $consults $profType}}
+                {{if $sessions}}
+                    {{range $idx, $c := $sessions}}
+                    <tr>
+                        {{if eq $idx 0}}
+                        <td rowspan="{{len $sessions}}">{{$profType}}</td>
+                        {{end}}
+                        <td class="text-center">{{if $c.HasConsulted}}✓{{end}}</td>
+                        <td class="text-center">{{if not $c.HasConsulted}}✓{{end}}</td>
+                        <td class="text-center">{{if $c.HasConsulted}}{{$c.WhenDate.String}}{{end}}</td>
+                        <td>{{if $c.HasConsulted}}{{$c.ForWhat.String}}{{end}}</td>
+                    </tr>
+                    {{end}}
+                {{else}}
+                    <tr>
+                        <td>{{$profType}}</td>
+                        <td class="text-center"></td>
+                        <td class="text-center">✓</td>
+                        <td class="text-center"></td>
+                        <td></td>
+                    </tr>
+                {{end}}
             {{end}}
         </table>
         {{end}} {{/* end with .Health */}}
