@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -349,6 +350,33 @@ func getConsultHelpers() template.FuncMap {
 					res = append(res, c.Interface())
 				}
 			}
+			sort.Slice(res, func(i, j int) bool {
+				valI := reflect.ValueOf(res[i]).FieldByName("WhenDate")
+				valJ := reflect.ValueOf(res[j]).FieldByName("WhenDate")
+				strI := ""
+				if valI.IsValid() {
+					if valI.Kind() == reflect.Struct {
+						strI = valI.FieldByName("String").String()
+					} else {
+						strI = valI.String()
+					}
+				}
+				strJ := ""
+				if valJ.IsValid() {
+					if valJ.Kind() == reflect.Struct {
+						strJ = valJ.FieldByName("String").String()
+					} else {
+						strJ = valJ.String()
+					}
+				}
+				if strI == "" {
+					return false
+				}
+				if strJ == "" {
+					return true
+				}
+				return strI < strJ
+			})
 			return res
 		},
 	}
