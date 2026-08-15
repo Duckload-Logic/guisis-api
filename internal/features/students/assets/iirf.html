@@ -581,15 +581,32 @@
             {{$schools := .School}}
             {{range $index := $levels}}
             {{$levelName := index $levelNames $index}}
-            {{$school := getEduBackground $schools $levelName}}
-            <tr>
-                <td>{{$levelName}}</td>
-                <td>{{if $school}}{{$school.SchoolName}}{{end}}</td>
-                <td>{{if $school}}{{$school.SchoolAddress}}{{end}}</td>
-                <td class="text-center">{{if $school}}{{$school.SchoolType}}{{end}}</td>
-                <td class="text-center">{{if $school}}{{$school.YearStarted}} - {{$school.YearCompleted}}{{end}}</td>
-                <td>{{if $school}}{{$school.Awards.String}}{{end}}</td>
-            </tr>
+            {{$levelSchools := getSchoolsByLevel $schools $levelName}}
+            {{if $levelSchools}}
+                {{range $sIdx, $school := $levelSchools}}
+                <tr>
+                    {{if eq $sIdx 0}}
+                    <td rowspan="{{len $levelSchools}}">{{$levelName}}</td>
+                    {{end}}
+                    <td>{{$school.SchoolName}}</td>
+                    <td>{{$school.SchoolAddress}}</td>
+                    <td class="text-center">{{$school.SchoolType}}</td>
+                    <td class="text-center">
+                        {{$school.YearStarted}} - {{$school.YearCompleted}}
+                    </td>
+                    <td>{{$school.Awards.String}}</td>
+                </tr>
+                {{end}}
+            {{else}}
+                <tr>
+                    <td>{{$levelName}}</td>
+                    <td></td>
+                    <td></td>
+                    <td class="text-center"></td>
+                    <td class="text-center"></td>
+                    <td></td>
+                </tr>
+            {{end}}
             {{end}}
         </table>
 
@@ -1109,13 +1126,13 @@
         {{$otherRoleSpec := ""}}
         {{range .Activities}}
             {{if not (eq .ActivityOption.Category "academic")}}
-                {{if eq .Role "Officer"}}
+                {{if hasRole .Roles "Officer"}}
                     {{$hasOfficer = true}}
                 {{end}}
-                {{if eq .Role "Member"}}
+                {{if hasRole .Roles "Member"}}
                     {{$hasMember = true}}
                 {{end}}
-                {{if eq .Role "Other"}}
+                {{if hasRole .Roles "Other"}}
                     {{$hasOtherRole = true}}
                     {{$otherRoleSpec = .RoleSpecification.String}}
                 {{end}}

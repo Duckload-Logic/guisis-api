@@ -354,7 +354,7 @@ type StudentActivity struct {
 	IIRID              string                 `db:"iir_id"              json:"iirId"`
 	OptionID           int                    `db:"option_id"           json:"optionId"`
 	OtherSpecification structs.NullableString `db:"other_specification" json:"otherSpecification,omitempty"`
-	Role               string                 `db:"role"                json:"role"`
+	Roles              []string               `db:"-"                   json:"roles"`
 	RoleSpecification  structs.NullableString `db:"role_specification"  json:"roleSpecification,omitempty"`
 	CreatedAt          time.Time              `db:"created_at"          json:"createdAt"`
 	UpdatedAt          time.Time              `db:"updated_at"          json:"updatedAt"`

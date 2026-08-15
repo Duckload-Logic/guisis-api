@@ -83,6 +83,9 @@ func getBasicHelpers() template.FuncMap {
 		"add": func(a, b int) int {
 			return a + b
 		},
+		"contains": func(s, substr string) bool {
+			return strings.Contains(s, substr)
+		},
 		"ptrInt": func(i *int) int {
 			if i == nil {
 				return 0
@@ -256,6 +259,18 @@ func getActivityHelpers() template.FuncMap {
 			}
 			return ""
 		},
+		"hasRole": func(roles interface{}, target string) bool {
+			v := reflect.ValueOf(roles)
+			if v.Kind() != reflect.Slice {
+				return false
+			}
+			for i := 0; i < v.Len(); i++ {
+				if strings.EqualFold(v.Index(i).String(), target) {
+					return true
+				}
+			}
+			return false
+		},
 	}
 }
 
@@ -313,6 +328,24 @@ func getEduHelpers() template.FuncMap {
 				}
 			}
 			return nil
+		},
+		"getSchoolsByLevel": func(
+			schools interface{}, level string,
+		) []interface{} {
+			v := reflect.ValueOf(schools)
+			if v.Kind() != reflect.Slice {
+				return nil
+			}
+			var res []interface{}
+			for i := 0; i < v.Len(); i++ {
+				s := v.Index(i)
+				lvl := s.FieldByName("EducationalLevel").
+					FieldByName("Name").String()
+				if lvl == level {
+					res = append(res, s.Interface())
+				}
+			}
+			return res
 		},
 	}
 }

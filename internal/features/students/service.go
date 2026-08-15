@@ -841,6 +841,10 @@ func (s *Service) GetStudentActivities(
 	for i, a := range activities {
 		option, err := s.repo.GetActivityOptionByID(ctx, a.OptionID)
 		if err != nil || option == nil {
+			roles := a.Roles
+			if roles == nil {
+				roles = []string{}
+			}
 			dtos[i] = StudentActivityDTO{
 				ID: a.ID,
 				ActivityOption: ActivityOption{
@@ -850,7 +854,7 @@ func (s *Service) GetStudentActivities(
 					IsActive: false,
 				},
 				OtherSpecification: a.OtherSpecification,
-				Role:               a.Role,
+				Roles:              roles,
 				RoleSpecification:  a.RoleSpecification,
 			}
 			continue
@@ -1544,7 +1548,7 @@ func (s *Service) saveComprehensiveProfile(
 			IIRID:              iirID,
 			OptionID:           aDTO.ActivityOption.ID,
 			OtherSpecification: aDTO.OtherSpecification,
-			Role:               aDTO.Role,
+			Roles:              aDTO.Roles,
 			RoleSpecification:  aDTO.RoleSpecification,
 		})
 		if err != nil {
