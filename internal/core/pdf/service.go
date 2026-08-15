@@ -83,6 +83,9 @@ func getBasicHelpers() template.FuncMap {
 		"add": func(a, b int) int {
 			return a + b
 		},
+		"contains": func(s, substr string) bool {
+			return strings.Contains(s, substr)
+		},
 		"ptrInt": func(i *int) int {
 			if i == nil {
 				return 0
