@@ -585,7 +585,9 @@
             {{if $levelSchools}}
                 {{range $sIdx, $school := $levelSchools}}
                 <tr>
-                    <td>{{if eq $sIdx 0}}{{$levelName}}{{end}}</td>
+                    {{if eq $sIdx 0}}
+                    <td rowspan="{{len $levelSchools}}">{{$levelName}}</td>
+                    {{end}}
                     <td>{{$school.SchoolName}}</td>
                     <td>{{$school.SchoolAddress}}</td>
                     <td class="text-center">{{$school.SchoolType}}</td>
