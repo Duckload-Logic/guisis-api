@@ -21,6 +21,7 @@ func (r *Repository) ListStudents(
 	query := `
 		SELECT
 			sp.student_number AS student_number,
+			u.idp_uuid AS idp_uuid,
 			u.first_name AS first_name,
 			u.middle_name AS middle_name,
 			u.last_name AS last_name,
@@ -100,6 +101,7 @@ func (r *Repository) GetStudentByStudentNumber(
 	query := `
 		SELECT
 			sp.student_number AS student_number,
+			u.idp_uuid AS idp_uuid,
 			u.first_name AS first_name,
 			u.middle_name AS middle_name,
 			u.last_name AS last_name,
@@ -115,14 +117,20 @@ func (r *Repository) GetStudentByStudentNumber(
 		JOIN iir_records i ON i.user_id = u.id
 		JOIN student_personal_info sp ON sp.iir_id = i.id
 		JOIN programs p ON sp.program_id = p.id
-		WHERE sp.student_number = ?
+		WHERE (sp.student_number = ? OR u.idp_uuid = ?)
 		AND u.is_active = true
 		AND i.is_submitted = true
 		LIMIT 1
 	`
 
 	var student OGOSStudentView
-	err := r.db.GetContext(ctx, &student, query, studentNumber)
+	err := r.db.GetContext(
+		ctx,
+		&student,
+		query,
+		studentNumber,
+		studentNumber,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -137,6 +145,7 @@ func (r *Repository) GetStudentByEmail(
 	query := `
 		SELECT
 			sp.student_number AS student_number,
+			u.idp_uuid AS idp_uuid,
 			u.first_name AS first_name,
 			u.middle_name AS middle_name,
 			u.last_name AS last_name,
@@ -152,14 +161,14 @@ func (r *Repository) GetStudentByEmail(
 		JOIN iir_records i ON i.user_id = u.id
 		JOIN student_personal_info sp ON sp.iir_id = i.id
 		JOIN programs p ON sp.program_id = p.id
-		WHERE u.email = ?
+		WHERE (u.email = ? OR u.idp_uuid = ?)
 		AND u.is_active = true
 		AND i.is_submitted = true
 		LIMIT 1
 	`
 
 	var student OGOSStudentView
-	err := r.db.GetContext(ctx, &student, query, email)
+	err := r.db.GetContext(ctx, &student, query, email, email)
 	if err != nil {
 		return nil, err
 	}
@@ -174,6 +183,7 @@ func (r *Repository) GetPersonalInfoByStudentNumber(
 	query := `
 		SELECT
 			sp.student_number AS student_number,
+			u.idp_uuid AS idp_uuid,
 			CASE WHEN sp.gender = 'Male' THEN 1 ELSE 2 END AS gender_id,
 			sp.gender AS gender_name,
 			sp.date_of_birth AS date_of_birth,
@@ -192,14 +202,20 @@ func (r *Repository) GetPersonalInfoByStudentNumber(
 		JOIN iir_records i ON sp.iir_id = i.id
 		JOIN users u ON i.user_id = u.id
 		LEFT JOIN emergency_contacts ec ON ec.iir_id = sp.iir_id
-		WHERE sp.student_number = ?
+		WHERE (sp.student_number = ? OR u.idp_uuid = ?)
 		AND u.is_active = true
 		AND i.is_submitted = true
 		LIMIT 1
 	`
 
 	var student OGOSStudentPersonalInfoView
-	err := r.db.GetContext(ctx, &student, query, studentNumber)
+	err := r.db.GetContext(
+		ctx,
+		&student,
+		query,
+		studentNumber,
+		studentNumber,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -214,6 +230,7 @@ func (r *Repository) GetAddressByStudentNumber(
 	query := `
 		SELECT
 			sp.student_number AS student_number,
+			u.idp_uuid AS idp_uuid,
 			sa.address_type AS address_type,
 			a.street_detail AS street_detail,
 			a.barangay_code AS barangay_code,
@@ -233,13 +250,19 @@ func (r *Repository) GetAddressByStudentNumber(
 		JOIN student_personal_info sp ON sp.iir_id = sa.iir_id
 		JOIN iir_records i ON sp.iir_id = i.id
 		JOIN users u ON i.user_id = u.id
-		WHERE sp.student_number = ?
+		WHERE (sp.student_number = ? OR u.idp_uuid = ?)
 		AND u.is_active = true
 		AND i.is_submitted = true
 	`
 
 	var addresses []OGOSStudentAddressView
-	err := r.db.SelectContext(ctx, &addresses, query, studentNumber)
+	err := r.db.SelectContext(
+		ctx,
+		&addresses,
+		query,
+		studentNumber,
+		studentNumber,
+	)
 	if err != nil {
 		return nil, err
 	}

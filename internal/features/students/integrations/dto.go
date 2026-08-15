@@ -23,6 +23,7 @@ type OGOSListStudentsResponse struct {
 }
 
 type OGOSStudentDTO struct {
+	IDP_UUID      string `json:"idpUuid"`
 	StudentNumber string `json:"studentNumber"`
 
 	FirstName  string                 `json:"firstName"`
@@ -34,11 +35,12 @@ type OGOSStudentDTO struct {
 	MobileNumber string `json:"mobileNumber"`
 
 	Program   students.Program `json:"program"`
-	YearLevel int             `json:"yearLevel"`
-	Section   string          `json:"section"`
+	YearLevel int              `json:"yearLevel"`
+	Section   string           `json:"section"`
 }
 
 type OGOSStudentPersonalInfoDTO struct {
+	IDP_UUID      string `json:"idpUuid"`
 	StudentNumber string `json:"studentNumber"`
 
 	Gender                 students.Gender `json:"gender"`
@@ -51,6 +53,7 @@ type OGOSStudentPersonalInfoDTO struct {
 }
 
 type OGOSStudentAddressDTO struct {
+	IDP_UUID      string `json:"idpUuid"`
 	StudentNumber string `json:"studentNumber"`
 
 	AddressType  string                 `json:"addressType,omitempty"`
