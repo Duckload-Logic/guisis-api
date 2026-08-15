@@ -800,7 +800,57 @@ func (r *Repository) GetStudentActivities(
 
 	var activities []StudentActivity
 	err := r.db.SelectContext(ctx, &activities, query, iirID)
-	return activities, err
+	if err != nil {
+		return nil, err
+	}
+
+	if len(activities) == 0 {
+		return activities, nil
+	}
+
+	activityIDs := make([]interface{}, len(activities))
+	activityMap := make(map[int]*StudentActivity)
+	for i := range activities {
+		activityIDs[i] = activities[i].ID
+		activityMap[activities[i].ID] = &activities[i]
+	}
+
+	roleQuery := `
+		SELECT student_activity_id, role
+		FROM student_activity_roles
+		WHERE student_activity_id IN (?)
+	`
+	queryWithIn, args, err := sqlx.In(roleQuery, activityIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build sqlx.In: %w", err)
+	}
+
+	queryWithIn = r.db.Rebind(queryWithIn)
+
+	type dbRole struct {
+		StudentActivityID int    `db:"student_activity_id"`
+		Role              string `db:"role"`
+	}
+
+	var roles []dbRole
+	err = r.db.SelectContext(ctx, &roles, queryWithIn, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query roles: %w", err)
+	}
+
+	for _, rv := range roles {
+		if act, ok := activityMap[rv.StudentActivityID]; ok {
+			act.Roles = append(act.Roles, rv.Role)
+		}
+	}
+
+	for i := range activities {
+		if activities[i].Roles == nil {
+			activities[i].Roles = []string{}
+		}
+	}
+
+	return activities, nil
 }
 
 func (r *Repository) GetActivityOptionByID(
@@ -1504,7 +1554,20 @@ func (r *Repository) CreateStudentActivity(
 		return 0, err
 	}
 	lastID, _ := result.LastInsertId()
-	return int(lastID), nil
+	activityID := int(lastID)
+
+	for _, role := range sa.Roles {
+		roleQuery := `
+			INSERT INTO student_activity_roles (student_activity_id, role)
+			VALUES (?, ?)
+		`
+		_, err = tx.ExecContext(ctx, roleQuery, activityID, role)
+		if err != nil {
+			return 0, fmt.Errorf("failed to insert role: %w", err)
+		}
+	}
+
+	return activityID, nil
 }
 
 func (r *Repository) DeleteStudentActivitiesByIIRID(

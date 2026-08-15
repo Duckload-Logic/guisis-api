@@ -1026,7 +1026,7 @@ func insertActivities(ctx context.Context, tx *sqlx.Tx, iirID string) {
 		sa := &students.StudentActivity{
 			IIRID:             iirID,
 			OptionID:          optID,
-			Role:              role,
+			Roles:             []string{role},
 			RoleSpecification: roleSpec,
 		}
 

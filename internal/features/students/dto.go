@@ -279,7 +279,7 @@ type StudentActivityDTO struct {
 	ID                 int                    `json:"id,omitempty"`
 	ActivityOption     ActivityOption         `json:"activityOption"`
 	OtherSpecification structs.NullableString `json:"otherSpecification,omitempty"`
-	Role               string                 `json:"role"` // "Officer", "Member", "Other"
+	Roles              []string               `json:"roles"`
 	RoleSpecification  structs.NullableString `json:"roleSpecification,omitempty"`
 }
 
@@ -524,11 +524,15 @@ func (c *StudentConsultation) ToDTO() StudentConsultationDTO {
 func (a *StudentActivity) ToDTO(
 	option ActivityOption,
 ) StudentActivityDTO {
+	roles := a.Roles
+	if roles == nil {
+		roles = []string{}
+	}
 	return StudentActivityDTO{
 		ID:                 a.ID,
 		ActivityOption:     option,
 		OtherSpecification: a.OtherSpecification,
-		Role:               a.Role,
+		Roles:              roles,
 		RoleSpecification:  a.RoleSpecification,
 	}
 }
