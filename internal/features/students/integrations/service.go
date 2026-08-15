@@ -31,6 +31,7 @@ func (s *Service) ListStudents(
 	var studentsDTO []OGOSStudentDTO
 	for _, student := range studentList {
 		studentsDTO = append(studentsDTO, OGOSStudentDTO{
+			IDP_UUID:      student.IDPUUID.String,
 			StudentNumber: student.StudentNumber,
 			FirstName:     student.FirstName,
 			MiddleName:    structs.FromSqlNull(student.MiddleName),
@@ -50,7 +51,11 @@ func (s *Service) ListStudents(
 
 	listResponse := OGOSListStudentsResponse{
 		Students: studentsDTO,
-		Meta:     structs.CalculateMetadata(total, req.Page, req.PageSize),
+		Meta: structs.CalculateMetadata(
+			total,
+			req.Page,
+			req.PageSize,
+		),
 	}
 
 	return listResponse, nil
@@ -69,6 +74,7 @@ func (s *Service) GetStudentByStudentNumber(
 	}
 
 	return &OGOSStudentDTO{
+		IDP_UUID:      student.IDPUUID.String,
 		StudentNumber: student.StudentNumber,
 		FirstName:     student.FirstName,
 		MiddleName:    structs.FromSqlNull(student.MiddleName),
@@ -100,6 +106,7 @@ func (s *Service) GetStudentByEmail(
 	}
 
 	return &OGOSStudentDTO{
+		IDP_UUID:      student.IDPUUID.String,
 		StudentNumber: student.StudentNumber,
 		FirstName:     student.FirstName,
 		MiddleName:    structs.FromSqlNull(student.MiddleName),
@@ -121,7 +128,10 @@ func (s *Service) GetPersonalInfoByStudentNumber(
 	ctx context.Context,
 	studentNumber string,
 ) (*OGOSStudentPersonalInfoDTO, error) {
-	student, err := s.repo.GetPersonalInfoByStudentNumber(ctx, studentNumber)
+	student, err := s.repo.GetPersonalInfoByStudentNumber(
+		ctx,
+		studentNumber,
+	)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -130,6 +140,7 @@ func (s *Service) GetPersonalInfoByStudentNumber(
 	}
 
 	return &OGOSStudentPersonalInfoDTO{
+		IDP_UUID:      student.IDPUUID.String,
 		StudentNumber: student.StudentNumber,
 		Gender: students.Gender{
 			ID:   student.GenderID,
@@ -166,6 +177,7 @@ func (s *Service) GetAddressByStudentNumber(
 	var addresesDTO []OGOSStudentAddressDTO
 	for _, address := range studentAddresses {
 		addresesDTO = append(addresesDTO, OGOSStudentAddressDTO{
+			IDP_UUID:      address.IDPUUID.String,
 			StudentNumber: address.StudentNumber,
 			AddressType:   address.AddressType,
 			StreetDetail:  address.StreetDetail,

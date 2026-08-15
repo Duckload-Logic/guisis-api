@@ -7,7 +7,8 @@ import (
 )
 
 type OGOSStudentView struct {
-	StudentNumber string `db:"student_number"`
+	IDPUUID       sql.NullString `db:"idp_uuid"`
+	StudentNumber string         `db:"student_number"`
 
 	FirstName  string         `db:"first_name"`
 	MiddleName sql.NullString `db:"middle_name,omitempty"`
@@ -20,12 +21,13 @@ type OGOSStudentView struct {
 	ProgramID   int    `db:"program_id"`
 	ProgramCode string `db:"program_code"`
 	ProgramName string `db:"program_name"`
-	YearLevel  int    `db:"year_level"`
-	Section    string `db:"section"`
+	YearLevel   int    `db:"year_level"`
+	Section     string `db:"section"`
 }
 
 type OGOSStudentPersonalInfoView struct {
-	StudentNumber string `db:"student_number"`
+	IDPUUID       sql.NullString `db:"idp_uuid"`
+	StudentNumber string         `db:"student_number"`
 
 	GenderID               int     `db:"gender_id"`
 	GenderName             string  `db:"gender_name"`
@@ -38,7 +40,8 @@ type OGOSStudentPersonalInfoView struct {
 }
 
 type OGOSStudentAddressView struct {
-	StudentNumber string `db:"student_number"`
+	IDPUUID       sql.NullString `db:"idp_uuid"`
+	StudentNumber string         `db:"student_number"`
 
 	AddressType  string                 `db:"address_type,omitempty"`
 	StreetDetail structs.NullableString `db:"street_detail"`
