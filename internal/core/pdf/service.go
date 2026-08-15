@@ -317,6 +317,24 @@ func getEduHelpers() template.FuncMap {
 			}
 			return nil
 		},
+		"getSchoolsByLevel": func(
+			schools interface{}, level string,
+		) []interface{} {
+			v := reflect.ValueOf(schools)
+			if v.Kind() != reflect.Slice {
+				return nil
+			}
+			var res []interface{}
+			for i := 0; i < v.Len(); i++ {
+				s := v.Index(i)
+				lvl := s.FieldByName("EducationalLevel").
+					FieldByName("Name").String()
+				if lvl == level {
+					res = append(res, s.Interface())
+				}
+			}
+			return res
+		},
 	}
 }
 
