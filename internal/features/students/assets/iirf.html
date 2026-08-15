@@ -1124,13 +1124,13 @@
         {{$otherRoleSpec := ""}}
         {{range .Activities}}
             {{if not (eq .ActivityOption.Category "academic")}}
-                {{if contains .Role "Officer"}}
+                {{if hasRole .Roles "Officer"}}
                     {{$hasOfficer = true}}
                 {{end}}
-                {{if contains .Role "Member"}}
+                {{if hasRole .Roles "Member"}}
                     {{$hasMember = true}}
                 {{end}}
-                {{if contains .Role "Other"}}
+                {{if hasRole .Roles "Other"}}
                     {{$hasOtherRole = true}}
                     {{$otherRoleSpec = .RoleSpecification.String}}
                 {{end}}

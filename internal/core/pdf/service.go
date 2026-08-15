@@ -259,6 +259,18 @@ func getActivityHelpers() template.FuncMap {
 			}
 			return ""
 		},
+		"hasRole": func(roles interface{}, target string) bool {
+			v := reflect.ValueOf(roles)
+			if v.Kind() != reflect.Slice {
+				return false
+			}
+			for i := 0; i < v.Len(); i++ {
+				if strings.EqualFold(v.Index(i).String(), target) {
+					return true
+				}
+			}
+			return false
+		},
 	}
 }
 
