@@ -95,7 +95,7 @@ func BodySizeLimitMiddleware(limit int64) gin.HandlerFunc {
 			// For multipart forms, Gin handles this differently via MaxMultipartMemory,
 			// but for JSON payloads, we need MaxBytesReader.
 			if !strings.HasPrefix(
-				c.GetHeader("Content-Type"),
+				strings.ToLower(c.GetHeader("Content-Type")),
 				"multipart/form-data",
 			) {
 				c.Request.Body = http.MaxBytesReader(
