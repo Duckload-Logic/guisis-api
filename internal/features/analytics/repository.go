@@ -796,7 +796,8 @@ func (r *Repository) buildFilter(
 	year int,
 	programID int,
 ) (string, []interface{}) {
-	filter := ""
+	filter := " AND spi.iir_id IN " +
+		"(SELECT id FROM iir_records WHERE is_completed = 1)"
 	args := []interface{}{}
 
 	if year > 0 {

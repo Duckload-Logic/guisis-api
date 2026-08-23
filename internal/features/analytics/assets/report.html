@@ -382,15 +382,24 @@
 					<td>TOTAL</td>
 					<td class="num-col">{{sumInt .Data "MaleCount"}}</td>
 					<td class="pct-col">
-						{{printf "%.2f" (sumFloat .Data "MalePct")}}%
+						{{printf "%.2f" (calcPct
+							(sumInt .Data "MaleCount")
+							(sumInt .Data "Total")
+						)}}%
 					</td>
 					<td class="num-col">{{sumInt .Data "FemaleCount"}}</td>
 					<td class="pct-col">
-						{{printf "%.2f" (sumFloat .Data "FemalePct")}}%
+						{{printf "%.2f" (calcPct
+							(sumInt .Data "FemaleCount")
+							(sumInt .Data "Total")
+						)}}%
 					</td>
 					<td class="num-col">{{sumInt .Data "Total"}}</td>
 					<td class="pct-col">
-						{{printf "%.2f" (sumFloat .Data "TotalPct")}}%
+						{{printf "%.2f" (calcPct
+							(sumInt .Data "Total")
+							(sumInt .Data "Total")
+						)}}%
 					</td>
 					<td class="rank-col"></td>
 				</tr>
