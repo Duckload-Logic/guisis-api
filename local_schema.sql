@@ -1071,7 +1071,7 @@ CREATE TABLE `student_personal_info` (
   `height_m` decimal(5,2) NOT NULL,
   `weight_kg` decimal(5,2) NOT NULL,
   `complexion` varchar(50) NOT NULL,
-  `high_school_gwa` decimal(4,2) NOT NULL,
+  `high_school_gwa` decimal(5,2) NOT NULL,
   `program_id` int NOT NULL,
   `year_level` int NOT NULL,
   `section` int NOT NULL,
