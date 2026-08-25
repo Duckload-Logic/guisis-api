@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"math"
 	"reflect"
 	"sort"
 	"strings"
@@ -146,6 +147,13 @@ func getBasicHelpers() template.FuncMap {
 				}
 			}
 			return sum
+		},
+		"calcPct": func(count, total int) float64 {
+			if total == 0 {
+				return 0
+			}
+			percent := (float64(count) / float64(total)) * 100
+			return math.Round(percent*100) / 100
 		},
 	}
 }
