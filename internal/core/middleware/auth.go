@@ -1,10 +1,12 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
@@ -74,7 +76,13 @@ func validateSession(
 		claims.UserID,
 	)
 
-	fields, err := redis.HGetAll(c.Request.Context(), key)
+	redisCtx, cancel := context.WithTimeout(
+		c.Request.Context(),
+		500*time.Millisecond,
+	)
+	defer cancel()
+
+	fields, err := redis.HGetAll(redisCtx, key)
 	if err != nil {
 		log.Printf(
 			"[AuthMiddleware] {Session Validate}: Redis error: %v",

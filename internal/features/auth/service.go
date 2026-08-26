@@ -937,7 +937,12 @@ func (s *Service) StartHealthCheck(cfg *config.Config) {
 				err,
 			)
 		}
-		_ = s.redis.Set(ctx, cacheKey, status, ttl)
+		redisCtx, cancel := context.WithTimeout(
+			ctx,
+			500*time.Millisecond,
+		)
+		_ = s.redis.Set(redisCtx, cacheKey, status, ttl)
+		cancel()
 
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
@@ -953,7 +958,12 @@ func (s *Service) StartHealthCheck(cfg *config.Config) {
 					err,
 				)
 			}
-			_ = s.redis.Set(ctx, cacheKey, status, ttl)
+			redisCtx, cancel := context.WithTimeout(
+				ctx,
+				500*time.Millisecond,
+			)
+			_ = s.redis.Set(redisCtx, cacheKey, status, ttl)
+			cancel()
 		}
 	}()
 }
@@ -966,7 +976,12 @@ func (s *Service) IsIDPUp(
 	const cacheKey = "idp_health_status"
 
 	if s.redis != nil {
-		status, err := s.redis.Get(ctx, cacheKey)
+		redisCtx, cancel := context.WithTimeout(
+			ctx,
+			500*time.Millisecond,
+		)
+		status, err := s.redis.Get(redisCtx, cacheKey)
+		cancel()
 		if err == nil && status != "" {
 			return status == "up"
 		}
