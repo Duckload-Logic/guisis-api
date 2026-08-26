@@ -913,13 +913,57 @@ func (s *Service) GetIDPUserInfo(
 	return userInfo, nil
 }
 
+// StartHealthCheck starts a background goroutine to periodically ping the IDP
+// and cache the status in Redis to decouple network latency.
+func (s *Service) StartHealthCheck(cfg *config.Config) {
+	if s.redis == nil {
+		return
+	}
+
+	const (
+		cacheKey = "idp_health_status"
+		interval = 15 * time.Second
+		ttl      = 60 * time.Second
+	)
+
+	go func() {
+		ctx := context.Background()
+		err := s.idpClient.PingIDP(ctx, cfg)
+		status := "up"
+		if err != nil {
+			status = "down"
+			log.Printf(
+				"[AuthService] {IDP Init Check}: Ping failed: %v",
+				err,
+			)
+		}
+		_ = s.redis.Set(ctx, cacheKey, status, ttl)
+
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			err = s.idpClient.PingIDP(ctx, cfg)
+			status = "up"
+			if err != nil {
+				status = "down"
+				log.Printf(
+					"[AuthService] {IDP Health Check}: " +
+						"Ping failed: %v",
+					err,
+				)
+			}
+			_ = s.redis.Set(ctx, cacheKey, status, ttl)
+		}
+	}()
+}
+
 // IsIDPUp checks if the IDP is up, utilizing a short-lived cache in Redis.
 func (s *Service) IsIDPUp(
 	ctx context.Context,
 	cfg *config.Config,
 ) bool {
 	const cacheKey = "idp_health_status"
-	const cacheTTL = 30 * time.Second
 
 	if s.redis != nil {
 		status, err := s.redis.Get(ctx, cacheKey)
@@ -928,17 +972,11 @@ func (s *Service) IsIDPUp(
 		}
 	}
 
+	// Fallback to synchronous ping if Redis is empty or errors
 	err := s.idpClient.PingIDP(ctx, cfg)
 	if err != nil {
-		log.Printf("[AuthService] {IsIDPUp}: IDP down: %v", err)
-		if s.redis != nil {
-			_ = s.redis.Set(ctx, cacheKey, "down", cacheTTL)
-		}
+		log.Printf("[AuthService] {IsIDPUp Fallback}: IDP down: %v", err)
 		return false
-	}
-
-	if s.redis != nil {
-		_ = s.redis.Set(ctx, cacheKey, "up", cacheTTL)
 	}
 	return true
 }

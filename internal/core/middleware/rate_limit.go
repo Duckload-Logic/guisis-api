@@ -26,10 +26,19 @@ func NewIPRateLimiter(r rate.Limit, b int) *IPRateLimiter {
 }
 
 func (i *IPRateLimiter) GetLimiter(key string) *rate.Limiter {
+	i.mu.RLock()
+	limiter, exists := i.ips[key]
+	i.mu.RUnlock()
+
+	if exists {
+		return limiter
+	}
+
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	limiter, exists := i.ips[key]
+	// Double-check after acquiring write lock
+	limiter, exists = i.ips[key]
 	if !exists {
 		limiter = rate.NewLimiter(i.r, i.b)
 		i.ips[key] = limiter

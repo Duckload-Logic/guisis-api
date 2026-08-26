@@ -101,6 +101,7 @@ func getServices(
 		emailer,
 		systemLogService,
 	)
+	authService.StartHealthCheck(cfg)
 
 	locationsService := locations.NewService(repos.LocationsRepo)
 
