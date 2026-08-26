@@ -7,8 +7,8 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: "0.15"
-                    memory: 150M
+                    cpus: "0.50"
+                    memory: 300M
         depends_on:
             redis:
                 condition: service_healthy
@@ -47,13 +47,13 @@ services:
         container_name: capstone-staging-mysql
         command: >
             --performance-schema=OFF
-            --innodb-buffer-pool-size=64M
-            --max-connections=30
+            --innodb-buffer-pool-size=256M
+            --max-connections=80
         deploy:
             resources:
                 limits:
-                    cpus: "0.25"
-                    memory: 256M
+                    cpus: "0.75"
+                    memory: 512M
         environment:
             MYSQL_ROOT_PASSWORD: ${DB_PASS}
             MYSQL_DATABASE: ${DB_NAME}
