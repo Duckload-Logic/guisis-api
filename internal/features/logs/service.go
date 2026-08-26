@@ -14,10 +14,15 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
 
+const (
+	logQueueBufferSize = 1000
+)
+
 type Service struct {
 	repo         *Repository
 	notifService audit.Notifier
 	userSvc      audit.UserGetter
+	logChan      chan *SystemLog
 }
 
 func NewService(
@@ -25,11 +30,25 @@ func NewService(
 	notifService audit.Notifier,
 	userSvc audit.UserGetter,
 ) *Service {
-	return &Service{
+	s := &Service{
 		repo:         repo,
 		notifService: notifService,
 		userSvc:      userSvc,
+		logChan:      make(chan *SystemLog, logQueueBufferSize),
 	}
+	s.startWorker()
+	return s
+}
+
+func (s *Service) startWorker() {
+	go func() {
+		for logEntry := range s.logChan {
+			ctx := context.Background()
+			if err := s.repo.Record(ctx, nil, logEntry); err != nil {
+				fmt.Printf("[RecordWorker] {Async Write}: %v\n", err)
+			}
+		}
+	}()
 }
 
 func (s *Service) GetDB() datastore.DB {
@@ -98,9 +117,19 @@ func (s *Service) Record(
 		Metadata:    structs.StringToNullableString(metaStr),
 	}
 
-	if err := s.repo.Record(ctx, tx, sysLog); err != nil {
-		fmt.Printf("[Record] {Database Insertion}: %v\n", err)
-		return
+	if tx != nil {
+		if err := s.repo.Record(ctx, tx, sysLog); err != nil {
+			fmt.Printf("[Record] {Database Insertion}: %v\n", err)
+			return
+		}
+	} else {
+		select {
+		case s.logChan <- sysLog:
+		default:
+			fmt.Printf(
+				"[Record] {Queue Insertion}: queue full, dropping log\n",
+			)
+		}
 	}
 
 	// Only notify superadmins for specific critical actions or system errors.

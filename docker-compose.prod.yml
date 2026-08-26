@@ -7,8 +7,8 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: "0.25"
-                    memory: 200M
+                    cpus: "0.75"
+                    memory: 512M
         depends_on:
             redis:
                 condition: service_healthy
@@ -47,13 +47,13 @@ services:
         container_name: capstone-mysql
         command: >
             --performance-schema=OFF
-            --innodb-buffer-pool-size=128M
-            --max-connections=64
+            --innodb-buffer-pool-size=512M
+            --max-connections=150
         deploy:
             resources:
                 limits:
-                    cpus: "0.75"
-                    memory: 512M
+                    cpus: "1.25"
+                    memory: 1G
         environment:
             MYSQL_ROOT_PASSWORD: ${DB_PASS}
             MYSQL_DATABASE: ${DB_NAME}
@@ -80,8 +80,8 @@ services:
         deploy:
             resources:
                 limits:
-                    # cpus: "0.35"
-                    memory: 800M
+                    cpus: "0.50"
+                    memory: 1G
         restart: always
         networks:
             - app-network
@@ -92,8 +92,8 @@ services:
         deploy:
             resources:
                 limits:
-                    # cpus: "0.50"
-                    memory: 1.5G
+                    cpus: "0.50"
+                    memory: 2G
         healthcheck:
             test:
                 - "CMD-SHELL"
