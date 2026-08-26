@@ -222,23 +222,21 @@ func (c *IDPClient) GetLogoutURL(
 	)
 }
 
-// PingIDP checks if the IDP is reachable by sending a fast HEAD request,
-// falling back to a GET request with a short timeout.
+// PingIDP checks if the IDP is reachable by sending a fast HEAD request.
 func (c *IDPClient) PingIDP(
 	ctx context.Context,
 	cfg *config.Config,
 ) error {
-	pingClient := &http.Client{
-		Timeout: 3 * time.Second,
-	}
-
 	targetURL := strings.TrimSuffix(cfg.IDPBaseUrl, "/api/v1")
 	if targetURL == "" {
 		targetURL = cfg.IDPBaseUrl
 	}
 
+	pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
 	req, err := http.NewRequestWithContext(
-		ctx,
+		pingCtx,
 		http.MethodHead,
 		targetURL,
 		nil,
@@ -247,31 +245,9 @@ func (c *IDPClient) PingIDP(
 		return fmt.Errorf("[IDPClient] {Ping IDP HEAD Req}: %w", err)
 	}
 
-	resp, err := pingClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		// Fallback to GET
-		reqGet, errGet := http.NewRequestWithContext(
-			ctx,
-			http.MethodGet,
-			targetURL,
-			nil,
-		)
-		if errGet != nil {
-			return fmt.Errorf(
-				"[IDPClient] {Ping IDP GET Req}: %w",
-				errGet,
-			)
-		}
-
-		respGet, errGet := pingClient.Do(reqGet)
-		if errGet != nil {
-			return fmt.Errorf(
-				"[IDPClient] {Ping IDP Connection}: %w",
-				errGet,
-			)
-		}
-		respGet.Body.Close()
-		return nil
+		return fmt.Errorf("[IDPClient] {Ping IDP HEAD Do}: %w", err)
 	}
 	resp.Body.Close()
 	return nil
