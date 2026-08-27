@@ -88,7 +88,9 @@ var (
 	ErrOutdatedCOR = errors.New(
 		"uploaded COR is for an outdated academic year or term",
 	)
-	ErrCOROwnerMismatch = errors.New("uploaded COR does not belong to the user")
+	ErrCOROwnerMismatch = errors.New(
+		"This file does not appear to be a valid COR",
+	)
 )
 
 type ValidationError struct {
