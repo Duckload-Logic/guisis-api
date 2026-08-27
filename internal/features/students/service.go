@@ -89,8 +89,9 @@ var (
 		"uploaded COR is for an outdated academic year or term",
 	)
 	ErrCOROwnerMismatch = errors.New(
-		"This file does not appear to be a valid COR",
+		"uploaded COR does not belong to the user",
 	)
+	ErrInvalidCOR = errors.New("invalid COR")
 )
 
 type ValidationError struct {
@@ -196,12 +197,11 @@ func (s *Service) SubmitCOR(
 					)
 					ocrStudNum := strings.TrimSpace(corData.StudentNumber)
 
-					cleanDB := cleanStudentNumber(dbStudNum)
-					cleanOCR := cleanStudentNumber(ocrStudNum)
-
-					if cleanOCR != "" &&
-						cleanDB != "" &&
-						cleanOCR != cleanDB {
+					if !matchStudentNumbers(dbStudNum, ocrStudNum) {
+						fmt.Printf(
+							"[SubmitCOR] Mismatch: db=%q, ocr=%q\n",
+							dbStudNum, ocrStudNum,
+						)
 						_ = s.filesSvc.DeleteFile(ctx, file.ID)
 						return "", ErrCOROwnerMismatch
 					}
@@ -253,6 +253,19 @@ func cleanStudentNumber(s string) string {
 		}
 	}
 	return sb.String()
+}
+
+func matchStudentNumbers(db, ocr string) bool {
+	cleanDB := cleanStudentNumber(db)
+	cleanOCR := cleanStudentNumber(ocr)
+	if cleanDB == "" || cleanOCR == "" {
+		return true
+	}
+	if len(cleanDB) < 5 || len(cleanOCR) < 5 {
+		return false
+	}
+	return strings.Contains(cleanDB, cleanOCR) ||
+		strings.Contains(cleanOCR, cleanDB)
 }
 
 func (s *Service) GetStudentCOR(
