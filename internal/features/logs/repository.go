@@ -246,13 +246,22 @@ func (r *Repository) GetActivityStats(
 ) ([]audit.LogActivityDTO, error) {
 	query := `
         SELECT
-            DATE_FORMAT(created_at, '%Y-%m-%d %H:00') as time,
+            DATE_FORMAT(
+                DATE_ADD(created_at, INTERVAL 8 HOUR),
+                '%Y-%m-%d %H:00'
+            ) as time,
             COUNT(CASE WHEN level != 'ERROR' THEN 1 END) as requests,
             COUNT(CASE WHEN level = 'ERROR' THEN 1 END) as errors
         FROM system_logs
         WHERE created_at >= NOW() - INTERVAL 24 HOUR
-        GROUP BY time
-        ORDER BY time ASC
+        GROUP BY DATE_FORMAT(
+            DATE_ADD(created_at, INTERVAL 8 HOUR),
+            '%Y-%m-%d %H:00'
+        )
+        ORDER BY DATE_FORMAT(
+            DATE_ADD(created_at, INTERVAL 8 HOUR),
+            '%Y-%m-%d %H:00'
+        ) ASC
     `
 
 	var stats []audit.LogActivityDTO

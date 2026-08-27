@@ -1121,6 +1121,21 @@ func (r *Repository) UpsertStudentPersonalInfo(
 	return err
 }
 
+func (r *Repository) UpdateStudentYearAndSection(
+	ctx context.Context,
+	iirID string,
+	yearLevel int,
+	section int,
+) error {
+	query := `
+		UPDATE student_personal_info
+		SET year_level = ?, section = ?
+		WHERE iir_id = ?
+	`
+	_, err := r.db.ExecContext(ctx, query, yearLevel, section, iirID)
+	return err
+}
+
 func (r *Repository) UpsertEmergencyContact(
 	ctx context.Context,
 	tx datastore.DB,

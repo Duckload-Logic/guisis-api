@@ -164,16 +164,32 @@ func (r *Repository) GetMonthlyVisitorStats(
 
 	query := `
 		SELECT
-			DATE_FORMAT(created_at, '` + format + `') as period,
-			DATE_FORMAT(created_at, '` + format + `') as month,
-			SUM(CASE WHEN action = 'LOGIN_SUCCESS' THEN 1 ELSE 0 END) as logins,
+			DATE_FORMAT(
+				DATE_ADD(created_at, INTERVAL 8 HOUR),
+				'` + format + `'
+			) as period,
+			DATE_FORMAT(
+				DATE_ADD(created_at, INTERVAL 8 HOUR),
+				'` + format + `'
+			) as month,
+			SUM(
+				CASE WHEN action = 'LOGIN_SUCCESS' THEN 1 ELSE 0 END
+			) as logins,
 			COUNT(*) as activity,
-			SUM(CASE WHEN action = 'LOGIN_SUCCESS' THEN 1 ELSE 0 END) as count
+			SUM(
+				CASE WHEN action = 'LOGIN_SUCCESS' THEN 1 ELSE 0 END
+			) as count
 		FROM system_logs
 		WHERE created_at >= DATE_SUB(` + baseDate + `,
 			INTERVAL ` + interval + `)
-		GROUP BY DATE_FORMAT(created_at, '` + groupBy + `'), period, month
-		ORDER BY DATE_FORMAT(created_at, '` + groupBy + `') ASC;
+		GROUP BY DATE_FORMAT(
+			DATE_ADD(created_at, INTERVAL 8 HOUR),
+			'` + groupBy + `'
+		), period, month
+		ORDER BY DATE_FORMAT(
+			DATE_ADD(created_at, INTERVAL 8 HOUR),
+			'` + groupBy + `'
+		) ASC;
 	`
 	var stats []MonthlyVisitorStatDTO
 	err := r.db.SelectContext(ctx, &stats, query)

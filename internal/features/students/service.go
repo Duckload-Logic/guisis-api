@@ -88,7 +88,10 @@ var (
 	ErrOutdatedCOR = errors.New(
 		"uploaded COR is for an outdated academic year or term",
 	)
-	ErrCOROwnerMismatch = errors.New("uploaded COR does not belong to the user")
+	ErrCOROwnerMismatch = errors.New(
+		"This Certificate of Registration does not match your student record",
+	)
+	ErrInvalidCOR = errors.New("invalid COR")
 )
 
 type ValidationError struct {
@@ -180,22 +183,42 @@ func (s *Service) SubmitCOR(
 				return "", ErrOutdatedCOR
 			}
 
-			// OPTIONAL / FUTURE IMPLEMENTATION:
 			// Verify that the COR really belongs to the student.
-			// Check user's first name, last name, and student number.
-			/*
-				userRecord, uErr := s.repo.GetUserByID(ctx, userID)
-				if uErr == nil {
+			// Compare OCR student number against database student number.
+			iir, iirErr := s.repo.GetStudentIIRByUserID(ctx, userID)
+			if iirErr == nil && iir != nil {
+				personalInfo, pErr := s.repo.GetStudentPersonalInfoView(
+					ctx,
+					iir.ID,
+				)
+				if pErr == nil && personalInfo != nil {
+					dbStudNum := strings.TrimSpace(
+						personalInfo.StudentNumber,
+					)
 					ocrStudNum := strings.TrimSpace(corData.StudentNumber)
-					dbStudNum := strings.TrimSpace(userRecord.StudentNumber)
 
-					// Perform matches on student number, first name, last name
-					if ocrStudNum != "" && dbStudNum != "" && ocrStudNum != dbStudNum {
+					if !matchStudentNumbers(dbStudNum, ocrStudNum) {
+						fmt.Printf(
+							"[SubmitCOR] Mismatch: db=%q, ocr=%q\n",
+							dbStudNum, ocrStudNum,
+						)
 						_ = s.filesSvc.DeleteFile(ctx, file.ID)
 						return "", ErrCOROwnerMismatch
 					}
+
+					// Update year level and section if they changed
+					if corData.YearLevel > 0 && corData.Section > 0 &&
+						(corData.YearLevel != personalInfo.YearLevel ||
+							corData.Section != personalInfo.Section) {
+						_ = s.repo.UpdateStudentYearAndSection(
+							ctx,
+							iir.ID,
+							corData.YearLevel,
+							corData.Section,
+						)
+					}
 				}
-			*/
+			}
 
 			// If valid, set ValidFrom/ValidUntil
 			cor.ValidFrom = structs.TimeToNullableTime(time.Now())
@@ -219,6 +242,36 @@ func (s *Service) SubmitCOR(
 	}
 
 	return file.ID, nil
+}
+
+func keepOnlyDigits(s string) string {
+	var sb strings.Builder
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			sb.WriteRune(r)
+		}
+	}
+	return sb.String()
+}
+
+func matchStudentNumbers(db, ocr string) bool {
+	if db == "" || ocr == "" {
+		return true
+	}
+
+	cleanDB := keepOnlyDigits(db)
+	cleanOCR := keepOnlyDigits(ocr)
+
+	if len(cleanDB) >= 9 && len(cleanOCR) >= 9 {
+		return cleanDB[:9] == cleanOCR[:9]
+	}
+
+	if len(cleanDB) >= 5 && len(cleanOCR) >= 5 {
+		return strings.Contains(cleanDB, cleanOCR) ||
+			strings.Contains(cleanOCR, cleanDB)
+	}
+
+	return false
 }
 
 func (s *Service) GetStudentCOR(
