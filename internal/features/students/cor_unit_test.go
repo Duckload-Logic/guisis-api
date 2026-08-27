@@ -4,24 +4,24 @@ import (
 	"testing"
 )
 
-func TestCleanStudentNumber(t *testing.T) {
+func TestKeepOnlyDigits(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected string
 	}{
-		{"2021-00123-TG-0", "202100123tg0"},
-		{"2021 00123 TG 0", "202100123tg0"},
-		{"2021_00123_tg_0", "202100123tg0"},
-		{"2021-00123-tg-0", "202100123tg0"},
+		{"2021-00123-TG-0", "2021001230"},
+		{"2021 00123 TG 0", "2021001230"},
+		{"2021_00123_tg_0", "2021001230"},
+		{"2021-00123-tg-0", "2021001230"},
 		{"", ""},
-		{"abc-123", "abc123"},
+		{"abc-123", "123"},
 	}
 
 	for _, tc := range tests {
-		result := cleanStudentNumber(tc.input)
+		result := keepOnlyDigits(tc.input)
 		if result != tc.expected {
 			t.Errorf(
-				"cleanStudentNumber(%q) = %q; expected %q",
+				"keepOnlyDigits(%q) = %q; expected %q",
 				tc.input, result, tc.expected,
 			)
 		}
@@ -35,6 +35,8 @@ func TestMatchStudentNumbers(t *testing.T) {
 		expected bool
 	}{
 		{"2023-00122-TG-0", "2023-00122-TG-0", true},
+		{"2023-00122-TG-0", "2023-00122-TG-O", true}, // OCR typo check digit
+		{"2023-00122-TG-0", "2023-00122-TO-0", true}, // OCR typo campus code
 		{"2023-00122-TG-0", "2023-00122-TG", true},
 		{"2023-00122-TG-0", "00122-TG-0", true},
 		{"2023-00122-TG-0", "2023-00122", true},

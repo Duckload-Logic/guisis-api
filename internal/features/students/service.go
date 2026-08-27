@@ -89,7 +89,7 @@ var (
 		"uploaded COR is for an outdated academic year or term",
 	)
 	ErrCOROwnerMismatch = errors.New(
-		"uploaded COR does not belong to the user",
+		"This file does not appear to be a valid COR",
 	)
 	ErrInvalidCOR = errors.New("invalid COR")
 )
@@ -244,11 +244,10 @@ func (s *Service) SubmitCOR(
 	return file.ID, nil
 }
 
-func cleanStudentNumber(s string) string {
-	s = strings.ToLower(s)
+func keepOnlyDigits(s string) string {
 	var sb strings.Builder
 	for _, r := range s {
-		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+		if r >= '0' && r <= '9' {
 			sb.WriteRune(r)
 		}
 	}
@@ -256,16 +255,23 @@ func cleanStudentNumber(s string) string {
 }
 
 func matchStudentNumbers(db, ocr string) bool {
-	cleanDB := cleanStudentNumber(db)
-	cleanOCR := cleanStudentNumber(ocr)
-	if cleanDB == "" || cleanOCR == "" {
+	if db == "" || ocr == "" {
 		return true
 	}
-	if len(cleanDB) < 5 || len(cleanOCR) < 5 {
-		return false
+
+	cleanDB := keepOnlyDigits(db)
+	cleanOCR := keepOnlyDigits(ocr)
+
+	if len(cleanDB) >= 9 && len(cleanOCR) >= 9 {
+		return cleanDB[:9] == cleanOCR[:9]
 	}
-	return strings.Contains(cleanDB, cleanOCR) ||
-		strings.Contains(cleanOCR, cleanDB)
+
+	if len(cleanDB) >= 5 && len(cleanOCR) >= 5 {
+		return strings.Contains(cleanDB, cleanOCR) ||
+			strings.Contains(cleanOCR, cleanDB)
+	}
+
+	return false
 }
 
 func (s *Service) GetStudentCOR(
