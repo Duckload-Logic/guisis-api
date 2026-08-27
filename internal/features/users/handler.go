@@ -85,6 +85,35 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 	response.SendSuccess(c, resp)
 }
 
+// GetUserByID retrieves user information by their ID.
+func (h *Handler) GetUserByID(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		fmt.Printf(
+			"[GetUserByID] {Check Param}: User ID is required\n",
+		)
+		response.SendFail(
+			c,
+			gin.H{"error": "User ID parameter is required"},
+		)
+		return
+	}
+
+	resp, err := h.service.GetUserByID(c.Request.Context(), userID)
+	if err != nil {
+		fmt.Printf("[GetUserByID] {GetUserByID}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to get user by ID",
+			http.StatusNotFound,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, resp)
+}
+
 // GetUsers retrieves a paginated list of all users.
 func (h *Handler) GetUsers(c *gin.Context) {
 	var params ListUsersRequest
