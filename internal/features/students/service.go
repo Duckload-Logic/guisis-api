@@ -180,22 +180,43 @@ func (s *Service) SubmitCOR(
 				return "", ErrOutdatedCOR
 			}
 
-			// OPTIONAL / FUTURE IMPLEMENTATION:
 			// Verify that the COR really belongs to the student.
-			// Check user's first name, last name, and student number.
-			/*
-				userRecord, uErr := s.repo.GetUserByID(ctx, userID)
-				if uErr == nil {
+			// Compare OCR student number against database student number.
+			iir, iirErr := s.repo.GetStudentIIRByUserID(ctx, userID)
+			if iirErr == nil && iir != nil {
+				personalInfo, pErr := s.repo.GetStudentPersonalInfoView(
+					ctx,
+					iir.ID,
+				)
+				if pErr == nil && personalInfo != nil {
+					dbStudNum := strings.TrimSpace(
+						personalInfo.StudentNumber,
+					)
 					ocrStudNum := strings.TrimSpace(corData.StudentNumber)
-					dbStudNum := strings.TrimSpace(userRecord.StudentNumber)
 
-					// Perform matches on student number, first name, last name
-					if ocrStudNum != "" && dbStudNum != "" && ocrStudNum != dbStudNum {
+					cleanDB := cleanStudentNumber(dbStudNum)
+					cleanOCR := cleanStudentNumber(ocrStudNum)
+
+					if cleanOCR != "" &&
+						cleanDB != "" &&
+						cleanOCR != cleanDB {
 						_ = s.filesSvc.DeleteFile(ctx, file.ID)
 						return "", ErrCOROwnerMismatch
 					}
+
+					// Update year level and section if they changed
+					if corData.YearLevel > 0 && corData.Section > 0 &&
+						(corData.YearLevel != personalInfo.YearLevel ||
+							corData.Section != personalInfo.Section) {
+						_ = s.repo.UpdateStudentYearAndSection(
+							ctx,
+							iir.ID,
+							corData.YearLevel,
+							corData.Section,
+						)
+					}
 				}
-			*/
+			}
 
 			// If valid, set ValidFrom/ValidUntil
 			cor.ValidFrom = structs.TimeToNullableTime(time.Now())
@@ -219,6 +240,17 @@ func (s *Service) SubmitCOR(
 	}
 
 	return file.ID, nil
+}
+
+func cleanStudentNumber(s string) string {
+	s = strings.ToLower(s)
+	var sb strings.Builder
+	for _, r := range s {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			sb.WriteRune(r)
+		}
+	}
+	return sb.String()
 }
 
 func (s *Service) GetStudentCOR(
