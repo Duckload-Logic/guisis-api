@@ -89,7 +89,7 @@ var (
 		"uploaded COR is for an outdated academic year or term",
 	)
 	ErrCOROwnerMismatch = errors.New(
-		"This file does not appear to be a valid COR",
+		"This Certificate of Registration does not match your student record",
 	)
 	ErrInvalidCOR = errors.New("invalid COR")
 )
