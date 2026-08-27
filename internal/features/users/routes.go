@@ -35,6 +35,7 @@ func RegisterRoutes(
 	{
 		adminOnly.GET("", h.GetUsers)
 		adminOnly.GET("/search", h.GetUserByEmail)
+		adminOnly.GET("/:id", h.GetUserByID)
 	}
 
 	userRoutes.GET("/distribution",
