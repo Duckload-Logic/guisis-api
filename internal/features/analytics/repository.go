@@ -586,7 +586,18 @@ func (r *Repository) GetElementaryStats(
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
-		JOIN school_details sd ON eb.id = sd.eb_id
+		JOIN (
+			SELECT s1.*
+			FROM school_details s1
+			JOIN (
+				SELECT eb_id, educational_level_id,
+					MAX(year_completed) AS max_yr
+				FROM school_details
+				GROUP BY eb_id, educational_level_id
+			) s2 ON s1.eb_id = s2.eb_id
+				AND s1.educational_level_id = s2.educational_level_id
+				AND s1.year_completed = s2.max_yr
+		) sd ON eb.id = sd.eb_id
 		JOIN educational_levels el ON sd.educational_level_id = el.id
 		WHERE el.level_name = 'Elementary' ` + filter + `
 		GROUP BY category
@@ -612,7 +623,18 @@ func (r *Repository) GetJuniorHighStats(
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
-		JOIN school_details sd ON eb.id = sd.eb_id
+		JOIN (
+			SELECT s1.*
+			FROM school_details s1
+			JOIN (
+				SELECT eb_id, educational_level_id,
+					MAX(year_completed) AS max_yr
+				FROM school_details
+				GROUP BY eb_id, educational_level_id
+			) s2 ON s1.eb_id = s2.eb_id
+				AND s1.educational_level_id = s2.educational_level_id
+				AND s1.year_completed = s2.max_yr
+		) sd ON eb.id = sd.eb_id
 		JOIN educational_levels el ON sd.educational_level_id = el.id
 		WHERE el.level_name = 'Junior High School' ` + filter + `
 		GROUP BY category
@@ -638,7 +660,18 @@ func (r *Repository) GetSeniorHighStats(
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
-		JOIN school_details sd ON eb.id = sd.eb_id
+		JOIN (
+			SELECT s1.*
+			FROM school_details s1
+			JOIN (
+				SELECT eb_id, educational_level_id,
+					MAX(year_completed) AS max_yr
+				FROM school_details
+				GROUP BY eb_id, educational_level_id
+			) s2 ON s1.eb_id = s2.eb_id
+				AND s1.educational_level_id = s2.educational_level_id
+				AND s1.year_completed = s2.max_yr
+		) sd ON eb.id = sd.eb_id
 		JOIN educational_levels el ON sd.educational_level_id = el.id
 		WHERE el.level_name = 'Senior High School' ` + filter + `
 		GROUP BY category
@@ -664,7 +697,18 @@ func (r *Repository) GetHighSchoolStats(
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
-		JOIN school_details sd ON eb.id = sd.eb_id
+		JOIN (
+			SELECT s1.*
+			FROM school_details s1
+			JOIN (
+				SELECT eb_id, educational_level_id,
+					MAX(year_completed) AS max_yr
+				FROM school_details
+				GROUP BY eb_id, educational_level_id
+			) s2 ON s1.eb_id = s2.eb_id
+				AND s1.educational_level_id = s2.educational_level_id
+				AND s1.year_completed = s2.max_yr
+		) sd ON eb.id = sd.eb_id
 		JOIN educational_levels el ON sd.educational_level_id = el.id
 		WHERE el.level_name IN (
 			'High School', 'Junior High School',
@@ -693,7 +737,18 @@ func (r *Repository) GetVocationalStats(
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
-		JOIN school_details sd ON eb.id = sd.eb_id
+		JOIN (
+			SELECT s1.*
+			FROM school_details s1
+			JOIN (
+				SELECT eb_id, educational_level_id,
+					MAX(year_completed) AS max_yr
+				FROM school_details
+				GROUP BY eb_id, educational_level_id
+			) s2 ON s1.eb_id = s2.eb_id
+				AND s1.educational_level_id = s2.educational_level_id
+				AND s1.year_completed = s2.max_yr
+		) sd ON eb.id = sd.eb_id
 		JOIN educational_levels el ON sd.educational_level_id = el.id
 		WHERE el.level_name = 'Vocational' ` + filter + `
 		GROUP BY category
@@ -719,7 +774,18 @@ func (r *Repository) GetCollegeStats(
 			) - 1) / 2.0 as rank_pos
 		FROM student_personal_info spi
 		JOIN educational_backgrounds eb ON spi.iir_id = eb.iir_id
-		JOIN school_details sd ON eb.id = sd.eb_id
+		JOIN (
+			SELECT s1.*
+			FROM school_details s1
+			JOIN (
+				SELECT eb_id, educational_level_id,
+					MAX(year_completed) AS max_yr
+				FROM school_details
+				GROUP BY eb_id, educational_level_id
+			) s2 ON s1.eb_id = s2.eb_id
+				AND s1.educational_level_id = s2.educational_level_id
+				AND s1.year_completed = s2.max_yr
+		) sd ON eb.id = sd.eb_id
 		JOIN educational_levels el ON sd.educational_level_id = el.id
 		WHERE el.level_name = 'College' ` + filter + `
 		GROUP BY category
