@@ -1168,9 +1168,10 @@ func (s *Service) UpdateExcuseSlipStatus(
 				if ticket == nil {
 					// Generate new ticket
 					ticketCode = fmt.Sprintf(
-						"SLIP-%d-%s",
-						time.Now().Year(),
-						strings.ToUpper(uuid.New().String()[:8]),
+						"SLIP-%s",
+						strings.ToUpper(
+							uuid.New().String()[:6],
+						),
 					)
 					newTicket := &AdmissionTicket{
 						ID:              uuid.New().String(),
