@@ -93,6 +93,8 @@ const (
 	ActionOCRProcessingSuccess        = "OCR_PROCESSING_SUCCESS"
 	ActionOCRProcessingFailed         = "OCR_PROCESSING_FAILED"
 	ActionOCRValidationFailed         = "OCR_VALIDATION_FAILED"
+	ActionCORSubmitted                = "COR_SUBMITTED"
+	ActionCORSubmitFailed             = "COR_SUBMIT_FAILED"
 )
 
 // Security log actions — track authentication and access events

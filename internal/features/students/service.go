@@ -179,6 +179,28 @@ func (s *Service) SubmitCOR(
 
 			if startYear != setting.CurrentYearStart ||
 				corData.Term != setting.CurrentTerm {
+				if s.logService != nil {
+					id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+					s.logService.Record(ctx, nil, audit.LogEntry{
+						Level:     audit.LevelWarning,
+						Category:  audit.CategorySystem,
+						Action:    audit.ActionOCRValidationFailed,
+						Message: fmt.Sprintf(
+							"COR academic setting mismatch for %s: "+
+								"expected %d term %d, got %d term %d",
+							email,
+							setting.CurrentYearStart,
+							setting.CurrentTerm,
+							startYear,
+							corData.Term,
+						),
+						UserID:    structs.StringToNullableString(id),
+						UserEmail: structs.StringToNullableString(email),
+						IPAddress: structs.StringToNullableString(ip),
+						UserAgent: structs.StringToNullableString(ua),
+						TraceID:   structs.StringToNullableString(trace),
+					})
+				}
 				_ = s.filesSvc.DeleteFile(ctx, file.ID)
 				return "", ErrOutdatedCOR
 			}
@@ -198,6 +220,26 @@ func (s *Service) SubmitCOR(
 					ocrStudNum := strings.TrimSpace(corData.StudentNumber)
 
 					if !matchStudentNumbers(dbStudNum, ocrStudNum) {
+						if s.logService != nil {
+							id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+							s.logService.Record(ctx, nil, audit.LogEntry{
+								Level:     audit.LevelWarning,
+								Category:  audit.CategorySystem,
+								Action:    audit.ActionOCRValidationFailed,
+								Message: fmt.Sprintf(
+									"COR student number mismatch for %s: "+
+										"DB=%s, OCR=%s",
+									email,
+									dbStudNum,
+									ocrStudNum,
+								),
+								UserID:    structs.StringToNullableString(id),
+								UserEmail: structs.StringToNullableString(email),
+								IPAddress: structs.StringToNullableString(ip),
+								UserAgent: structs.StringToNullableString(ua),
+								TraceID:   structs.StringToNullableString(trace),
+							})
+						}
 						fmt.Printf(
 							"[SubmitCOR] Mismatch: db=%q, ocr=%q\n",
 							dbStudNum, ocrStudNum,
@@ -239,6 +281,21 @@ func (s *Service) SubmitCOR(
 	})
 	if err != nil {
 		return "", fmt.Errorf("[StudentService] {SubmitCOR Save}: %w", err)
+	}
+
+	if s.logService != nil {
+		id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+		s.logService.Record(ctx, nil, audit.LogEntry{
+			Level:     audit.LevelInfo,
+			Category:  audit.CategoryAudit,
+			Action:    audit.ActionCORSubmitted,
+			Message:   fmt.Sprintf("COR submitted for %s", email),
+			UserID:    structs.StringToNullableString(id),
+			UserEmail: structs.StringToNullableString(email),
+			IPAddress: structs.StringToNullableString(ip),
+			UserAgent: structs.StringToNullableString(ua),
+			TraceID:   structs.StringToNullableString(trace),
+		})
 	}
 
 	return file.ID, nil
