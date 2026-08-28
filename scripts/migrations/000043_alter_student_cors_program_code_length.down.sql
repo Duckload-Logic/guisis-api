@@ -1,0 +1,2 @@
+ALTER TABLE student_cors MODIFY COLUMN program_code VARCHAR(10) NOT NULL;
+ALTER TABLE student_cors MODIFY COLUMN campus VARCHAR(20) NOT NULL;
