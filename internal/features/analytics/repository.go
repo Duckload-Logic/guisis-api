@@ -425,7 +425,8 @@ func (r *Repository) GetFatherEducationStats(
 		JOIN related_persons rp ON srp.related_person_id = rp.id
 		JOIN student_relationship_types srt ON srp.relationship_id = srt.id
 		LEFT JOIN educational_attainments ea ON rp.educational_attainment_id = ea.id
-		WHERE srt.relationship_name = 'Father' ` + filter + `
+		WHERE srt.relationship_name = 'Father'
+		  AND srp.is_parent = 1 ` + filter + `
 		GROUP BY category
 		ORDER BY FIELD(
 			category,
@@ -462,7 +463,8 @@ func (r *Repository) GetMotherEducationStats(
 		JOIN related_persons rp ON srp.related_person_id = rp.id
 		JOIN student_relationship_types srt ON srp.relationship_id = srt.id
 		LEFT JOIN educational_attainments ea ON rp.educational_attainment_id = ea.id
-		WHERE srt.relationship_name = 'Mother' ` + filter + `
+		WHERE srt.relationship_name = 'Mother'
+		  AND srp.is_parent = 1 ` + filter + `
 		GROUP BY category
 		ORDER BY FIELD(
 			category,
@@ -838,7 +840,8 @@ func (r *Repository) GetFatherLifeStatusStats(
 		FROM student_personal_info spi
 		JOIN student_related_persons srp ON spi.iir_id = srp.iir_id
 		JOIN student_relationship_types srt ON srp.relationship_id = srt.id
-		WHERE srt.relationship_name = 'Father' ` + filter + `
+		WHERE srt.relationship_name = 'Father'
+		  AND srp.is_parent = 1 ` + filter + `
 		GROUP BY category
 		ORDER BY category ASC;`
 	return r.executeStatQuery(ctx, query, args...)
@@ -866,7 +869,8 @@ func (r *Repository) GetMotherLifeStatusStats(
 		FROM student_personal_info spi
 		JOIN student_related_persons srp ON spi.iir_id = srp.iir_id
 		JOIN student_relationship_types srt ON srp.relationship_id = srt.id
-		WHERE srt.relationship_name = 'Mother' ` + filter + `
+		WHERE srt.relationship_name = 'Mother'
+		  AND srp.is_parent = 1 ` + filter + `
 		GROUP BY category
 		ORDER BY category ASC;`
 	return r.executeStatQuery(ctx, query, args...)
