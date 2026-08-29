@@ -19,10 +19,16 @@ type OCRClient struct {
 }
 
 func NewClient(baseURL string, apiKey string) *OCRClient {
+	// Disable keep-alives to prevent EOF errors caused by 
+	// idle timeout mismatches between Go (90s) and Uvicorn/FastAPI (5s).
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DisableKeepAlives = true
+
 	return &OCRClient{
 		baseURL: baseURL,
 		http: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout:   30 * time.Second,
+			Transport: transport,
 		},
 		apiKey:  apiKey,
 	}
