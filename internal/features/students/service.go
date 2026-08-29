@@ -1570,6 +1570,16 @@ func (s *Service) saveComprehensiveProfile(
 			strings.TrimSpace(rpDTO.LastName) == "" {
 			continue
 		}
+
+		firstNameLower := strings.ToLower(strings.TrimSpace(rpDTO.FirstName))
+		isNA := firstNameLower == "n/a" ||
+			firstNameLower == "none" ||
+			firstNameLower == "not applicable"
+
+		if isNA && rpDTO.DateOfBirth == "" {
+			rpDTO.DateOfBirth = "1900-01-01"
+		}
+
 		// Validate DOB if not empty or if required
 		if rpDTO.DateOfBirth != "" {
 			if err := s.validateDate(
