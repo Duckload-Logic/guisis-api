@@ -1572,9 +1572,13 @@ func (s *Service) saveComprehensiveProfile(
 		}
 
 		firstNameLower := strings.ToLower(strings.TrimSpace(rpDTO.FirstName))
+		lastNameLower := strings.ToLower(strings.TrimSpace(rpDTO.LastName))
 		isNA := firstNameLower == "n/a" ||
 			firstNameLower == "none" ||
-			firstNameLower == "not applicable"
+			firstNameLower == "not applicable" ||
+			lastNameLower == "n/a" ||
+			lastNameLower == "none" ||
+			lastNameLower == "not applicable"
 
 		if isNA && rpDTO.DateOfBirth == "" {
 			rpDTO.DateOfBirth = "1900-01-01"
