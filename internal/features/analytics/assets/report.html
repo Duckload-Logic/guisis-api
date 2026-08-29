@@ -203,14 +203,11 @@
 		{{template "statTable" (dict "Category" `Elementary` "Data"
 		.Data.Elementary)}}
 		<!--  -->
-		{{template "statTable" (dict "Category" `High School` "Data"
-		.Data.HighSchool)}}
+		{{template "statTable" (dict "Category" `Junior High School` "Data"
+		.Data.JuniorHigh)}}
 		<!--  -->
-		{{template "statTable" (dict "Category" `Vocational` "Data"
-		.Data.Vocational)}}
-		<!--  -->
-		{{template "statTable" (dict "Category" `College Education` "Data"
-		.Data.College)}}
+		{{template "statTable" (dict "Category" `Senior High School` "Data"
+		.Data.SeniorHigh)}}
 		<!--  -->
 		{{template "statTable" (dict "Category" `Nature of Schooling` "Data"
 		.Data.NatureOfSchooling)}}
@@ -224,20 +221,15 @@
 			({{.ElemTopPct}}%) is categorized as:
 			<strong>{{.ElemTopCategories}}</strong>. {{end}}
 			<!--  -->
-			{{if gt .HSCATopPct 0.0}} With regard to
-			<strong>High School Education</strong>, the highest percentage of
-			freshmen ({{.HSCATopPct}}%) are in the range of:
-			<strong>{{.HSCATopCategories}}</strong>. {{end}}
+			{{if gt .JHSTopPct 0.0}} With regard to
+			<strong>Junior High School Education</strong>, the highest percentage
+			of freshmen ({{.JHSTopPct}}%) are in the range of:
+			<strong>{{.JHSTopCategories}}</strong>. {{end}}
 			<!--  -->
-			{{if gt .VocTopPct 0.0}} With regard to
-			<strong>Vocational Education</strong>, the highest percentage of
-			freshmen ({{.VocTopPct}}%) are in the range of:
-			<strong>{{.VocTopCategories}}</strong>. {{end}}
-			<!--  -->
-			{{if gt .CollegeTopPct 0.0}} On the
-			<strong>College Education</strong> of the respondents, the highest
-			percentage ({{.CollegeTopPct}}%) falls under:
-			<strong>{{.CollegeTopCategories}}</strong>. {{end}}
+			{{if gt .SHSTopPct 0.0}} With regard to
+			<strong>Senior High School Education</strong>, the highest percentage
+			of freshmen ({{.SHSTopPct}}%) are in the range of:
+			<strong>{{.SHSTopCategories}}</strong>. {{end}}
 			<!--  -->
 			With regard to
 			<strong>Nature of Schooling</strong>, the highest percentage of

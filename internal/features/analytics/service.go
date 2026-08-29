@@ -297,17 +297,16 @@ func (s *Service) ExportIIRAnalyticsReport(
 	)
 	ordinalCats, ordinalPct := getTopCategoriesText(data.OrdinalPosition)
 
-	hscaCats, hscaPct := getTopCategoriesText(data.HighSchool)
-	vocCats, vocPct := getTopCategoriesText(data.Vocational)
-	collegeCats, collegePct := getTopCategoriesText(data.College)
+	jhsCats, jhsPct := getTopCategoriesText(data.JuniorHigh)
+	shsCats, shsPct := getTopCategoriesText(data.SeniorHigh)
 	natureCats, naturePct := getTopCategoriesText(data.NatureOfSchooling)
 	quietCats, quietPct := getTopCategoriesText(data.QuietStudyPlace)
 
 	reportData := struct {
-		Data       *IIRAnalyticsReportResponse
-		DateToday  string
-		Year       int
-		LogoBase64 string
+		Data        *IIRAnalyticsReportResponse
+		DateToday   string
+		Year        int
+		LogoBase64  string
 		ProgramCode string
 		ProgramName string
 
@@ -338,21 +337,19 @@ func (s *Service) ExportIIRAnalyticsReport(
 		OrdinalTopCategories        string
 		OrdinalTopPct               float64
 
-		HSCATopCategories              string
-		HSCATopPct                     float64
-		VocTopCategories               string
-		VocTopPct                      float64
-		CollegeTopCategories           string
-		CollegeTopPct                  float64
+		JHSTopCategories               string
+		JHSTopPct                      float64
+		SHSTopCategories               string
+		SHSTopPct                      float64
 		NatureOfSchoolingTopCategories string
 		NatureOfSchoolingTopPct        float64
 		QuietStudyPlaceTopCategories   string
 		QuietStudyPlaceTopPct          float64
 	}{
-		Data:       data,
-		DateToday:  time.Now().Format("January 02, 2006"),
-		Year:       year,
-		LogoBase64: logoBase64,
+		Data:        data,
+		DateToday:   time.Now().Format("January 02, 2006"),
+		Year:        year,
+		LogoBase64:  logoBase64,
 		ProgramCode: programCode,
 		ProgramName: programName,
 
@@ -383,12 +380,10 @@ func (s *Service) ExportIIRAnalyticsReport(
 		OrdinalTopCategories:        ordinalCats,
 		OrdinalTopPct:               ordinalPct,
 
-		HSCATopCategories:              hscaCats,
-		HSCATopPct:                     hscaPct,
-		VocTopCategories:               vocCats,
-		VocTopPct:                      vocPct,
-		CollegeTopCategories:           collegeCats,
-		CollegeTopPct:                  collegePct,
+		JHSTopCategories:               jhsCats,
+		JHSTopPct:                      jhsPct,
+		SHSTopCategories:               shsCats,
+		SHSTopPct:                      shsPct,
 		NatureOfSchoolingTopCategories: natureCats,
 		NatureOfSchoolingTopPct:        naturePct,
 		QuietStudyPlaceTopCategories:   quietCats,

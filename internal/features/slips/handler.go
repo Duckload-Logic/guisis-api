@@ -203,7 +203,7 @@ func (h *Handler) GetSlipStats(c *gin.Context) {
 	}
 
 	var iirIDPtr *string
-	if isStudent && !isAdmin {
+	if req.Scope == "me" || (isStudent && !isAdmin) {
 		iirID, ok := getIIRIDFromContext(c)
 		if !ok {
 			return

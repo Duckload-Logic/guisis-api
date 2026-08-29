@@ -14,6 +14,7 @@ type ListSlipsRequest struct {
 	EndDate    string `form:"end_date"`
 	SortBy     string `form:"sort_by"`
 	CategoryID int    `form:"category_id"`
+	Scope      string `form:"scope"`
 }
 
 type ListSlipsResponse struct {

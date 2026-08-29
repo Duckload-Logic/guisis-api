@@ -305,7 +305,7 @@ func (r *Repository) GetReligionStats(
 				WHEN rel.religion_name = 'Others'
 					AND spi.other_religion_text IS NOT NULL
 					AND spi.other_religion_text != ''
-					THEN 'Others (' || spi.other_religion_text || ')'
+					THEN CONCAT('Others (', spi.other_religion_text, ')')
 				ELSE COALESCE(rel.religion_name, 'Not Indicated')
 			END AS category,
 			SUM(CASE WHEN spi.gender = 'Male' THEN 1 ELSE 0 END) as male_count,

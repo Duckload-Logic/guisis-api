@@ -388,9 +388,16 @@ func (h *Handler) GetAppointmentStats(c *gin.Context) {
 		}
 	}
 
+	var req ListAppointmentsRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		response.SendFail(c, gin.H{"error": "Invalid query parameters"})
+		return
+	}
+
 	var iirIDPtr *string
-	// Only force student-specific stats if user is a student AND NOT an admin/developer
-	if isStudent && !isAdmin {
+	// Force student-specific stats if the scope is "me" OR
+	// (user is a student AND NOT an admin/developer)
+	if req.Scope == "me" || (isStudent && !isAdmin) {
 		if !exists {
 			response.SendFail(c, gin.H{
 				"error": "Please complete your IIR profile",
@@ -408,12 +415,6 @@ func (h *Handler) GetAppointmentStats(c *gin.Context) {
 			return
 		}
 		iirIDPtr = &iirID
-	}
-
-	var req ListAppointmentsRequest
-	if err := c.ShouldBindQuery(&req); err != nil {
-		response.SendFail(c, gin.H{"error": "Invalid query parameters"})
-		return
 	}
 
 	stats, err := h.service.GetAppointmentStats(

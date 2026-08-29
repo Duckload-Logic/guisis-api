@@ -14,6 +14,7 @@ type ListAppointmentsRequest struct {
 	EndDate    string `form:"end_date"`
 	CategoryID string `form:"category_id"`
 	Urgency    string `form:"urgency"`
+	Scope      string `form:"scope"`
 }
 
 type ListAppointmentsResponse struct {
