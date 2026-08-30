@@ -29,14 +29,15 @@ type OGOSStudentPersonalInfoView struct {
 	IDPUUID       sql.NullString `db:"idp_uuid"`
 	StudentNumber string         `db:"student_number"`
 
-	GenderID               int     `db:"gender_id"`
-	GenderName             string  `db:"gender_name"`
-	DateOfBirth            string  `db:"date_of_birth"`
-	PlaceOfBirth           string  `db:"place_of_birth"`
-	HeightM                float32 `db:"height_m"`
-	WeightKg               float32 `db:"weight_kg"`
-	EmergencyContactName   string  `db:"emergency_contact_name"`
-	EmergencyContactNumber string  `db:"emergency_contact_number"`
+	GenderID                     int     `db:"gender_id"`
+	GenderName                   string  `db:"gender_name"`
+	DateOfBirth                  string  `db:"date_of_birth"`
+	PlaceOfBirth                 string  `db:"place_of_birth"`
+	HeightM                      float32 `db:"height_m"`
+	WeightKg                     float32 `db:"weight_kg"`
+	EmergencyContactName         string  `db:"emergency_contact_name"`
+	EmergencyContactNumber       string  `db:"emergency_contact_number"`
+	EmergencyContactRelationship string  `db:"emergency_contact_relationship"`
 }
 
 type OGOSStudentAddressView struct {

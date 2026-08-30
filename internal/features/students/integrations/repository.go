@@ -197,11 +197,13 @@ func (r *Repository) GetPersonalInfoByStudentNumber(
 				ec.last_name,
 				COALESCE(CONCAT(' ', ec.suffix_name), '')
 			)), '') AS emergency_contact_name,
-			COALESCE(ec.contact_number, '') AS emergency_contact_number
+			COALESCE(ec.contact_number, '') AS emergency_contact_number,
+			COALESCE(srt.name, '') AS emergency_contact_relationship
 		FROM student_personal_info sp
 		JOIN iir_records i ON sp.iir_id = i.id
 		JOIN users u ON i.user_id = u.id
 		LEFT JOIN emergency_contacts ec ON ec.iir_id = sp.iir_id
+		LEFT JOIN student_relationship_types srt ON ec.relationship_id = srt.id
 		WHERE (sp.student_number = ? OR u.idp_uuid = ?)
 		AND u.is_active = true
 		AND i.is_submitted = true

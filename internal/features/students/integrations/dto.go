@@ -43,13 +43,14 @@ type OGOSStudentPersonalInfoDTO struct {
 	IDP_UUID      string `json:"idpUuid"`
 	StudentNumber string `json:"studentNumber"`
 
-	Gender                 students.Gender `json:"gender"`
-	DateOfBirth            string          `json:"dateOfBirth"`
-	PlaceOfBirth           string          `json:"placeOfBirth"`
-	HeightM                float32         `json:"heightM"`
-	WeightKg               float32         `json:"weightKg"`
-	EmergencyContactName   string          `json:"emergencyContactName"`
-	EmergencyContactNumber string          `json:"emergencyContactNumber"`
+	Gender                      students.Gender `json:"gender"`
+	DateOfBirth                 string          `json:"dateOfBirth"`
+	PlaceOfBirth                string          `json:"placeOfBirth"`
+	HeightM                     float32         `json:"heightM"`
+	WeightKg                    float32         `json:"weightKg"`
+	EmergencyContactName        string          `json:"emergencyContactName"`
+	EmergencyContactNumber      string          `json:"emergencyContactNumber"`
+	EmergencyContactRelationship string          `json:"emergencyContactRelationship"`
 }
 
 type OGOSStudentAddressDTO struct {

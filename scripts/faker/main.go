@@ -40,6 +40,7 @@ func main() {
 		"Path to appointments CSV file",
 	)
 	backfillIIR := flag.Bool("backfill-iir", false, "Backfill missing IIR records for existing students")
+	backfillPersonalInfo := flag.Bool("backfill-personal-info", false, "Backfill student_personal_info for IIRs missing it")
 	flag.Parse()
 
 	// ---------- CONFIGURATION ----------
@@ -92,6 +93,13 @@ func main() {
 	if *backfillIIR {
 		runBackfill(passwordHash, appointmentsDataset)
 		fmt.Println("Backfill completed successfully.")
+		log.Println("Time taken:", time.Since(startTime))
+		return
+	}
+
+	if *backfillPersonalInfo {
+		runBackfillPersonalInfo()
+		fmt.Println("Backfill personal info completed successfully.")
 		log.Println("Time taken:", time.Since(startTime))
 		return
 	}
@@ -328,6 +336,56 @@ func runBackfill(
 		if err := tx.Commit(); err != nil {
 			tx.Rollback()
 			log.Fatalf("[Backfill] Failed to commit student %s: %v", u.ID, err)
+		}
+	}
+}
+
+func runBackfillPersonalInfo() {
+	ctx := context.Background()
+	fmt.Println("Checking for IIR records missing student_personal_info...")
+
+	query := `
+		SELECT iir.id FROM iir_records iir
+		LEFT JOIN student_personal_info spi ON iir.id = spi.iir_id
+		WHERE spi.iir_id IS NULL
+	`
+
+	var missingIIRs []string
+	err := db.SelectContext(ctx, &missingIIRs, query)
+	if err != nil {
+		log.Fatalf("[Backfill] Failed to query missing personal info: %v", err)
+	}
+
+	count := len(missingIIRs)
+	if count == 0 {
+		fmt.Println("No IIRs missing personal info. Everything is in sync!")
+		return
+	}
+
+	fmt.Printf("Found %d IIRs missing personal info. Starting backfill...\n", count)
+
+	for i, iirID := range missingIIRs {
+		yearLevel := rand.Intn(4) + 1
+		dob, _ := generateRealisticDOB(yearLevel)
+
+		tx, err := db.BeginTxx(ctx, nil)
+		if err != nil {
+			log.Fatalf("[Backfill] Failed to start transaction: %v", err)
+		}
+
+		insertPersonalInfo(
+			ctx,
+			tx,
+			iirID,
+			dob,
+			yearLevel,
+			i,
+			0,
+		)
+
+		if err := tx.Commit(); err != nil {
+			tx.Rollback()
+			log.Fatalf("[Backfill] Failed to commit IIR %s: %v", iirID, err)
 		}
 	}
 }
