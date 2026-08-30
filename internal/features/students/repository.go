@@ -464,9 +464,12 @@ func (r *Repository) buildStudentsListQuery(
 	)
 
 	allowedSortColumns := map[string]string{
-		"studentName":   "last_name",
-		"studentNumber": "student_number",
-		"email":         "email",
+		"last_name":      "last_name",
+		"student_number": "student_number",
+		"email":          "email",
+		"program_id":     "program_id",
+		"year_level":     "year_level",
+		"created_at":     "created_at",
 	}
 
 	sortColumn, ok := allowedSortColumns[req.SortBy]
