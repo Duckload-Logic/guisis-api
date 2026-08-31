@@ -13,6 +13,10 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/features/users"
 )
 
+var profanityDetector = goaway.NewProfanityDetector().
+	WithSanitizeSpaces(false).
+	WithSanitizeSpecialCharacters(false)
+
 type Service struct {
 	repo     *Repository
 	notifSvc *notifications.Service
@@ -39,7 +43,7 @@ func (s *Service) OpenTicket(
 	req CreateTicketRequest,
 	authUserID string,
 ) (*TicketResponse, error) {
-	req.Message = goaway.Censor(req.Message)
+	req.Message = profanityDetector.Censor(req.Message)
 
 	ticketID := uuid.New().String()
 	ticket := &SupportTicket{
@@ -206,7 +210,7 @@ func (s *Service) AddMessage(
 	req CreateMessageRequest,
 	senderID string,
 ) (*MessageResponse, error) {
-	req.Message = goaway.Censor(req.Message)
+	req.Message = profanityDetector.Censor(req.Message)
 
 	ticket, err := s.repo.GetTicket(ctx, ticketID)
 	if err != nil {
