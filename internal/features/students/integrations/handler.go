@@ -262,3 +262,156 @@ func (h *Handler) GetAddressByStudentNumber(c *gin.Context) {
 
 	response.SendSuccess(c, studentAddresses)
 }
+
+// GetStudentByIDPUUID godoc
+// @Summary Get student profile by IDP UUID
+// @Description Get student profile by IDP UUID
+// @Tags External Students
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param idpUuid path string true "IDP UUID of the student"
+// @Success 200 {object} StudentSuccessResponse
+// @Failure 400 {object} response.CommonErrorResponse "Bad Request"
+// @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
+// @Failure 404 {object} response.CommonErrorResponse "Not Found"
+// @Failure 500 {object} response.CommonErrorResponse "Internal Server Error"
+// @Router /integrations/students/idp/{idpUuid} [get]
+func (h *Handler) GetStudentByIDPUUID(c *gin.Context) {
+	idpUuid := c.Param("idpUuid")
+	if idpUuid == "" {
+		response.SendFail(
+			c,
+			gin.H{"error": "idpUuid parameter is required"},
+		)
+		return
+	}
+
+	student, err := h.service.GetStudentByStudentNumber(
+		c.Request.Context(),
+		idpUuid,
+	)
+	if err != nil {
+		log.Printf("[GetStudentByIDPUUID] {Service Get}: %v", err)
+		response.SendError(
+			c,
+			string(constants.ErrInternalServerError),
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	if student == nil {
+		response.SendFail(
+			c,
+			gin.H{"error": constants.ErrNotFound},
+			http.StatusNotFound,
+		)
+		return
+	}
+
+	response.SendSuccess(c, student)
+}
+
+// GetPersonalInfoByIDPUUID godoc
+// @Summary Get personal info by IDP UUID
+// @Description Get personal info of a student by IDP UUID
+// @Tags External Students
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param idpUuid path string true "IDP UUID of the student"
+// @Success 200 {object} StudentPersonalInfoSuccessResponse
+// @Failure 400 {object} response.CommonErrorResponse "Bad Request"
+// @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
+// @Failure 404 {object} response.CommonErrorResponse "Not Found"
+// @Failure 500 {object} response.CommonErrorResponse "Internal Server Error"
+// @Router /integrations/students/idp/{idpUuid}/personal-info [get]
+func (h *Handler) GetPersonalInfoByIDPUUID(c *gin.Context) {
+	idpUuid := c.Param("idpUuid")
+	if idpUuid == "" {
+		response.SendFail(
+			c,
+			gin.H{"error": "idpUuid parameter is required"},
+		)
+		return
+	}
+
+	student, err := h.service.GetPersonalInfoByStudentNumber(
+		c.Request.Context(),
+		idpUuid,
+	)
+	if err != nil {
+		log.Printf("[GetPersonalInfoByIDPUUID] {Service Get}: %v", err)
+		response.SendError(
+			c,
+			string(constants.ErrInternalServerError),
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	if student == nil {
+		response.SendFail(
+			c,
+			gin.H{"error": constants.ErrNotFound},
+			http.StatusNotFound,
+		)
+		return
+	}
+
+	response.SendSuccess(c, student)
+}
+
+// GetAddressByIDPUUID godoc
+// @Summary Get student addresses by IDP UUID
+// @Description Get all addresses of a student by IDP UUID
+// @Tags External Students
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param idpUuid path string true "IDP UUID of the student"
+// @Success 200 {object} StudentAddressSuccessResponse
+// @Failure 400 {object} response.CommonErrorResponse "Bad Request"
+// @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
+// @Failure 404 {object} response.CommonErrorResponse "Not Found"
+// @Failure 500 {object} response.CommonErrorResponse "Internal Server Error"
+// @Router /integrations/students/idp/{idpUuid}/addresses [get]
+func (h *Handler) GetAddressByIDPUUID(c *gin.Context) {
+	idpUuid := c.Param("idpUuid")
+	if idpUuid == "" {
+		response.SendFail(
+			c,
+			gin.H{"error": "idpUuid parameter is required"},
+		)
+		return
+	}
+
+	studentAddresses, err := h.service.GetAddressByStudentNumber(
+		c.Request.Context(),
+		idpUuid,
+	)
+	if err != nil {
+		log.Printf("[GetAddressByIDPUUID] {Service Get}: %v", err)
+		response.SendError(
+			c,
+			string(constants.ErrInternalServerError),
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	if len(studentAddresses) == 0 {
+		response.SendFail(
+			c,
+			gin.H{"error": constants.ErrNotFound},
+			http.StatusNotFound,
+		)
+		return
+	}
+
+	response.SendSuccess(c, studentAddresses)
+}
