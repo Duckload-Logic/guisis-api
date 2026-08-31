@@ -203,3 +203,108 @@ func (s *Service) GetAddressByStudentNumber(
 
 	return addresesDTO, nil
 }
+
+func (s *Service) GetStudentByIDPUUID(
+	ctx context.Context,
+	idpUuid string,
+) (*OGOSStudentDTO, error) {
+	student, err := s.repo.GetStudentByIDPUUID(ctx, idpUuid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &OGOSStudentDTO{
+		IDP_UUID:      student.IDPUUID.String,
+		StudentNumber: student.StudentNumber,
+		FirstName:     student.FirstName,
+		MiddleName:    structs.FromSqlNull(student.MiddleName),
+		LastName:      student.LastName,
+		SuffixName:    student.SuffixName.String,
+		Email:         student.Email,
+		MobileNumber:  student.MobileNumber,
+		Program: students.Program{
+			ID:   student.ProgramID,
+			Code: student.ProgramCode,
+			Name: student.ProgramName,
+		},
+		YearLevel: student.YearLevel,
+		Section:   student.Section,
+	}, nil
+}
+
+func (s *Service) GetPersonalInfoByIDPUUID(
+	ctx context.Context,
+	idpUuid string,
+) (*OGOSStudentPersonalInfoDTO, error) {
+	student, err := s.repo.GetPersonalInfoByIDPUUID(ctx, idpUuid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &OGOSStudentPersonalInfoDTO{
+		IDP_UUID:      student.IDPUUID.String,
+		StudentNumber: student.StudentNumber,
+		Gender: students.Gender{
+			ID:   student.GenderID,
+			Name: student.GenderName,
+		},
+		DateOfBirth:                 student.DateOfBirth,
+		PlaceOfBirth:                student.PlaceOfBirth,
+		HeightM:                     float32(student.HeightM),
+		WeightKg:                    student.WeightKg,
+		EmergencyContactName:        student.EmergencyContactName,
+		EmergencyContactNumber:      student.EmergencyContactNumber,
+		EmergencyContactRelationship: student.EmergencyContactRelationship,
+	}, nil
+}
+
+func (s *Service) GetAddressByIDPUUID(
+	ctx context.Context,
+	idpUuid string,
+) ([]OGOSStudentAddressDTO, error) {
+	studentAddresses, err := s.repo.GetAddressByIDPUUID(ctx, idpUuid)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if len(studentAddresses) == 0 {
+		return nil, nil
+	}
+
+	var addresesDTO []OGOSStudentAddressDTO
+	for _, address := range studentAddresses {
+		addresesDTO = append(addresesDTO, OGOSStudentAddressDTO{
+			IDP_UUID:      address.IDPUUID.String,
+			StudentNumber: address.StudentNumber,
+			AddressType:   address.AddressType,
+			StreetDetail:  address.StreetDetail,
+			Barangay: locations.Barangay{
+				Code: address.BarangayCode,
+				Name: address.BarangayName,
+			},
+			City: locations.City{
+				Code: address.CityCode,
+				Name: address.CityName,
+			},
+			Province: &locations.ProvinceDTO{
+				Code: structs.FromSqlNull(address.ProvinceCode),
+				Name: structs.FromSqlNull(address.ProvinceName),
+			},
+			Region: locations.Region{
+				Code: address.RegionCode,
+				Name: address.RegionName,
+			},
+		})
+	}
+
+	return addresesDTO, nil
+}

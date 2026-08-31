@@ -124,20 +124,52 @@ func (r *Repository) GetStudentByStudentNumber(
 		JOIN iir_records i ON i.user_id = u.id
 		JOIN student_personal_info sp ON sp.iir_id = i.id
 		JOIN programs p ON sp.program_id = p.id
-		WHERE (sp.student_number = ? OR u.idp_uuid = ?)
+		WHERE sp.student_number = ?
 		AND u.is_active = true
 		AND i.is_submitted = true
 		LIMIT 1
 	`
 
 	var student OGOSStudentView
-	err := r.db.GetContext(
-		ctx,
-		&student,
-		query,
-		studentNumber,
-		studentNumber,
-	)
+	err := r.db.GetContext(ctx, &student, query, studentNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	return &student, nil
+}
+
+func (r *Repository) GetStudentByIDPUUID(
+	ctx context.Context,
+	idpUuid string,
+) (*OGOSStudentView, error) {
+	query := `
+		SELECT
+			sp.student_number AS student_number,
+			u.idp_uuid AS idp_uuid,
+			u.first_name AS first_name,
+			u.middle_name AS middle_name,
+			u.last_name AS last_name,
+			u.suffix_name AS suffix_name,
+			u.email AS email,
+			sp.mobile_number AS mobile_number,
+			p.id AS program_id,
+			p.code AS program_code,
+			p.program_name AS program_name,
+			sp.year_level AS year_level,
+			sp.section AS section
+		FROM users u
+		JOIN iir_records i ON i.user_id = u.id
+		JOIN student_personal_info sp ON sp.iir_id = i.id
+		JOIN programs p ON sp.program_id = p.id
+		WHERE u.idp_uuid = ?
+		AND u.is_active = true
+		AND i.is_submitted = true
+		LIMIT 1
+	`
+
+	var student OGOSStudentView
+	err := r.db.GetContext(ctx, &student, query, idpUuid)
 	if err != nil {
 		return nil, err
 	}
@@ -168,14 +200,14 @@ func (r *Repository) GetStudentByEmail(
 		JOIN iir_records i ON i.user_id = u.id
 		JOIN student_personal_info sp ON sp.iir_id = i.id
 		JOIN programs p ON sp.program_id = p.id
-		WHERE (u.email = ? OR u.idp_uuid = ?)
+		WHERE u.email = ?
 		AND u.is_active = true
 		AND i.is_submitted = true
 		LIMIT 1
 	`
 
 	var student OGOSStudentView
-	err := r.db.GetContext(ctx, &student, query, email, email)
+	err := r.db.GetContext(ctx, &student, query, email)
 	if err != nil {
 		return nil, err
 	}
@@ -211,20 +243,57 @@ func (r *Repository) GetPersonalInfoByStudentNumber(
 		JOIN users u ON i.user_id = u.id
 		LEFT JOIN emergency_contacts ec ON ec.iir_id = sp.iir_id
 		LEFT JOIN student_relationship_types srt ON ec.relationship_id = srt.id
-		WHERE (sp.student_number = ? OR u.idp_uuid = ?)
+		WHERE sp.student_number = ?
 		AND u.is_active = true
 		AND i.is_submitted = true
 		LIMIT 1
 	`
 
 	var student OGOSStudentPersonalInfoView
-	err := r.db.GetContext(
-		ctx,
-		&student,
-		query,
-		studentNumber,
-		studentNumber,
-	)
+	err := r.db.GetContext(ctx, &student, query, studentNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	return &student, nil
+}
+
+func (r *Repository) GetPersonalInfoByIDPUUID(
+	ctx context.Context,
+	idpUuid string,
+) (*OGOSStudentPersonalInfoView, error) {
+	query := `
+		SELECT
+			sp.student_number AS student_number,
+			u.idp_uuid AS idp_uuid,
+			CASE WHEN sp.gender = 'Male' THEN 1 ELSE 2 END AS gender_id,
+			sp.gender AS gender_name,
+			sp.date_of_birth AS date_of_birth,
+			sp.place_of_birth AS place_of_birth,
+			sp.height_m AS height_m,
+			sp.weight_kg AS weight_kg,
+			COALESCE(TRIM(CONCAT(
+				ec.first_name,
+				' ',
+				COALESCE(CONCAT(ec.middle_name, ' '), ''),
+				ec.last_name,
+				COALESCE(CONCAT(' ', ec.suffix_name), '')
+			)), '') AS emergency_contact_name,
+			COALESCE(ec.contact_number, '') AS emergency_contact_number,
+			COALESCE(srt.relationship_name, '') AS emergency_contact_relationship
+		FROM student_personal_info sp
+		JOIN iir_records i ON sp.iir_id = i.id
+		JOIN users u ON i.user_id = u.id
+		LEFT JOIN emergency_contacts ec ON ec.iir_id = sp.iir_id
+		LEFT JOIN student_relationship_types srt ON ec.relationship_id = srt.id
+		WHERE u.idp_uuid = ?
+		AND u.is_active = true
+		AND i.is_submitted = true
+		LIMIT 1
+	`
+
+	var student OGOSStudentPersonalInfoView
+	err := r.db.GetContext(ctx, &student, query, idpUuid)
 	if err != nil {
 		return nil, err
 	}
@@ -259,19 +328,54 @@ func (r *Repository) GetAddressByStudentNumber(
 		JOIN student_personal_info sp ON sp.iir_id = sa.iir_id
 		JOIN iir_records i ON sp.iir_id = i.id
 		JOIN users u ON i.user_id = u.id
-		WHERE (sp.student_number = ? OR u.idp_uuid = ?)
+		WHERE sp.student_number = ?
 		AND u.is_active = true
 		AND i.is_submitted = true
 	`
 
 	var addresses []OGOSStudentAddressView
-	err := r.db.SelectContext(
-		ctx,
-		&addresses,
-		query,
-		studentNumber,
-		studentNumber,
-	)
+	err := r.db.SelectContext(ctx, &addresses, query, studentNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	return addresses, nil
+}
+
+func (r *Repository) GetAddressByIDPUUID(
+	ctx context.Context,
+	idpUuid string,
+) ([]OGOSStudentAddressView, error) {
+	query := `
+		SELECT
+			sp.student_number AS student_number,
+			u.idp_uuid AS idp_uuid,
+			sa.address_type AS address_type,
+			a.street_detail AS street_detail,
+			a.barangay_code AS barangay_code,
+			b.name AS barangay_name,
+			a.city_code AS city_code,
+			ci.name AS city_name,
+			a.province_code AS province_code,
+			p.name AS province_name,
+			a.region_code AS region_code,
+			r.name AS region_name
+		FROM student_addresses sa
+		JOIN addresses a ON a.id = sa.address_id
+		JOIN barangays b ON a.barangay_code = b.code
+		JOIN cities ci ON a.city_code = ci.code
+		LEFT JOIN provinces p ON a.province_code = p.code
+		JOIN regions r ON a.region_code = r.code
+		JOIN student_personal_info sp ON sp.iir_id = sa.iir_id
+		JOIN iir_records i ON sp.iir_id = i.id
+		JOIN users u ON i.user_id = u.id
+		WHERE u.idp_uuid = ?
+		AND u.is_active = true
+		AND i.is_submitted = true
+	`
+
+	var addresses []OGOSStudentAddressView
+	err := r.db.SelectContext(ctx, &addresses, query, idpUuid)
 	if err != nil {
 		return nil, err
 	}
