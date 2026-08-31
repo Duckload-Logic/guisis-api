@@ -200,9 +200,9 @@ func (r *Repository) applyLogFilters(
 	}
 
 	if search != "" {
-		query += " AND (message LIKE ? OR action LIKE ? OR user_email LIKE ?)"
+		query += ` AND (message LIKE ? OR action LIKE ? OR user_email LIKE ? OR target_email LIKE ? OR ip_address LIKE ? OR trace_id LIKE ?)`
 		searchTerm := "%" + search + "%"
-		args = append(args, searchTerm, searchTerm, searchTerm)
+		args = append(args, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm)
 	}
 
 	if startDate != "" {

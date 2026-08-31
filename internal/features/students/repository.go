@@ -406,10 +406,12 @@ func (r *Repository) applyStudentFilters(
 		query += ` AND (first_name LIKE ?
                  OR last_name LIKE ?
                  OR email LIKE ?
-                 OR student_number LIKE ?)`
+                 OR student_number LIKE ?
+                 OR CONCAT(first_name, ' ', last_name) LIKE ?
+                 OR CONCAT(last_name, ' ', first_name) LIKE ?)`
 
 		pattern := "%" + req.Search + "%"
-		args = append(args, pattern, pattern, pattern, pattern)
+		args = append(args, pattern, pattern, pattern, pattern, pattern, pattern)
 	}
 
 	return query, args
