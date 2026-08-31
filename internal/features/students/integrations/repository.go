@@ -48,10 +48,17 @@ func (r *Repository) ListStudents(
 				u.first_name LIKE ?
 				OR u.last_name LIKE ?
 				OR sp.student_number LIKE ?
+				OR u.idp_uuid LIKE ?
 			)
 		`
 		searchTerm := "%" + req.Search + "%"
-		args = append(args, searchTerm, searchTerm, searchTerm)
+		args = append(
+			args,
+			searchTerm,
+			searchTerm,
+			searchTerm,
+			searchTerm,
+		)
 	}
 
 	if req.ProgramID != 0 {

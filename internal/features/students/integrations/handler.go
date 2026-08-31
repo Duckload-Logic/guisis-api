@@ -24,7 +24,7 @@ func NewHandler(service ServiceInterface) *Handler {
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param search query string false "Search term for student name or number"
+// @Param search query string false "Search term for name, number, or IDP UUID"
 // @Param program_id query int false "Filter by program ID"
 // @Param gender_id query int false "Filter by gender ID"
 // @Param year_level query int false "Filter by year level"
@@ -60,13 +60,13 @@ func (h *Handler) GetStudents(c *gin.Context) {
 }
 
 // GetStudentByStudentNumber godoc
-// @Summary Get student by student number
-// @Description Get student information by student number
+// @Summary Get student by student number or IDP UUID
+// @Description Get student profile by student number or IDP UUID
 // @Tags External Students
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param studentNumber path string true "Student number of the student"
+// @Param studentNumber path string true "Student number or IDP UUID"
 // @Success 200 {object} StudentSuccessResponse
 // @Failure 400 {object} response.CommonErrorResponse "Bad Request"
 // @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
@@ -111,13 +111,13 @@ func (h *Handler) GetStudentByStudentNumber(c *gin.Context) {
 }
 
 // GetStudentByEmail godoc
-// @Summary Get student by Email
-// @Description Get student information by their email
+// @Summary Get student by Email or IDP UUID
+// @Description Get student profile by email or IDP UUID
 // @Tags External Students
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param email query string true "Student Email"
+// @Param email query string true "Student email or IDP UUID"
 // @Success 200 {object} StudentSuccessResponse
 // @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
 // @Failure 403 {object} response.CommonErrorResponse "Forbidden"
@@ -162,13 +162,13 @@ func (h *Handler) GetStudentByEmail(c *gin.Context) {
 }
 
 // GetPersonalInfoByStudentNumber godoc
-// @Summary Get personal information by student number
-// @Description Get personal information of a student by their student number
+// @Summary Get personal info by student number or IDP UUID
+// @Description Get personal info of a student by student number or IDP UUID
 // @Tags External Students
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param studentNumber path string true "Student number of the student"
+// @Param studentNumber path string true "Student number or IDP UUID"
 // @Success 200 {object} StudentPersonalInfoSuccessResponse
 // @Failure 400 {object} response.CommonErrorResponse "Bad Request"
 // @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
@@ -213,13 +213,13 @@ func (h *Handler) GetPersonalInfoByStudentNumber(c *gin.Context) {
 }
 
 // GetAddressByStudentNumber godoc
-// @Summary Get student addresses by student number
-// @Description Get all addresses of a student by their student number
+// @Summary Get student addresses by student number or IDP UUID
+// @Description Get all addresses of a student by student number or IDP UUID
 // @Tags External Students
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param studentNumber path string true "Student number of the student"
+// @Param studentNumber path string true "Student number or IDP UUID"
 // @Success 200 {object} StudentAddressSuccessResponse
 // @Failure 400 {object} response.CommonErrorResponse "Bad Request"
 // @Failure 401 {object} response.CommonErrorResponse "Unauthorized"

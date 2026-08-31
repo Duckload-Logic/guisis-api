@@ -19,13 +19,24 @@ func RegisterRoutes(
 	routes.GET("/profiles", h.GetStudents)
 	routes.GET("/profile", h.GetStudentByEmail)
 	routes.GET("/:studentNumber", h.GetStudentByStudentNumber)
+	routes.GET("/idp/:studentNumber", h.GetStudentByStudentNumber)
 	routes.GET(
 		"/:studentNumber/personal-info",
 		middleware.RequireM2MPersonalInfoAccess,
 		h.GetPersonalInfoByStudentNumber,
 	)
 	routes.GET(
+		"/idp/:studentNumber/personal-info",
+		middleware.RequireM2MPersonalInfoAccess,
+		h.GetPersonalInfoByStudentNumber,
+	)
+	routes.GET(
 		"/:studentNumber/addresses",
+		middleware.RequireM2MPersonalInfoAccess,
+		h.GetAddressByStudentNumber,
+	)
+	routes.GET(
+		"/idp/:studentNumber/addresses",
 		middleware.RequireM2MPersonalInfoAccess,
 		h.GetAddressByStudentNumber,
 	)
