@@ -58,15 +58,32 @@ func RateLimitMiddleware(limiter *IPRateLimiter) gin.HandlerFunc {
 		if !limiter.GetLimiter(limitKey).Allow() {
 			if logSvc, ok := c.Get(SecurityLoggerContextKey); ok {
 				if svc, ok := logSvc.(SecurityLogger); ok {
+					userEmail := ""
+					if val, exists := c.Get("userEmail"); exists {
+						if email, ok := val.(string); ok {
+							userEmail = email
+						}
+					} else if val, exists := c.Get("userID"); exists {
+						if id, ok := val.(string); ok {
+							userEmail = id
+						}
+					}
+
+					actorMsg := userEmail
+					if actorMsg == "" {
+						actorMsg = fmt.Sprintf("Anonymous (%s)", clientIP)
+					}
+
 					svc.RecordSecurity(
 						c.Request.Context(),
 						"RATE_LIMIT_EXCEEDED",
 						fmt.Sprintf(
-							"Rate limit exceeded on %s %s",
+							"Rate limit exceeded by %s on %s %s",
+							actorMsg,
 							c.Request.Method,
 							c.Request.URL.Path,
 						),
-						"",
+						userEmail,
 						clientIP,
 						c.Request.UserAgent(),
 					)
