@@ -58,18 +58,37 @@ func RateLimitMiddleware(limiter *IPRateLimiter) gin.HandlerFunc {
 		if !limiter.GetLimiter(limitKey).Allow() {
 			if logSvc, ok := c.Get(SecurityLoggerContextKey); ok {
 				if svc, ok := logSvc.(SecurityLogger); ok {
-					userEmail := ""
-					if val, exists := c.Get("userEmail"); exists {
-						if email, ok := val.(string); ok {
-							userEmail = email
-						}
-					} else if val, exists := c.Get("userID"); exists {
-						if id, ok := val.(string); ok {
-							userEmail = id
+					actor := ""
+
+					if isM2M, ok := c.Get("isM2M"); ok && isM2M == true {
+						clientName := ginStringVal(c, "clientName")
+						m2mID := ginStringVal(c, "m2mClientID")
+						if clientName != "" {
+							actor = fmt.Sprintf(
+								"M2M Client: %s (%s)",
+								clientName,
+								m2mID,
+							)
+						} else if m2mID != "" {
+							actor = fmt.Sprintf("M2M Client (%s)", m2mID)
+						} else {
+							actor = "M2M Client"
 						}
 					}
 
-					actorMsg := userEmail
+					if actor == "" {
+						if val, exists := c.Get("userEmail"); exists {
+							if email, ok := val.(string); ok && email != "" {
+								actor = email
+							}
+						} else if val, exists := c.Get("userID"); exists {
+							if id, ok := val.(string); ok && id != "" {
+								actor = id
+							}
+						}
+					}
+
+					actorMsg := actor
 					if actorMsg == "" {
 						actorMsg = fmt.Sprintf("Anonymous (%s)", clientIP)
 					}
@@ -83,7 +102,7 @@ func RateLimitMiddleware(limiter *IPRateLimiter) gin.HandlerFunc {
 							c.Request.Method,
 							c.Request.URL.Path,
 						),
-						userEmail,
+						actor,
 						clientIP,
 						c.Request.UserAgent(),
 					)
@@ -97,3 +116,5 @@ func RateLimitMiddleware(limiter *IPRateLimiter) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+
