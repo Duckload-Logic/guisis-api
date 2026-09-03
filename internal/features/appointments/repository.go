@@ -33,6 +33,8 @@ const appointmentsBaseQuery = `
 		a.reason AS reason,
 		a.admin_notes AS admin_notes,
 		DATE_FORMAT(a.when_date, '%Y-%m-%d') AS when_date,
+		a.started_at AS started_at,
+		a.completed_at AS completed_at,
 		a.created_at AS created_at,
 		a.updated_at AS updated_at,
 		ts.id AS time_slot_id,
@@ -584,14 +586,16 @@ func (r *Repository) CreateAppointment(
 			urgency_level, urgency_score,
 			preferred_date_1, preferred_time_slot_id_1,
 			preferred_date_2, preferred_time_slot_id_2,
-			preferred_date_3, preferred_time_slot_id_3
+			preferred_date_3, preferred_time_slot_id_3,
+			started_at
 		) VALUES (
 			:id, :iir_id, :reason, :admin_notes, :when_date,
 			:time_slot_id, :appointment_category_id, :status_id,
 			:urgency_level, :urgency_score,
 			:preferred_date_1, :preferred_time_slot_id_1,
 			:preferred_date_2, :preferred_time_slot_id_2,
-			:preferred_date_3, :preferred_time_slot_id_3
+			:preferred_date_3, :preferred_time_slot_id_3,
+			NULL
 		)
 	`
 
@@ -639,7 +643,13 @@ func (r *Repository) UpdateAppointment(
 	if appt.StatusID != 0 {
 		setQuery = append(setQuery, "status_id = ?")
 		args = append(args, appt.StatusID)
+		if appt.StatusID == 3 {
+			setQuery = append(setQuery, "completed_at = NOW()")
+		}
 	}
+
+	// Always ensure started_at is stamped if servicing appointment on-site
+	setQuery = append(setQuery, "started_at = COALESCE(started_at, NOW())")
 
 	if len(setQuery) == 0 {
 		return nil
@@ -652,6 +662,22 @@ func (r *Repository) UpdateAppointment(
 
 	_, err := tx.ExecContext(ctx, query, args...)
 	return err
+}
+
+func (r *Repository) StartProcessDuration(
+	ctx context.Context,
+	apptID string,
+) error {
+	query := `
+		UPDATE appointments
+		SET started_at = NOW()
+		WHERE id = ? AND started_at IS NULL
+	`
+	_, err := r.db.ExecContext(ctx, query, apptID)
+	if err != nil {
+		return fmt.Errorf("failed to start appointment duration: %w", err)
+	}
+	return nil
 }
 
 func buildAppointmentOrderClause(orderBy, sortOrder string) string {

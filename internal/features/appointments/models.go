@@ -56,6 +56,8 @@ type Appointment struct {
 	PrefTimeSlotID2 structs.NullableInt64  `db:"preferred_time_slot_id_2"`
 	PrefDate3       structs.NullableString `db:"preferred_date_3"`
 	PrefTimeSlotID3 structs.NullableInt64  `db:"preferred_time_slot_id_3"`
+	StartedAt       structs.NullableTime   `db:"started_at" json:"startedAt"`
+	CompletedAt     structs.NullableTime   `db:"completed_at" json:"completedAt"`
 	CreatedAt       time.Time              `db:"created_at" json:"createdAt"`
 	UpdatedAt       time.Time              `db:"updated_at" json:"updatedAt"`
 }
@@ -74,6 +76,8 @@ type AppointmentWithDetailsView struct {
 	Reason             structs.NullableString `db:"reason"`
 	AdminNotes         structs.NullableString `db:"admin_notes"`
 	WhenDate           string                 `db:"when_date"`
+	StartedAt          structs.NullableTime   `db:"started_at"`
+	CompletedAt        structs.NullableTime   `db:"completed_at"`
 	CreatedAt          time.Time              `db:"created_at"`
 	UpdatedAt          time.Time              `db:"updated_at"`
 	TimeSlotID         int                    `db:"time_slot_id"`

@@ -19,8 +19,6 @@ func RegisterRoutes(
 	analyticsRoutes.GET("",
 		middleware.RoleMiddleware(
 			constants.AdminRoleID,
-			constants.SuperAdminRoleID,
-			constants.DeveloperRoleID,
 		),
 		h.GetAdminDashboard,
 	)
@@ -28,8 +26,6 @@ func RegisterRoutes(
 	analyticsRoutes.GET("/admin-dashboard",
 		middleware.RoleMiddleware(
 			constants.AdminRoleID,
-			constants.SuperAdminRoleID,
-			constants.DeveloperRoleID,
 		),
 		h.GetAdminDashboard,
 	)
@@ -37,8 +33,6 @@ func RegisterRoutes(
 	analyticsRoutes.GET("/reports/iir",
 		middleware.RoleMiddleware(
 			constants.AdminRoleID,
-			constants.SuperAdminRoleID,
-			constants.DeveloperRoleID,
 		),
 		h.GetIIRAnalyticsReport,
 	)
@@ -46,8 +40,6 @@ func RegisterRoutes(
 	analyticsRoutes.GET("/reports/iir/export",
 		middleware.RoleMiddleware(
 			constants.AdminRoleID,
-			constants.SuperAdminRoleID,
-			constants.DeveloperRoleID,
 		),
 		h.ExportIIRAnalyticsReport,
 	)

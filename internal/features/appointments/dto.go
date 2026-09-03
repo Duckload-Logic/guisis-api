@@ -44,6 +44,8 @@ type AppointmentDTO struct {
 	PreferredTimeSlot3  *TimeSlot              `json:"preferredTimeSlot3,omitempty"`
 	HasSignificantNote  bool                   `json:"hasSignificantNote"`
 	StudentCORURL       string                 `json:"studentCorUrl,omitempty"`
+	StartedAt           structs.NullableTime   `json:"startedAt,omitempty"`
+	CompletedAt         structs.NullableTime   `json:"completedAt,omitempty"`
 	CreatedAt           time.Time              `json:"createdAt,omitempty"`
 	UpdatedAt           time.Time              `json:"updatedAt,omitempty"`
 }

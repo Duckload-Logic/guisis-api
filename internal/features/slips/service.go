@@ -1346,6 +1346,10 @@ func (s *Service) GetSlipByTicketCode(
 	if slip == nil {
 		return nil, nil
 	}
+
+	_ = s.repo.StartProcessDuration(ctx, slip.ID)
+	slip, _ = s.repo.GetSlipByTicketCode(ctx, code)
+
 	return s.mapToDTO(slip), nil
 }
 
@@ -1377,9 +1381,11 @@ func (s *Service) mapToDTO(slip *SlipWithDetailsView) *SlipDTO {
 			ID:   slip.StatusID,
 			Name: slip.StatusName,
 		},
-		IsVerified: slip.IsVerified.Bool,
-		CreatedAt:  slip.CreatedAt,
-		UpdatedAt:  slip.UpdatedAt,
+		IsVerified:  slip.IsVerified.Bool,
+		StartedAt:   slip.StartedAt,
+		CompletedAt: slip.CompletedAt,
+		CreatedAt:   slip.CreatedAt,
+		UpdatedAt:   slip.UpdatedAt,
 	}
 
 	if slip.TicketCode.Valid {
@@ -1393,4 +1399,11 @@ func (s *Service) mapToDTO(slip *SlipWithDetailsView) *SlipDTO {
 	}
 
 	return dto
+}
+
+func (s *Service) StartSlipDuration(
+	ctx context.Context,
+	slipID string,
+) error {
+	return s.repo.StartProcessDuration(ctx, slipID)
 }

@@ -38,6 +38,8 @@ type SlipDTO struct {
 	Ticket             *TicketDTO             `json:"ticket,omitempty"`
 	HasSignificantNote bool                   `json:"hasSignificantNote"`
 	IsVerified         bool                   `json:"isVerified"`
+	StartedAt          structs.NullableTime   `json:"startedAt,omitempty"`
+	CompletedAt        structs.NullableTime   `json:"completedAt,omitempty"`
 	CreatedAt          time.Time              `json:"createdAt,omitempty"`
 	UpdatedAt          time.Time              `json:"updatedAt,omitempty"`
 }

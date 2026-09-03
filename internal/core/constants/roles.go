@@ -7,4 +7,5 @@ const (
 	AdminRoleID
 	SuperAdminRoleID
 	DeveloperRoleID
+	StudentAssistantRoleID
 )
