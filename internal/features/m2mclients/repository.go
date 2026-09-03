@@ -157,3 +157,12 @@ func (r *Repository) VerifyByID(
 	_, err := r.db.ExecContext(ctx, query, hasPersonalInfoAccess, id)
 	return err
 }
+
+func (r *Repository) UpdateLastUsedAt(
+	ctx context.Context,
+	id int,
+) error {
+	query := `UPDATE m2m_clients SET last_used_at = NOW() WHERE id = ?`
+	_, err := r.db.ExecContext(ctx, query, id)
+	return err
+}
