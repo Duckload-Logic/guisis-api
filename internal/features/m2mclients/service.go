@@ -299,6 +299,8 @@ func (s *Service) issueTokens(
 		return nil, err
 	}
 
+	_ = s.repo.UpdateLastUsedAt(ctx, client.ID)
+
 	return &M2MTokenResponse{
 		AccessToken:  token,
 		RefreshToken: refreshToken,
