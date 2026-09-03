@@ -19,8 +19,6 @@ func RegisterRoutes(
 	routes.Use(middleware.HydrateStudentIIRContext(db))
 	routes.Use(middleware.RoleMiddleware(
 		constants.AdminRoleID,
-		constants.SuperAdminRoleID,
-		constants.DeveloperRoleID,
 	))
 	{
 		routes.GET("/user/id/:iirID", h.GetSignificantNotes)

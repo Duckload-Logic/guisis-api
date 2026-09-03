@@ -623,3 +623,27 @@ func (h *Handler) PatchAppointment(c *gin.Context) {
 		"message": "Appointment updated successfully",
 	})
 }
+
+// PostAppointmentStart godoc
+func (h *Handler) PostAppointmentStart(c *gin.Context) {
+	id := c.Param("appointmentID")
+	if id == "" {
+		response.SendFail(c, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	if err := h.service.StartAppointment(c.Request.Context(), id); err != nil {
+		fmt.Printf("[PostAppointmentStart] {Start Appointment}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to start appointment",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{
+		"message": "Appointment started successfully",
+	})
+}

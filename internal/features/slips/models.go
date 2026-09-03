@@ -41,6 +41,8 @@ type SlipWithDetailsView struct {
 	TicketCode     structs.NullableString `db:"ticket_code"`
 	IsVerified     sql.NullBool           `db:"is_verified"`
 	VerifiedAt     structs.NullableTime   `db:"verified_at"`
+	StartedAt      structs.NullableTime   `db:"started_at"       json:"startedAt"`
+	CompletedAt    structs.NullableTime   `db:"completed_at"     json:"completedAt"`
 	CreatedAt      time.Time              `db:"created_at"`
 	UpdatedAt      time.Time              `db:"updated_at"`
 }
@@ -62,6 +64,8 @@ type Slip struct {
 	AdminNotes    structs.NullableString `db:"admin_notes"     json:"adminNotes"`
 	CategoryID    int                    `db:"category_id"     json:"categoryId"`
 	StatusID      int                    `db:"status_id"       json:"statusId"`
+	StartedAt     structs.NullableTime   `db:"started_at"      json:"startedAt"`
+	CompletedAt   structs.NullableTime   `db:"completed_at"    json:"completedAt"`
 	CreatedAt     time.Time              `db:"created_at"      json:"createdAt"`
 	UpdatedAt     time.Time              `db:"updated_at"      json:"updatedAt"`
 }

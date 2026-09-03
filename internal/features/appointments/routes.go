@@ -24,20 +24,17 @@ func RegisterRoutes(
 	adminOnly := routes.Group("")
 	adminOnly.Use(middleware.RoleMiddleware(
 		constants.AdminRoleID,
-		constants.SuperAdminRoleID,
-		constants.DeveloperRoleID,
 	))
 	{
 		adminOnly.GET("", h.GetAppointments)
 		adminOnly.GET("/calendar/stats", h.GetAppointmentDailyStats)
+		adminOnly.POST("/id/:appointmentID/start", h.PostAppointmentStart)
 	}
 
 	studentOnly := routes.Group("")
 	studentOnly.Use(middleware.RoleMiddleware(
 		constants.StudentRoleID,
 		constants.AdminRoleID,
-		constants.SuperAdminRoleID,
-		constants.DeveloperRoleID,
 	))
 	{
 		studentOnly.GET("/me", h.GetAppointmentsMe)

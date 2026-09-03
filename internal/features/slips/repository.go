@@ -40,6 +40,8 @@ const (
 		t.ticket_code AS ticket_code,
 		t.is_verified AS is_verified,
 		t.verified_at AS verified_at,
+		slp.started_at AS started_at,
+		slp.completed_at AS completed_at,
 		slp.created_at AS created_at,
 		slp.updated_at AS updated_at
 	FROM admission_slips slp
@@ -72,10 +74,10 @@ func (r *Repository) CreateSlip(
 	query := `
 		INSERT INTO admission_slips (
 			id, iir_id, reason, date_of_absence, date_needed,
-			category_id, status_id
+			category_id, status_id, started_at
 		) VALUES (
 			:id, :iir_id, :reason, :date_of_absence, :date_needed,
-			:category_id, :status_id
+			:category_id, :status_id, NULL
 		)
 	`
 
@@ -577,11 +579,19 @@ func (r *Repository) UpdateStatus(
 	// Now update the slip with the status ID and admin notes
 	updateQuery := `
 		UPDATE admission_slips
-		SET status_id = ?, admin_notes = ?, updated_at = NOW()
+		SET status_id = ?, admin_notes = ?, updated_at = NOW(),
+		    completed_at = CASE WHEN ? = 'Approved' THEN NOW() ELSE completed_at END
 		WHERE id = ?
 	`
 
-	result, err := tx.ExecContext(ctx, updateQuery, statusID, adminNotes, id)
+	result, err := tx.ExecContext(
+		ctx,
+		updateQuery,
+		statusID,
+		adminNotes,
+		statusName,
+		id,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to update status: %w", err)
 	}
@@ -652,6 +662,15 @@ func (r *Repository) UpdateTicketVerification(
 	if err != nil {
 		return fmt.Errorf("failed to verify ticket: %w", err)
 	}
+
+	slipUpdateQuery := `
+		UPDATE admission_slips
+		SET completed_at = NOW()
+		WHERE id = (
+			SELECT admission_slip_id FROM admission_tickets WHERE id = ?
+		)
+	`
+	_, _ = tx.ExecContext(ctx, slipUpdateQuery, ticketID)
 	return nil
 }
 
@@ -767,4 +786,20 @@ func sanitizeSort(orderBy, sortOrder string) (string, string) {
 	}
 
 	return col, dir
+}
+
+func (r *Repository) StartProcessDuration(
+	ctx context.Context,
+	slipID string,
+) error {
+	query := `
+		UPDATE admission_slips
+		SET started_at = NOW()
+		WHERE id = ? AND started_at IS NULL
+	`
+	_, err := r.db.ExecContext(ctx, query, slipID)
+	if err != nil {
+		return fmt.Errorf("failed to start slip process duration: %w", err)
+	}
+	return nil
 }

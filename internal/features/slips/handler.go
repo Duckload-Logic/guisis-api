@@ -701,3 +701,27 @@ func (h *Handler) GetTicketDetails(c *gin.Context) {
 
 	response.SendSuccess(c, slip)
 }
+
+// PostSlipStart godoc
+func (h *Handler) PostSlipStart(c *gin.Context) {
+	id := c.Param("slipID")
+	if id == "" {
+		response.SendFail(c, gin.H{"error": "Slip ID is required"})
+		return
+	}
+
+	if err := h.service.StartSlipDuration(c.Request.Context(), id); err != nil {
+		fmt.Printf("[PostSlipStart] {Start Slip}: %v\n", err)
+		response.SendError(
+			c,
+			"Failed to start slip process duration",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{
+		"message": "Slip process duration started successfully",
+	})
+}
