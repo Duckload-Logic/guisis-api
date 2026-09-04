@@ -119,158 +119,165 @@ func (s *Service) SubmitCOR(
 		StudentID: userID,
 	}
 
-	// Fetch OCR result to set validity
-	ocrResult, err := s.filesSvc.GetOCRResult(ctx, file.ID)
-	if err != nil {
-		// Non-fatal, but we'll use fallback dates
-		fmt.Printf("%v\n", err)
-	}
+	isStaging := os.Getenv("IS_STAGING") == "true" ||
+		os.Getenv("BYPASS_COR_OWNERSHIP") == "true"
 
-	if ocrResult != nil && ocrResult.StructuredData != "" {
-		var corData struct {
-			StudentNumber     string `json:"student_number"`
-			ProgramCode       string `json:"program_code"`
-			ProgramDesc       string `json:"program_desc"`
-			YearLevel         int    `json:"year_level"`
-			Section           int    `json:"section"`
-			Campus            string `json:"campus"`
-			StartAcademicYear string `json:"start_academic_year"`
-			EndAcademicYear   string `json:"end_academic_year"`
-			Term              int    `json:"term"`
+	if isStaging {
+		cor.ValidFrom = structs.TimeToNullableTime(time.Now())
+		cor.ValidUntil = structs.TimeToNullableTime(
+			time.Now().AddDate(0, 5, 0),
+		)
+	} else {
+		// Fetch OCR result to set validity
+		ocrResult, err := s.filesSvc.GetOCRResult(ctx, file.ID)
+		if err != nil {
+			// Non-fatal, but we'll use fallback dates
+			fmt.Printf("%v\n", err)
 		}
-		if err := json.Unmarshal(
-			[]byte(ocrResult.StructuredData), &corData,
-		); err == nil {
-			startYear := time.Now().Year()
-			if corData.StartAcademicYear != "" {
-				fmt.Sscanf(
-					corData.StartAcademicYear,
-					"%d",
-					&startYear,
-				)
-			}
-			endYear := startYear + 1
-			if corData.EndAcademicYear != "" {
-				fmt.Sscanf(
-					corData.EndAcademicYear,
-					"%d",
-					&endYear,
-				)
-			}
-			cor.StudentNumber = corData.StudentNumber
-			cor.ProgramCode = corData.ProgramCode
-			cor.ProgramDesc = corData.ProgramDesc
-			cor.YearLevel = corData.YearLevel
-			cor.Section = corData.Section
-			cor.Campus = corData.Campus
-			cor.Term = corData.Term
-			cor.YearStart = startYear
-			cor.YearEnd = endYear
 
-			// Validate against the current global AcademicSetting.
-			// If OCR year + term do not match, automatically reject the COR.
-			setting, sErr := s.repo.GetAcademicSetting(ctx)
-			if sErr != nil {
-				_ = s.filesSvc.DeleteFile(ctx, file.ID)
-				return "", fmt.Errorf(
-					"%w",
-					sErr,
-				)
+		if ocrResult != nil && ocrResult.StructuredData != "" {
+			var corData struct {
+				StudentNumber     string `json:"student_number"`
+				ProgramCode       string `json:"program_code"`
+				ProgramDesc       string `json:"program_desc"`
+				YearLevel         int    `json:"year_level"`
+				Section           int    `json:"section"`
+				Campus            string `json:"campus"`
+				StartAcademicYear string `json:"start_academic_year"`
+				EndAcademicYear   string `json:"end_academic_year"`
+				Term              int    `json:"term"`
 			}
-
-			isStaging := os.Getenv("IS_STAGING") == "true" ||
-				os.Getenv("BYPASS_COR_OWNERSHIP") == "true"
-
-			if !isStaging && (startYear != setting.CurrentYearStart ||
-				corData.Term != setting.CurrentTerm) {
-				if s.logService != nil {
-					id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
-					s.logService.Record(ctx, nil, audit.LogEntry{
-						Level:    audit.LevelWarning,
-						Category: audit.CategorySystem,
-						Action:   audit.ActionOCRValidationFailed,
-						Message: fmt.Sprintf(
-							"COR academic setting mismatch for %s: "+
-								"expected %d term %d, got %d term %d",
-							email,
-							setting.CurrentYearStart,
-							setting.CurrentTerm,
-							startYear,
-							corData.Term,
-						),
-						UserID:    structs.StringToNullableString(id),
-						UserEmail: structs.StringToNullableString(email),
-						IPAddress: structs.StringToNullableString(ip),
-						UserAgent: structs.StringToNullableString(ua),
-						TraceID:   structs.StringToNullableString(trace),
-					})
-				}
-				_ = s.filesSvc.DeleteFile(ctx, file.ID)
-				return "", ErrOutdatedCOR
-			}
-
-			// Verify that the COR really belongs to the student.
-			// Compare OCR student number against database student number.
-			iir, iirErr := s.repo.GetStudentIIRByUserID(ctx, userID)
-			if iirErr == nil && iir != nil {
-				personalInfo, pErr := s.repo.GetStudentPersonalInfoView(
-					ctx,
-					iir.ID,
-				)
-				if pErr == nil && personalInfo != nil {
-					dbStudNum := strings.TrimSpace(
-						personalInfo.StudentNumber,
+			if err := json.Unmarshal(
+				[]byte(ocrResult.StructuredData), &corData,
+			); err == nil {
+				startYear := time.Now().Year()
+				if corData.StartAcademicYear != "" {
+					fmt.Sscanf(
+						corData.StartAcademicYear,
+						"%d",
+						&startYear,
 					)
-					ocrStudNum := strings.TrimSpace(corData.StudentNumber)
+				}
+				endYear := startYear + 1
+				if corData.EndAcademicYear != "" {
+					fmt.Sscanf(
+						corData.EndAcademicYear,
+						"%d",
+						&endYear,
+					)
+				}
+				cor.StudentNumber = corData.StudentNumber
+				cor.ProgramCode = corData.ProgramCode
+				cor.ProgramDesc = corData.ProgramDesc
+				cor.YearLevel = corData.YearLevel
+				cor.Section = corData.Section
+				cor.Campus = corData.Campus
+				cor.Term = corData.Term
+				cor.YearStart = startYear
+				cor.YearEnd = endYear
 
-					if !matchStudentNumbers(dbStudNum, ocrStudNum) {
-						if s.logService != nil {
-							id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
-							s.logService.Record(ctx, nil, audit.LogEntry{
-								Level:    audit.LevelWarning,
-								Category: audit.CategorySystem,
-								Action:   audit.ActionOCRValidationFailed,
-								Message: fmt.Sprintf(
-									"COR student number mismatch for %s: "+
-										"DB=%s, OCR=%s",
-									email,
-									dbStudNum,
-									ocrStudNum,
-								),
-								UserID:    structs.StringToNullableString(id),
-								UserEmail: structs.StringToNullableString(email),
-								IPAddress: structs.StringToNullableString(ip),
-								UserAgent: structs.StringToNullableString(ua),
-								TraceID:   structs.StringToNullableString(trace),
-							})
-						}
-						fmt.Printf(
-							"[SubmitCOR] Mismatch: db=%q, ocr=%q\n",
-							dbStudNum, ocrStudNum,
-						)
-						_ = s.filesSvc.DeleteFile(ctx, file.ID)
-						return "", ErrCOROwnerMismatch
+				// Validate against the current global AcademicSetting.
+				// If OCR year + term do not match, automatically reject the COR.
+				setting, sErr := s.repo.GetAcademicSetting(ctx)
+				if sErr != nil {
+					_ = s.filesSvc.DeleteFile(ctx, file.ID)
+					return "", fmt.Errorf(
+						"%w",
+						sErr,
+					)
+				}
+
+				if startYear != setting.CurrentYearStart ||
+					corData.Term != setting.CurrentTerm {
+					if s.logService != nil {
+						id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+						s.logService.Record(ctx, nil, audit.LogEntry{
+							Level:    audit.LevelWarning,
+							Category: audit.CategorySystem,
+							Action:   audit.ActionOCRValidationFailed,
+							Message: fmt.Sprintf(
+								"COR academic setting mismatch for %s: "+
+									"expected %d term %d, got %d term %d",
+								email,
+								setting.CurrentYearStart,
+								setting.CurrentTerm,
+								startYear,
+								corData.Term,
+							),
+							UserID:    structs.StringToNullableString(id),
+							UserEmail: structs.StringToNullableString(email),
+							IPAddress: structs.StringToNullableString(ip),
+							UserAgent: structs.StringToNullableString(ua),
+							TraceID:   structs.StringToNullableString(trace),
+						})
 					}
+					_ = s.filesSvc.DeleteFile(ctx, file.ID)
+					return "", ErrOutdatedCOR
+				}
 
-					// Update year level and section if they changed
-					if corData.YearLevel > 0 && corData.Section > 0 &&
-						(corData.YearLevel != personalInfo.YearLevel ||
-							corData.Section != personalInfo.Section) {
-						_ = s.repo.UpdateStudentYearAndSection(
-							ctx,
-							iir.ID,
-							corData.YearLevel,
-							corData.Section,
+				// Verify that the COR really belongs to the student.
+				// Compare OCR student number against database student number.
+				iir, iirErr := s.repo.GetStudentIIRByUserID(ctx, userID)
+				if iirErr == nil && iir != nil {
+					personalInfo, pErr := s.repo.GetStudentPersonalInfoView(
+						ctx,
+						iir.ID,
+					)
+					if pErr == nil && personalInfo != nil {
+						dbStudNum := strings.TrimSpace(
+							personalInfo.StudentNumber,
 						)
+						ocrStudNum := strings.TrimSpace(corData.StudentNumber)
+
+						if !matchStudentNumbers(dbStudNum, ocrStudNum) {
+							if s.logService != nil {
+								id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+								s.logService.Record(ctx, nil, audit.LogEntry{
+									Level:    audit.LevelWarning,
+									Category: audit.CategorySystem,
+									Action:   audit.ActionOCRValidationFailed,
+									Message: fmt.Sprintf(
+										"COR student number mismatch for %s: "+
+											"DB=%s, OCR=%s",
+										email,
+										dbStudNum,
+										ocrStudNum,
+									),
+									UserID:    structs.StringToNullableString(id),
+									UserEmail: structs.StringToNullableString(email),
+									IPAddress: structs.StringToNullableString(ip),
+									UserAgent: structs.StringToNullableString(ua),
+									TraceID:   structs.StringToNullableString(trace),
+								})
+							}
+							fmt.Printf(
+								"[SubmitCOR] Mismatch: db=%q, ocr=%q\n",
+								dbStudNum, ocrStudNum,
+							)
+							_ = s.filesSvc.DeleteFile(ctx, file.ID)
+							return "", ErrCOROwnerMismatch
+						}
+
+						// Update year level and section if they changed
+						if corData.YearLevel > 0 && corData.Section > 0 &&
+							(corData.YearLevel != personalInfo.YearLevel ||
+								corData.Section != personalInfo.Section) {
+							_ = s.repo.UpdateStudentYearAndSection(
+								ctx,
+								iir.ID,
+								corData.YearLevel,
+								corData.Section,
+							)
+						}
 					}
 				}
-			}
 
-			// If valid, set ValidFrom/ValidUntil
-			cor.ValidFrom = structs.TimeToNullableTime(time.Now())
-			cor.ValidUntil = structs.TimeToNullableTime(
-				time.Now().AddDate(0, 5, 0),
-			)
+				// If valid, set ValidFrom/ValidUntil
+				cor.ValidFrom = structs.TimeToNullableTime(time.Now())
+				cor.ValidUntil = structs.TimeToNullableTime(
+					time.Now().AddDate(0, 5, 0),
+				)
+			}
 		}
 	}
 
