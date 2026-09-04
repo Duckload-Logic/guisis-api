@@ -6,6 +6,7 @@ ARG IMAGE_TAG=1.24-alpine
 ################################################################################
 # Base stage for shared dependencies
 FROM golang:${IMAGE_TAG} AS base
+ENV GOTOOLCHAIN=auto
 RUN apk add --no-cache git make
 WORKDIR /app
 COPY go.mod go.sum ./
