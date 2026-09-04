@@ -645,11 +645,9 @@ func (r *Repository) UpdateAppointment(
 		args = append(args, appt.StatusID)
 		if appt.StatusID == 3 {
 			setQuery = append(setQuery, "completed_at = NOW()")
+			setQuery = append(setQuery, "started_at = COALESCE(started_at, NOW())")
 		}
 	}
-
-	// Always ensure started_at is stamped if servicing appointment on-site
-	setQuery = append(setQuery, "started_at = COALESCE(started_at, NOW())")
 
 	if len(setQuery) == 0 {
 		return nil
