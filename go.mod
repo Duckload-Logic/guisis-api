@@ -1,6 +1,6 @@
 module github.com/olazo-johnalbert/duckload-api
 
-go 1.26.1
+go 1.25.0
 
 require (
 	github.com/SherClockHolmes/webpush-go v1.4.0
