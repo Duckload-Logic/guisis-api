@@ -187,7 +187,8 @@ func (s *Service) UploadFiles(
 		case "cors":
 			isStaging := (s.cfg != nil && s.cfg.IsStaging) ||
 				os.Getenv("IS_STAGING") == "true" ||
-				os.Getenv("BYPASS_COR_OWNERSHIP") == "true"
+				os.Getenv("BYPASS_COR_OWNERSHIP") == "true" ||
+				os.Getenv("APP_ENV") == "staging"
 
 			if !isStaging {
 				corResp, err := s.ocrClient.ProcessCOR(

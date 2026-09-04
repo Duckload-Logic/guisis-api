@@ -119,8 +119,10 @@ func (s *Service) SubmitCOR(
 		StudentID: userID,
 	}
 
-	isStaging := os.Getenv("IS_STAGING") == "true" ||
-		os.Getenv("BYPASS_COR_OWNERSHIP") == "true"
+	isStaging := (s.cfg != nil && s.cfg.IsStaging) ||
+		os.Getenv("IS_STAGING") == "true" ||
+		os.Getenv("BYPASS_COR_OWNERSHIP") == "true" ||
+		os.Getenv("APP_ENV") == "staging"
 
 	if isStaging {
 		cor.ValidFrom = structs.TimeToNullableTime(time.Now())
