@@ -178,8 +178,11 @@ func (s *Service) SubmitCOR(
 				)
 			}
 
-			if startYear != setting.CurrentYearStart ||
-				corData.Term != setting.CurrentTerm {
+			isStaging := os.Getenv("IS_STAGING") == "true" ||
+				os.Getenv("BYPASS_COR_OWNERSHIP") == "true"
+
+			if !isStaging && (startYear != setting.CurrentYearStart ||
+				corData.Term != setting.CurrentTerm) {
 				if s.logService != nil {
 					id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
 					s.logService.Record(ctx, nil, audit.LogEntry{
