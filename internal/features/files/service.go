@@ -10,6 +10,7 @@ import (
 	"mime"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -90,6 +91,7 @@ var ErrFileTooLarge = errors.New("file exceeds maximum size of 5MB")
 var AllowedMimeTypes = map[string]bool{
 	"image/jpeg":      true,
 	"image/png":       true,
+	"image/webp":      true,
 	"application/pdf": true,
 }
 
@@ -183,69 +185,97 @@ func (s *Service) UploadFiles(
 
 		switch prefix {
 		case "cors":
-			corResp, err := s.ocrClient.ProcessCOR(
-				ctx,
-				fh.Filename,
-				bytes.NewReader(data),
-			)
-			if err != nil {
-				if s.logger != nil {
-					id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
-					logLevel := audit.LevelError
-					logAction := audit.ActionOCRProcessingFailed
-					logMsg := fmt.Sprintf(
-						"OCR COR processing failed for %s: %v",
-						fh.Filename,
-						err,
-					)
+			isStaging := (s.cfg != nil && s.cfg.IsStaging) ||
+				os.Getenv("IS_STAGING") == "true" ||
+				os.Getenv("BYPASS_COR_OWNERSHIP") == "true" ||
+				os.Getenv("APP_ENV") == "staging"
 
-					var httpErr *ocr.HTTPError
-					if errors.As(err, &httpErr) &&
-						httpErr.StatusCode >= 400 &&
-						httpErr.StatusCode < 500 {
-						logLevel = audit.LevelWarning
-						logAction = audit.ActionOCRValidationFailed
-						logMsg = fmt.Sprintf(
-							"COR validation failed for %s: %v",
-							fh.Filename,
-							err,
-						)
-					} else if strings.Contains(err.Error(), "status: 400") ||
-						strings.Contains(err.Error(), "status: 422") {
-						logLevel = audit.LevelWarning
-						logAction = audit.ActionOCRValidationFailed
-						logMsg = fmt.Sprintf(
-							"COR validation failed for %s: %v",
-							fh.Filename,
-							err,
-						)
-					}
-
-					s.logger.Record(ctx, nil, audit.LogEntry{
-						Level:     logLevel,
-						Category:  audit.CategorySystem,
-						Action:    logAction,
-						Message:   logMsg,
-						UserID:    structs.StringToNullableString(id),
-						UserEmail: structs.StringToNullableString(email),
-						IPAddress: structs.StringToNullableString(ip),
-						UserAgent: structs.StringToNullableString(ua),
-						TraceID:   structs.StringToNullableString(trace),
-					})
-				}
-				return nil, fmt.Errorf(
-					"this file does not appear to be a valid COR",
+			if !isStaging {
+				corResp, err := s.ocrClient.ProcessCOR(
+					ctx,
+					fh.Filename,
+					bytes.NewReader(data),
 				)
-			}
-			if corResp == nil {
+				if err != nil {
+					if s.logger != nil {
+						id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+						logLevel := audit.LevelError
+						logAction := audit.ActionOCRProcessingFailed
+						logMsg := fmt.Sprintf(
+							"OCR COR processing failed for %s: %v",
+							fh.Filename,
+							err,
+						)
+
+						var httpErr *ocr.HTTPError
+						if errors.As(err, &httpErr) &&
+							httpErr.StatusCode >= 400 &&
+							httpErr.StatusCode < 500 {
+							logLevel = audit.LevelWarning
+							logAction = audit.ActionOCRValidationFailed
+							logMsg = fmt.Sprintf(
+								"COR validation failed for %s: %v",
+								fh.Filename,
+								err,
+							)
+						} else if strings.Contains(err.Error(), "status: 400") ||
+							strings.Contains(err.Error(), "status: 422") {
+							logLevel = audit.LevelWarning
+							logAction = audit.ActionOCRValidationFailed
+							logMsg = fmt.Sprintf(
+								"COR validation failed for %s: %v",
+								fh.Filename,
+								err,
+							)
+						}
+
+						s.logger.Record(ctx, nil, audit.LogEntry{
+							Level:     logLevel,
+							Category:  audit.CategorySystem,
+							Action:    logAction,
+							Message:   logMsg,
+							UserID:    structs.StringToNullableString(id),
+							UserEmail: structs.StringToNullableString(email),
+							IPAddress: structs.StringToNullableString(ip),
+							UserAgent: structs.StringToNullableString(ua),
+							TraceID:   structs.StringToNullableString(trace),
+						})
+					}
+					return nil, fmt.Errorf(
+						"this file does not appear to be a valid COR",
+					)
+				}
+				if corResp == nil {
+					if s.logger != nil {
+						id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+						s.logger.Record(ctx, nil, audit.LogEntry{
+							Level:    audit.LevelError,
+							Category: audit.CategorySystem,
+							Action:   audit.ActionOCRProcessingFailed,
+							Message: fmt.Sprintf(
+								"AI service returned empty response for COR: %s",
+								fh.Filename,
+							),
+							UserID:    structs.StringToNullableString(id),
+							UserEmail: structs.StringToNullableString(email),
+							IPAddress: structs.StringToNullableString(ip),
+							UserAgent: structs.StringToNullableString(ua),
+							TraceID:   structs.StringToNullableString(trace),
+						})
+					}
+					return nil, fmt.Errorf(
+						"AI service returned empty response for COR",
+					)
+				}
+
 				if s.logger != nil {
 					id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
 					s.logger.Record(ctx, nil, audit.LogEntry{
-						Level:    audit.LevelError,
+						Level:    audit.LevelInfo,
 						Category: audit.CategorySystem,
-						Action:   audit.ActionOCRProcessingFailed,
+						Action:   audit.ActionOCRProcessingSuccess,
 						Message: fmt.Sprintf(
-							"AI service returned empty response for COR: %s",
+							"Successfully processed COR document using OCR: %s",
 							fh.Filename,
 						),
 						UserID:    structs.StringToNullableString(id),
@@ -255,36 +285,15 @@ func (s *Service) UploadFiles(
 						TraceID:   structs.StringToNullableString(trace),
 					})
 				}
-				return nil, fmt.Errorf(
-					"AI service returned empty response for COR",
-				)
-			}
 
-			if s.logger != nil {
-				id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
-				s.logger.Record(ctx, nil, audit.LogEntry{
-					Level:    audit.LevelInfo,
-					Category: audit.CategorySystem,
-					Action:   audit.ActionOCRProcessingSuccess,
-					Message: fmt.Sprintf(
-						"Successfully processed COR document using OCR: %s",
-						fh.Filename,
-					),
-					UserID:    structs.StringToNullableString(id),
-					UserEmail: structs.StringToNullableString(email),
-					IPAddress: structs.StringToNullableString(ip),
-					UserAgent: structs.StringToNullableString(ua),
-					TraceID:   structs.StringToNullableString(trace),
+				marshaled, _ := json.Marshal(corResp)
+				ocrResults = append(ocrResults, OCRResult{
+					FileID:         fileID,
+					StructuredData: string(marshaled),
+					EngineV:        "paddleocr-v4-cor",
+					CreatedAt:      time.Now(),
 				})
 			}
-
-			marshaled, _ := json.Marshal(corResp)
-			ocrResults = append(ocrResults, OCRResult{
-				FileID:         fileID,
-				StructuredData: string(marshaled),
-				EngineV:        "paddleocr-v4-cor",
-				CreatedAt:      time.Now(),
-			})
 		}
 	}
 

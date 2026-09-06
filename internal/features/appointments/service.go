@@ -964,6 +964,8 @@ func (s *Service) mapToDTO(
 		},
 		UrgencyLevel: appt.UrgencyLevel,
 		UrgencyScore: appt.UrgencyScore,
+		StartedAt:    appt.StartedAt,
+		CompletedAt:  appt.CompletedAt,
 		CreatedAt:    appt.CreatedAt,
 		UpdatedAt:    appt.UpdatedAt,
 	}
@@ -997,4 +999,11 @@ func (s *Service) mapToDTO(
 	}
 
 	return dto
+}
+
+func (s *Service) StartAppointment(
+	ctx context.Context,
+	id string,
+) error {
+	return s.repo.StartProcessDuration(ctx, id)
 }

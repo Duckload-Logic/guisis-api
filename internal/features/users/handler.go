@@ -486,6 +486,10 @@ func (h *Handler) UploadProfilePicture(c *gin.Context) {
 
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
+		fmt.Printf(
+			"[UploadProfilePicture] {FormFile}: %v\n",
+			err,
+		)
 		response.SendFail(c, gin.H{"error": "File is required"})
 		return
 	}
@@ -496,9 +500,15 @@ func (h *Handler) UploadProfilePicture(c *gin.Context) {
 		fileHeader,
 	)
 	if err != nil {
-		fmt.Printf("[UploadProfilePicture] {UploadProfilePicture}: %v\n", err)
+		fmt.Printf(
+			"[UploadProfilePicture] {UploadProfilePicture}: %v\n",
+			err,
+		)
 		if errors.Is(err, files.ErrFileTooLarge) {
-			response.SendFail(c, gin.H{"error": "Profile picture must not exceed 5MB"})
+			response.SendFail(
+				c,
+				gin.H{"error": "Profile picture must not exceed 5MB"},
+			)
 			return
 		}
 		response.SendError(

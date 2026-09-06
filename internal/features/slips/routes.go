@@ -24,13 +24,13 @@ func RegisterRoutes(
 	adminOnly := routes.Group("")
 	adminOnly.Use(middleware.RoleMiddleware(
 		constants.AdminRoleID,
-		constants.SuperAdminRoleID,
-		constants.DeveloperRoleID,
+		constants.StudentAssistantRoleID,
 	))
 	{
 		adminOnly.GET("", h.GetSlips)
 		adminOnly.GET("/urgent", h.GetUrgentSlips)
 		adminOnly.PATCH("/id/:slipID/status", h.PatchSlipStatus)
+		adminOnly.POST("/id/:slipID/start", h.PostSlipStart)
 		adminOnly.POST("/tickets/claim", h.PostClaimTicket)
 		adminOnly.GET("/tickets/:code", h.GetTicketDetails)
 	}
@@ -39,8 +39,6 @@ func RegisterRoutes(
 	studentOnly.Use(middleware.RoleMiddleware(
 		constants.StudentRoleID,
 		constants.AdminRoleID,
-		constants.SuperAdminRoleID,
-		constants.DeveloperRoleID,
 	))
 	{
 		studentOnly.GET("/me", h.GetSlipsMe)
