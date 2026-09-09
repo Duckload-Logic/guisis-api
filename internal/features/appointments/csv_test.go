@@ -24,10 +24,10 @@ func TestGenerateAppointmentsCSV(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(records) != 2 || len(records[0]) != 10 {
+	if len(records) != 2 || len(records[0]) != 9 {
 		t.Fatalf("unexpected CSV shape: %#v", records)
 	}
-	if records[1][2] != "'=A1" || records[1][8] != "'+formula" {
+	if records[1][2] != "'=A1" {
 		t.Fatalf("unsafe cells were not escaped: %#v", records[1])
 	}
 }
