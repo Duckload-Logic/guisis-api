@@ -31,44 +31,44 @@ func RegisterRoutes(
 		adminOnly.POST("/id/:appointmentID/start", h.PostAppointmentStart)
 	}
 
-	studentOnly := routes.Group("")
-	studentOnly.Use(middleware.RoleMiddleware(
+	appointmentRoutes := routes.Group("")
+	appointmentRoutes.Use(middleware.RoleMiddleware(
 		constants.StudentRoleID,
 		constants.AdminRoleID,
 	))
 	{
-		studentOnly.GET("/me", h.GetAppointmentsMe)
-		studentOnly.POST("", middleware.RequireCOR(), h.PostAppointment)
-		studentOnly.POST(
+		appointmentRoutes.GET("/me", h.GetAppointmentsMe)
+		appointmentRoutes.POST("", middleware.RequireCOR(), h.PostAppointment)
+		appointmentRoutes.POST(
 			"/id/:appointmentID/cancel",
 			appointmentLookup,
 			middleware.RequireCOR(),
 			h.PostAppointmentCancellation,
 		)
+		appointmentRoutes.GET(
+			"/id/:appointmentID",
+			appointmentLookup,
+			h.GetAppointmentByID,
+		)
+		appointmentRoutes.PATCH(
+			"/id/:appointmentID",
+			appointmentLookup,
+			middleware.RequireCOR(),
+			h.PatchAppointment,
+		)
 	}
 
-	sharedRoutes := routes.Group("")
-	sharedRoutes.Use(middleware.RoleMiddleware(
+	sharedLookups := routes.Group("")
+	sharedLookups.Use(middleware.RoleMiddleware(
 		constants.StudentRoleID,
 		constants.AdminRoleID,
 		constants.SuperAdminRoleID,
 		constants.DeveloperRoleID,
 	))
 	{
-		sharedRoutes.GET(
-			"/id/:appointmentID",
-			appointmentLookup,
-			h.GetAppointmentByID,
-		)
-		sharedRoutes.GET("/stats", h.GetAppointmentStats)
-		sharedRoutes.GET("/lookups/categories", h.GetAppointmentCategories)
-		sharedRoutes.GET("/lookups/slots", h.GetAppointmentSlots)
-		sharedRoutes.GET("/lookups/statuses", h.GetAppointmentStatuses)
-		sharedRoutes.PATCH(
-			"/id/:appointmentID",
-			appointmentLookup,
-			middleware.RequireCOR(),
-			h.PatchAppointment,
-		)
+		sharedLookups.GET("/stats", h.GetAppointmentStats)
+		sharedLookups.GET("/lookups/categories", h.GetAppointmentCategories)
+		sharedLookups.GET("/lookups/slots", h.GetAppointmentSlots)
+		sharedLookups.GET("/lookups/statuses", h.GetAppointmentStatuses)
 	}
 }

@@ -436,7 +436,7 @@ func generateAppointmentsCSV(appointments []AppointmentWithDetailsView) ([]byte,
 	writer := csv.NewWriter(&buf)
 	if err := writer.Write([]string{
 		"Appointment Date", "Time Slot", "Student Number", "Student Name",
-		"Email", "Category", "Status", "Urgency", "Reason", "Created At",
+		"Email", "Category", "Status", "Urgency", "Created At",
 	}); err != nil {
 		return nil, fmt.Errorf("failed to write CSV headers: %w", err)
 	}
@@ -451,7 +451,6 @@ func generateAppointmentsCSV(appointments []AppointmentWithDetailsView) ([]byte,
 			csvutil.EscapeCell(appointment.CategoryName),
 			csvutil.EscapeCell(appointment.StatusName),
 			csvutil.EscapeCell(appointment.UrgencyLevel),
-			csvutil.EscapeCell(appointment.Reason.String),
 			appointment.CreatedAt.Format("2006-01-02 15:04:05"),
 		}); err != nil {
 			return nil, fmt.Errorf("failed to write CSV row: %w", err)
