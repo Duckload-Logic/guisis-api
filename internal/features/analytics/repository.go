@@ -229,18 +229,32 @@ func (r *Repository) GetMonthlyAppointmentStats(
 
 	query := `
 		SELECT
-			DATE_FORMAT(when_date, '` + format + `') as period,
-			DATE_FORMAT(when_date, '` + format + `') as month,
+			DATE_FORMAT(touchpoint_date, '` + format + `') as period,
+			DATE_FORMAT(touchpoint_date, '` + format + `') as month,
 			0 as logins,
 			0 as activity,
 			COUNT(*) as count
-		FROM appointments a
-		JOIN statuses s ON s.id = a.status_id
-		WHERE when_date >= DATE_SUB(` + baseDate + `,
-			INTERVAL ` + interval + `)
-		  AND UPPER(s.name) = 'COMPLETED'
-		GROUP BY DATE_FORMAT(when_date, '` + groupBy + `'), period, month
-		ORDER BY DATE_FORMAT(when_date, '` + groupBy + `') ASC;
+		FROM (
+			SELECT a.when_date AS touchpoint_date
+			FROM appointments a
+			JOIN statuses s ON s.id = a.status_id
+			WHERE UPPER(s.name) = 'COMPLETED'
+			  AND a.when_date >= DATE_SUB(` + baseDate + `,
+				INTERVAL ` + interval + `)
+			UNION ALL
+			SELECT DATE(
+				COALESCE(t.verified_at, t.updated_at, t.created_at)
+			) AS touchpoint_date
+			FROM admission_tickets t
+			WHERE t.is_verified = TRUE
+			  AND COALESCE(
+				t.verified_at, t.updated_at, t.created_at
+			  ) >= DATE_SUB(` + baseDate + `,
+				INTERVAL ` + interval + `)
+		) touchpoints
+		GROUP BY DATE_FORMAT(touchpoint_date, '` + groupBy + `'),
+			period, month
+		ORDER BY DATE_FORMAT(touchpoint_date, '` + groupBy + `') ASC;
 	`
 
 	stats := []MonthlyVisitorStatDTO{}
