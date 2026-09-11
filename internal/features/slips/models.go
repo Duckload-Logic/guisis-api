@@ -21,32 +21,32 @@ type SlipStatus struct {
 
 // SlipWithDetailsView represents a denormalized view of a slip for listings.
 type SlipWithDetailsView struct {
-	ID             string                 `db:"id"               json:"id"`
-	IIRID          string                 `db:"iir_id"           json:"iirId"`
-	UserID         string                 `db:"user_id"          json:"userId"`
-	UserFirstName  string                 `db:"user_first_name"  json:"userFirstName"`
-	UserMiddleName structs.NullableString `db:"user_middle_name" json:"userMiddleName,omitempty"`
-	UserLastName   string                 `db:"user_last_name"   json:"userLastName"`
-	UserEmail      string                 `db:"user_email"       json:"userEmail"`
+	ID                 string                 `db:"id"               json:"id"`
+	IIRID              string                 `db:"iir_id"           json:"iirId"`
+	UserID             string                 `db:"user_id"          json:"userId"`
+	UserFirstName      string                 `db:"user_first_name"  json:"userFirstName"`
+	UserMiddleName     structs.NullableString `db:"user_middle_name" json:"userMiddleName,omitempty"`
+	UserLastName       string                 `db:"user_last_name"   json:"userLastName"`
+	UserEmail          string                 `db:"user_email"       json:"userEmail"`
 	UserProfilePicture structs.NullableString `db:"user_profile_picture"`
-	StudentNumber  string                 `db:"student_number"   json:"studentNumber"`
-	ContactNumber  string                 `db:"contact_number"   json:"contactNumber"`
-	Reason         string                 `db:"reason"           json:"reason"`
-	DateOfAbsence  string                 `db:"date_of_absence"  json:"dateOfAbsence"`
-	DateNeeded     string                 `db:"date_needed"      json:"dateNeeded"`
-	AdminNotes     structs.NullableString `db:"admin_notes"      json:"adminNotes"`
-	CategoryID     int                    `db:"category_id"      json:"categoryId"`
-	CategoryName   string                 `db:"category_name"    json:"categoryName"`
-	StatusID       int                    `db:"status_id"        json:"statusId"`
-	StatusName     string                 `db:"status_name"      json:"statusName"`
-	UrgencyScore   int                    `db:"urgency_score"    json:"urgencyScore"`
-	TicketCode     structs.NullableString `db:"ticket_code"`
-	IsVerified     sql.NullBool           `db:"is_verified"`
-	VerifiedAt     structs.NullableTime   `db:"verified_at"`
-	StartedAt      structs.NullableTime   `db:"started_at"       json:"startedAt"`
-	CompletedAt    structs.NullableTime   `db:"completed_at"     json:"completedAt"`
-	CreatedAt      time.Time              `db:"created_at"`
-	UpdatedAt      time.Time              `db:"updated_at"`
+	StudentNumber      string                 `db:"student_number"   json:"studentNumber"`
+	ContactNumber      string                 `db:"contact_number"   json:"contactNumber"`
+	Reason             string                 `db:"reason"           json:"reason"`
+	DateOfAbsence      string                 `db:"date_of_absence"  json:"dateOfAbsence"`
+	DateNeeded         string                 `db:"date_needed"      json:"dateNeeded"`
+	AdminNotes         structs.NullableString `db:"admin_notes"      json:"adminNotes"`
+	CategoryID         int                    `db:"category_id"      json:"categoryId"`
+	CategoryName       string                 `db:"category_name"    json:"categoryName"`
+	StatusID           int                    `db:"status_id"        json:"statusId"`
+	StatusName         string                 `db:"status_name"      json:"statusName"`
+	UrgencyScore       int                    `db:"urgency_score"    json:"urgencyScore"`
+	TicketCode         structs.NullableString `db:"ticket_code"`
+	IsVerified         sql.NullBool           `db:"is_verified"`
+	VerifiedAt         structs.NullableTime   `db:"verified_at"`
+	StartedAt          structs.NullableTime   `db:"started_at"       json:"startedAt"`
+	CompletedAt        structs.NullableTime   `db:"completed_at"     json:"completedAt"`
+	CreatedAt          time.Time              `db:"created_at"`
+	UpdatedAt          time.Time              `db:"updated_at"`
 }
 
 // SlipStatusCount represents aggregated status metrics.
