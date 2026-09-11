@@ -55,20 +55,22 @@ func RegisterRoutes(
 	sharedRoutes.Use(middleware.RoleMiddleware(
 		constants.AdminRoleID,
 		constants.StudentRoleID,
-		constants.SuperAdminRoleID,
-		constants.DeveloperRoleID,
 	))
 	{
 		sharedRoutes.GET("/id/:slipID", slipLookup, h.GetSlipByID)
 		sharedRoutes.GET("/stats", h.GetSlipStats)
-		sharedRoutes.GET(
-			"/lookups/statuses",
-			h.GetSlipStatuses,
-		)
-		sharedRoutes.GET(
-			"/lookups/categories",
-			h.GetSlipCategories,
-		)
+	}
+
+	lookupRoutes := routes.Group("/lookups")
+	lookupRoutes.Use(middleware.RoleMiddleware(
+		constants.AdminRoleID,
+		constants.StudentRoleID,
+		constants.SuperAdminRoleID,
+		constants.DeveloperRoleID,
+	))
+	{
+		lookupRoutes.GET("/statuses", h.GetSlipStatuses)
+		lookupRoutes.GET("/categories", h.GetSlipCategories)
 	}
 
 	// Attachment routes: Counselors (Admin) and Student owner only.

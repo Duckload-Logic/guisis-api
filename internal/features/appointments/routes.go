@@ -58,7 +58,16 @@ func RegisterRoutes(
 		)
 	}
 
-	sharedLookups := routes.Group("")
+	sharedRoutes := routes.Group("")
+	sharedRoutes.Use(middleware.RoleMiddleware(
+		constants.StudentRoleID,
+		constants.AdminRoleID,
+	))
+	{
+		sharedRoutes.GET("/stats", h.GetAppointmentStats)
+	}
+
+	sharedLookups := routes.Group("/lookups")
 	sharedLookups.Use(middleware.RoleMiddleware(
 		constants.StudentRoleID,
 		constants.AdminRoleID,
@@ -66,9 +75,8 @@ func RegisterRoutes(
 		constants.DeveloperRoleID,
 	))
 	{
-		sharedLookups.GET("/stats", h.GetAppointmentStats)
-		sharedLookups.GET("/lookups/categories", h.GetAppointmentCategories)
-		sharedLookups.GET("/lookups/slots", h.GetAppointmentSlots)
-		sharedLookups.GET("/lookups/statuses", h.GetAppointmentStatuses)
+		sharedLookups.GET("/categories", h.GetAppointmentCategories)
+		sharedLookups.GET("/slots", h.GetAppointmentSlots)
+		sharedLookups.GET("/statuses", h.GetAppointmentStatuses)
 	}
 }
