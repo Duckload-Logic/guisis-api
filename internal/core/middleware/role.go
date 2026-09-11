@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,8 +13,8 @@ func RoleMiddleware(allowedRoles ...constants.RoleID) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		roleIDsVal, exists := c.Get("roleIDs")
 		if !exists {
-			fmt.Printf(
-				"[RoleMiddleware] {Error}: roleIDs not found in context\n",
+			log.Printf(
+				"[RoleMiddleware] {Auth Context}: roleIDs not found in context",
 			)
 			c.AbortWithStatusJSON(
 				http.StatusForbidden,
@@ -35,7 +36,10 @@ func RoleMiddleware(allowedRoles ...constants.RoleID) gin.HandlerFunc {
 				}
 			}
 		default:
-			fmt.Printf("[RoleMiddleware] {Error}: Invalid roleIDs type: %T\n", roleIDsVal)
+			log.Printf(
+				"[RoleMiddleware] {Type Assertion}: invalid roleIDs type: %T",
+				roleIDsVal,
+			)
 			c.AbortWithStatusJSON(
 				http.StatusForbidden,
 				gin.H{"error": "Invalid roles type"},
@@ -45,11 +49,6 @@ func RoleMiddleware(allowedRoles ...constants.RoleID) gin.HandlerFunc {
 
 		isAuthorized := false
 		for _, urid := range userRoles {
-			if urid == int(constants.SuperAdminRoleID) {
-				isAuthorized = true
-				break
-			}
-
 			for _, allowed := range allowedRoles {
 				if int(allowed) == urid {
 					isAuthorized = true
