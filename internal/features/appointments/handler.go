@@ -411,8 +411,7 @@ func (h *Handler) GetAppointmentStats(c *gin.Context) {
 			isStudent = true
 		}
 		if rid == int(constants.AdminRoleID) ||
-			rid == int(constants.SuperAdminRoleID) ||
-			rid == int(constants.DeveloperRoleID) {
+			rid == int(constants.SuperAdminRoleID) {
 			isAdmin = true
 		}
 	}

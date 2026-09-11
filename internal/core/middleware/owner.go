@@ -33,8 +33,7 @@ func OwnershipMiddleware(db *sqlx.DB, paramName string) gin.HandlerFunc {
 		isStudent := false
 		for _, rid := range roleIDs {
 			if rid == int(constants.AdminRoleID) ||
-				rid == int(constants.SuperAdminRoleID) ||
-				rid == int(constants.DeveloperRoleID) {
+				rid == int(constants.SuperAdminRoleID) {
 				isAdmin = true
 				break
 			}

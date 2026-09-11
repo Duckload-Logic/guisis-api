@@ -77,7 +77,6 @@ func RegisterRoutes(
 	attachmentRoutes.Use(middleware.RoleMiddleware(
 		constants.AdminRoleID,
 		constants.StudentRoleID,
-		constants.DeveloperRoleID,
 	))
 	{
 		attachmentRoutes.GET(
