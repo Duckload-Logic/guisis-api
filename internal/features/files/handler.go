@@ -3,8 +3,11 @@ package files
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/middleware"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
 )
 
@@ -22,6 +25,30 @@ func (h *Handler) GetFile(c *gin.Context) {
 	path := c.Param("path")
 	if path == "" {
 		response.SendFail(c, gin.H{"error": "File path is required"})
+		return
+	}
+
+	if strings.Contains(path, "..") {
+		if logSvc, ok := c.Get(middleware.SecurityLoggerContextKey); ok {
+			if svc, ok := logSvc.(middleware.SecurityLogger); ok {
+				svc.RecordSecurity(
+					c.Request.Context(),
+					audit.ActionSecurityBreachAttempt,
+					"Path traversal breach attempt on /uploads"+path,
+					"",
+					c.ClientIP(),
+					c.Request.UserAgent(),
+				)
+			}
+		}
+		log.Printf(
+			"[SECURITY_BREACH_ATTEMPT] Path traversal detected from IP %s: %s",
+			c.ClientIP(),
+			path,
+		)
+		response.SendFail(c, gin.H{
+			"error": "Access denied: security breach attempt logged",
+		}, http.StatusForbidden)
 		return
 	}
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
@@ -465,7 +466,12 @@ func (h *Handler) PostProfilePicture(c *gin.Context) {
 
 	err := h.service.PostProfilePicture(c.Request.Context(), userID, fileID)
 	if err != nil {
-		fmt.Printf("[PostProfilePicture] {PostProfilePicture}: %v\n", err)
+		if strings.Contains(err.Error(), "security:") ||
+			strings.Contains(err.Error(), "invalid") ||
+			strings.Contains(err.Error(), "not found") {
+			response.SendFail(c, gin.H{"error": err.Error()})
+			return
+		}
 		response.SendError(
 			c,
 			"Failed to associate profile picture",

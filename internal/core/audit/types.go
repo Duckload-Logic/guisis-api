@@ -110,11 +110,12 @@ const (
 	ActionM2MClientInvalid    = "M2M_CLIENT_INVALID"
 	ActionM2MAuthSuccess      = "M2M_AUTH_SUCCESS"
 	ActionM2MAuthFailed       = "M2M_AUTH_FAILED"
-	ActionM2MTokenRefreshed   = "M2M_TOKEN_REFRESHED" // nolint:gosec
-	ActionElevateRoles        = "ELEVATE_ROLES"
-	ActionElevateRolesFailed  = "ELEVATE_ROLES_FAILED"
-	ActionM2MDataAccess       = "M2M_DATA_ACCESS"
-	ActionM2MDataAccessDenied = "M2M_DATA_ACCESS_DENIED"
+	ActionM2MTokenRefreshed       = "M2M_TOKEN_REFRESHED" // nolint:gosec
+	ActionElevateRoles            = "ELEVATE_ROLES"
+	ActionElevateRolesFailed      = "ELEVATE_ROLES_FAILED"
+	ActionM2MDataAccess           = "M2M_DATA_ACCESS"
+	ActionM2MDataAccessDenied     = "M2M_DATA_ACCESS_DENIED"
+	ActionSecurityBreachAttempt   = "SECURITY_BREACH_ATTEMPT"
 )
 
 // LogEntry is the input struct used by other services to record a log.

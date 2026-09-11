@@ -355,21 +355,48 @@ func (s *Service) DownloadFile(
 	fileURL string,
 	writer io.Writer,
 ) (string, error) {
-	file, err := s.repo.GetFileByURL(ctx, fileURL)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return "", fmt.Errorf("[FileService] {DownloadFile Meta}: %w", err)
+	if strings.Contains(fileURL, "..") {
+		if s.logger != nil {
+			id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+			s.logger.Record(ctx, nil, audit.LogEntry{
+				Level:    audit.LevelCritical,
+				Category: audit.CategorySecurity,
+				Action:   audit.ActionSecurityBreachAttempt,
+				Message: fmt.Sprintf(
+					"Path traversal attempt detected on file download: %s",
+					fileURL,
+				),
+				UserID:    structs.StringToNullableString(id),
+				UserEmail: structs.StringToNullableString(email),
+				IPAddress: structs.StringToNullableString(ip),
+				UserAgent: structs.StringToNullableString(ua),
+				TraceID:   structs.StringToNullableString(trace),
+			})
+		}
+		return "", fmt.Errorf("security: path traversal attempt detected")
 	}
 
-	blobPath := strings.TrimPrefix(fileURL, "/uploads/")
-	if file != nil && file.FileURL != "" {
-		blobPath = strings.TrimPrefix(file.FileURL, "/uploads/")
+	file, err := s.repo.GetFileByURL(ctx, fileURL)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", fmt.Errorf("file not found")
+		}
+		return "", fmt.Errorf("[FileService] {DownloadFile Meta}: %w", err)
+	}
+	if file == nil || file.FileURL == "" {
+		return "", fmt.Errorf("file not found")
+	}
+
+	blobPath := strings.TrimPrefix(file.FileURL, "/uploads/")
+	if strings.Contains(blobPath, "..") {
+		return "", fmt.Errorf("security: invalid file path detected")
 	}
 
 	if err := s.storage.Download(ctx, blobPath, writer); err != nil {
 		return "", fmt.Errorf("[FileService] {DownloadFile Storage}: %w", err)
 	}
 
-	if file != nil && file.MimeType != "" {
+	if file.MimeType != "" {
 		return file.MimeType, nil
 	}
 
