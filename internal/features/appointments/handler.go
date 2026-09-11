@@ -2,7 +2,7 @@ package appointments
 
 import (
 	"database/sql"
-	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -61,7 +61,10 @@ func getIIRIDFromContext(c *gin.Context) (string, bool) {
 func (h *Handler) GetAppointmentCategories(c *gin.Context) {
 	categories, err := h.service.GetConcernCategories(c.Request.Context())
 	if err != nil {
-		fmt.Printf("[GetAppointmentCategories] {Fetch Categories}: %v\n", err)
+		log.Printf(
+			"[GetAppointmentCategories] {Fetch Categories}: %v",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to retrieve categories",
@@ -101,7 +104,10 @@ func (h *Handler) GetAppointmentDailyStats(c *gin.Context) {
 		req.StartDate,
 	)
 	if err != nil {
-		fmt.Printf("[GetAppointmentDailyStats] {Fetch Daily Stats}: %v\n", err)
+		log.Printf(
+			"[GetAppointmentDailyStats] {Fetch Daily Stats}: %v",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to retrieve statistics",
@@ -152,7 +158,10 @@ func (h *Handler) PostAppointment(c *gin.Context) {
 		c.Request.Context(), iirID, req, h.cfg,
 	)
 	if err != nil {
-		fmt.Printf("[PostAppointment] {Create Appointment}: %v\n", err)
+		log.Printf(
+			"[PostAppointment] {Create Appointment}: %v",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to create appointment",
@@ -186,7 +195,10 @@ func (h *Handler) GetAppointmentByID(c *gin.Context) {
 
 	appt, err := h.service.GetAppointmentByID(c.Request.Context(), id)
 	if err != nil {
-		fmt.Printf("[GetAppointmentByID] {Fetch Appointment}: %v\n", err)
+		log.Printf(
+			"[GetAppointmentByID] {Fetch Appointment}: %v",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to retrieve appointment",
@@ -230,18 +242,29 @@ func (h *Handler) GetAppointments(c *gin.Context) {
 	if c.Query("export") == "csv" {
 		csvData, err := h.service.ExportAppointmentsCSV(c.Request.Context(), req)
 		if err != nil {
-			fmt.Printf("[GetAppointments] {Export CSV}: %v\n", err)
-			response.SendError(c, "Failed to generate CSV report", http.StatusInternalServerError, nil)
+			log.Printf("[GetAppointments] {Export CSV}: %v", err)
+			response.SendError(
+				c,
+				"Failed to generate CSV report",
+				http.StatusInternalServerError,
+				nil,
+			)
 			return
 		}
-		c.Header("Content-Disposition", "attachment; filename=appointments_report.csv")
+		c.Header(
+			"Content-Disposition",
+			"attachment; filename=appointments_report.csv",
+		)
 		c.Data(http.StatusOK, "text/csv; charset=utf-8", csvData)
 		return
 	}
 
 	appts, err := h.service.ListAppointments(c.Request.Context(), req)
 	if err != nil {
-		fmt.Printf("[GetAppointments] {Fetch Appointments}: %v\n", err)
+		log.Printf(
+			"[GetAppointments] {Fetch Appointments}: %v",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to retrieve appointments",
@@ -273,7 +296,7 @@ func (h *Handler) GetAppointmentSlots(c *gin.Context) {
 
 	slots, err := h.service.GetAvailableTimeSlots(c.Request.Context(), date)
 	if err != nil {
-		fmt.Printf("[GetAppointmentSlots] {Fetch Slots}: %v\n", err)
+		log.Printf("[GetAppointmentSlots] {Fetch Slots}: %v", err)
 		response.SendError(
 			c,
 			"Failed to retrieve time slots",
@@ -297,7 +320,10 @@ func (h *Handler) GetAppointmentSlots(c *gin.Context) {
 func (h *Handler) GetAppointmentStatuses(c *gin.Context) {
 	statuses, err := h.service.GetAppointmentStatuses(c.Request.Context())
 	if err != nil {
-		fmt.Printf("[GetAppointmentStatuses] {Fetch Statuses}: %v\n", err)
+		log.Printf(
+			"[GetAppointmentStatuses] {Fetch Statuses}: %v",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to retrieve statuses",
@@ -335,7 +361,10 @@ func (h *Handler) GetAppointmentsMe(c *gin.Context) {
 		c.Request.Context(), iirID, req,
 	)
 	if err != nil {
-		fmt.Printf("[GetAppointmentsMe] {Fetch Appointments}: %v\n", err)
+		log.Printf(
+			"[GetAppointmentsMe] {Fetch Appointments}: %v",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to retrieve appointments",
@@ -421,7 +450,7 @@ func (h *Handler) GetAppointmentStats(c *gin.Context) {
 		c.Request.Context(), req, iirIDPtr,
 	)
 	if err != nil {
-		fmt.Printf("[GetAppointmentStats] {Fetch Stats}: %v\n", err)
+		log.Printf("[GetAppointmentStats] {Fetch Stats}: %v", err)
 		response.SendError(
 			c,
 			"Failed to retrieve statistics",
@@ -460,8 +489,8 @@ func (h *Handler) PostAppointmentCancellation(c *gin.Context) {
 		id,
 	)
 	if err != nil {
-		fmt.Printf(
-			"[PostAppointmentCancellation] {Verify Ownership}: %v\n",
+		log.Printf(
+			"[PostAppointmentCancellation] {Verify Ownership}: %v",
 			err,
 		)
 		response.SendError(
@@ -483,8 +512,8 @@ func (h *Handler) PostAppointmentCancellation(c *gin.Context) {
 
 	appt, err := h.service.GetAppointmentByID(c.Request.Context(), id)
 	if err != nil {
-		fmt.Printf(
-			"[PostAppointmentCancellation] {Fetch Appointment}: %v\n",
+		log.Printf(
+			"[PostAppointmentCancellation] {Fetch Appointment}: %v",
 			err,
 		)
 		response.SendError(
@@ -547,8 +576,8 @@ func (h *Handler) PostAppointmentCancellation(c *gin.Context) {
 	var req CancelAppointmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		if err.Error() != "EOF" {
-			fmt.Printf(
-				"[PostAppointmentCancellation] {Bind Request}: %v\n",
+			log.Printf(
+				"[PostAppointmentCancellation] {Bind Request}: %v",
 				err,
 			)
 		}
@@ -569,7 +598,7 @@ func (h *Handler) PostAppointmentCancellation(c *gin.Context) {
 	if err := h.service.UpdateAppointment(
 		c.Request.Context(), id, updateReq,
 	); err != nil {
-		fmt.Printf("[PostAppointmentCancellation] {Update}: %v\n", err)
+		log.Printf("[PostAppointmentCancellation] {Update}: %v", err)
 		response.SendError(
 			c,
 			"Failed to cancel appointment",
@@ -609,7 +638,10 @@ func (h *Handler) PatchAppointment(c *gin.Context) {
 			)
 			return
 		}
-		fmt.Printf("[PatchAppointment] {Update Appointment}: %v\n", err)
+		log.Printf(
+			"[PatchAppointment] {Update Appointment}: %v",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to update appointment",
@@ -640,7 +672,10 @@ func (h *Handler) PostAppointmentStart(c *gin.Context) {
 		id,
 		req.OffsetMinutes,
 	); err != nil {
-		fmt.Printf("[PostAppointmentStart] {Start Appointment}: %v\n", err)
+		log.Printf(
+			"[PostAppointmentStart] {Start Appointment}: %v",
+			err,
+		)
 		response.SendError(
 			c,
 			"Failed to start appointment",
