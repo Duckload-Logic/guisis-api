@@ -28,6 +28,7 @@ type SlipWithDetailsView struct {
 	UserMiddleName structs.NullableString `db:"user_middle_name" json:"userMiddleName,omitempty"`
 	UserLastName   string                 `db:"user_last_name"   json:"userLastName"`
 	UserEmail      string                 `db:"user_email"       json:"userEmail"`
+	UserProfilePicture structs.NullableString `db:"user_profile_picture"`
 	StudentNumber  string                 `db:"student_number"   json:"studentNumber"`
 	ContactNumber  string                 `db:"contact_number"   json:"contactNumber"`
 	Reason         string                 `db:"reason"           json:"reason"`
