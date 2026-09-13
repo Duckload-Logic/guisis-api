@@ -33,19 +33,27 @@ func (r *Repository) GetByUserID(
 ) ([]Notification, error) {
 	query := strings.Builder{}
 	query.WriteString(`
-		SELECT id, receiver_id, actor_id, target_id, target_type,
-			title, message, type, is_read, is_touched,
-			created_at, updated_at
-		FROM notifications
-		WHERE receiver_id = ?
+		SELECT n.id, n.receiver_id, n.actor_id, n.target_id, n.target_type,
+			n.title, n.message, n.type, n.is_read, n.is_touched,
+			n.created_at, n.updated_at,
+			COALESCE(
+				CONCAT_WS(' ', u.first_name, u.last_name),
+				''
+			) AS actor_name,
+			COALESCE(pf.file_url, '') AS actor_profile_picture
+		FROM notifications n
+		LEFT JOIN users u ON u.id = n.actor_id
+		LEFT JOIN profile_pictures pp ON pp.user_id = n.actor_id
+		LEFT JOIN files pf ON pf.id = pp.file_id
+		WHERE n.receiver_id = ?
 	`)
 
 	args := []interface{}{userID}
 	if unreadOnly {
-		query.WriteString(" AND is_read = FALSE")
+		query.WriteString(" AND n.is_read = FALSE")
 	}
 
-	query.WriteString(" ORDER BY created_at DESC LIMIT ? OFFSET ?")
+	query.WriteString(" ORDER BY n.created_at DESC LIMIT ? OFFSET ?")
 	args = append(args, limit, offset)
 
 	var results []Notification

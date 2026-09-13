@@ -152,17 +152,19 @@ func (s *Service) GetUserNotifications(
 	dtos := make([]audit.NotificationEntry, 0, len(models))
 	for _, m := range models {
 		dtos = append(dtos, audit.NotificationEntry{
-			ID:         m.ID,
-			ReceiverID: m.ReceiverID,
-			ActorID:    m.ActorID,
-			TargetID:   m.TargetID,
-			TargetType: m.TargetType,
-			Title:      m.Title,
-			Message:    m.Message,
-			Type:       m.Type,
-			IsRead:     m.IsRead,
-			IsTouched:  m.IsTouched,
-			CreatedAt:  m.CreatedAt,
+			ID:                  m.ID,
+			ReceiverID:          m.ReceiverID,
+			ActorID:             m.ActorID,
+			ActorName:           m.ActorName,
+			ActorProfilePicture: m.ActorProfilePicture,
+			TargetID:            m.TargetID,
+			TargetType:          m.TargetType,
+			Title:               m.Title,
+			Message:             m.Message,
+			Type:                m.Type,
+			IsRead:              m.IsRead,
+			IsTouched:           m.IsTouched,
+			CreatedAt:           m.CreatedAt,
 		})
 	}
 

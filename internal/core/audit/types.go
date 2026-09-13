@@ -145,17 +145,19 @@ type LogEntry struct {
 // NotificationEntry is the input struct used by other services to send a
 // notification.
 type NotificationEntry struct {
-	ID         string                 `json:"id"`
-	ReceiverID structs.NullableString `json:"receiverId,omitempty"`
-	ActorID    structs.NullableString `json:"actorId,omitempty"`
-	TargetID   structs.NullableString `json:"targetId,omitempty"`
-	TargetType structs.NullableString `json:"targetType,omitempty"`
-	Title      string                 `json:"title"`
-	Message    string                 `json:"message"`
-	Type       string                 `json:"type"`
-	IsRead     bool                   `json:"isRead"`
-	IsTouched  bool                   `json:"isTouched"`
-	CreatedAt  time.Time              `json:"createdAt"`
+	ID                  string                 `json:"id"`
+	ReceiverID          structs.NullableString `json:"receiverId,omitempty"`
+	ActorID             structs.NullableString `json:"actorId,omitempty"`
+	ActorName           structs.NullableString `json:"actorName,omitempty"`
+	ActorProfilePicture structs.NullableString `json:"actorProfilePicture,omitempty"`
+	TargetID            structs.NullableString `json:"targetId,omitempty"`
+	TargetType          structs.NullableString `json:"targetType,omitempty"`
+	Title               string                 `json:"title"`
+	Message             string                 `json:"message"`
+	Type                string                 `json:"type"`
+	IsRead              bool                   `json:"isRead"`
+	IsTouched           bool                   `json:"isTouched"`
+	CreatedAt           time.Time              `json:"createdAt"`
 }
 
 type EmailEntry struct {
