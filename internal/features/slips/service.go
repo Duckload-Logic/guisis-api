@@ -857,7 +857,13 @@ func (s *Service) UpdateExcuseSlip(
 	notifications := []audit.NotificationParams{
 		{
 			ReceiverID: structs.StringToNullableString(studentUserID),
-			Title:      "Slip Updated",
+			TargetID: structs.StringToNullableString(
+				slipID,
+			),
+			TargetType: structs.StringToNullableString(
+				constants.SlipEntityType,
+			),
+			Title: "Slip Updated",
 			Message: fmt.Sprintf(
 				"Your slip #%s has been updated",
 				slipID,
@@ -1138,6 +1144,12 @@ func (s *Service) UpdateExcuseSlipStatus(
 						},
 						Notifications: []audit.NotificationParams{
 							{
+								TargetID: structs.StringToNullableString(
+									id,
+								),
+								TargetType: structs.StringToNullableString(
+									constants.SlipEntityType,
+								),
 								Title: "Admission Slip Status Update Failed",
 								Message: fmt.Sprintf(
 									"Failed to update status for admission slip #%s: %s",

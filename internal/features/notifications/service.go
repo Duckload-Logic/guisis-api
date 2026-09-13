@@ -190,6 +190,14 @@ func (s *Service) MarkAsRead(
 	return s.repo.MarkAsRead(ctx, nil, id, userID)
 }
 
+func (s *Service) MarkTargetAsRead(
+	ctx context.Context,
+	targetID string,
+	userID string,
+) error {
+	return s.repo.MarkTargetAsRead(ctx, nil, targetID, userID)
+}
+
 func (s *Service) MarkAllAsTouched(
 	ctx context.Context,
 	userID string,

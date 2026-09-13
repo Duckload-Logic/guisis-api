@@ -123,6 +123,31 @@ func (h *Handler) PatchNotificationRead(c *gin.Context) {
 	response.SendSuccess(c, gin.H{"message": "Notification marked as read"})
 }
 
+func (h *Handler) PatchTargetNotificationRead(c *gin.Context) {
+	targetID := c.Param("targetId")
+	userID := c.MustGet("userID").(string)
+
+	err := h.service.MarkTargetAsRead(c.Request.Context(), targetID, userID)
+	if err != nil {
+		fmt.Printf(
+			"[PatchTargetNotificationRead] {MarkTargetAsRead}: %s\n",
+			err.Error(),
+		)
+		response.SendError(
+			c,
+			"Failed to mark target notifications as read",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(
+		c,
+		gin.H{"message": "Target notifications marked as read"},
+	)
+}
+
 func (h *Handler) PatchNotificationsTouched(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
 

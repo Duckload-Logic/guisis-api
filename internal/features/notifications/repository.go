@@ -169,6 +169,33 @@ func (r *Repository) MarkAsRead(
 	return nil
 }
 
+func (r *Repository) MarkTargetAsRead(
+	ctx context.Context,
+	tx datastore.DB,
+	targetID string,
+	userID string,
+) error {
+	if tx == nil {
+		tx = r.db
+	}
+
+	query := `
+		UPDATE notifications
+		SET is_read = TRUE, is_touched = TRUE
+		WHERE target_id = ? AND receiver_id = ? AND is_read = FALSE
+	`
+	_, err := tx.ExecContext(ctx, query, targetID, userID)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to mark notifications as read for target %s: %w",
+			targetID,
+			err,
+		)
+	}
+
+	return nil
+}
+
 func (r *Repository) MarkAllAsTouched(
 	ctx context.Context,
 	tx datastore.DB,
