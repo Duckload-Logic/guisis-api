@@ -14,11 +14,16 @@ func RegisterDebugRoutes(
 	rg *gin.RouterGroup,
 	redis *datastore.RedisClient,
 ) {
+	// Strictly disabled in production and staging environments
+	if os.Getenv("IS_PRODUCTION") == "true" ||
+		os.Getenv("IS_STAGING") == "true" {
+		return
+	}
+
 	debugGroup := rg.Group("/debug")
 	{
 		debugGroup.GET("/redis", func(c *gin.Context) {
-			// Basic security check via secret token in URL
-			secret := c.Query("secret")
+			secret := c.GetHeader("X-Debug-Secret")
 			expectedSecret := os.Getenv("REDIS_DEBUG_SECRET")
 
 			if expectedSecret == "" || secret != expectedSecret {
@@ -35,8 +40,8 @@ func RegisterDebugRoutes(
 			)
 			defer cancel()
 
-			// Get all keys
-			keys, err := redis.Client.Keys(ctx, "*").Result()
+			// Safe non-blocking key inspection: scan up to 50 keys max
+			keys, _, err := redis.Client.Scan(ctx, 0, "*", 50).Result()
 			if err != nil {
 				c.JSON(
 					http.StatusInternalServerError,
@@ -45,7 +50,6 @@ func RegisterDebugRoutes(
 				return
 			}
 
-			// Get details for a few keys (optional, but nice)
 			details := make(map[string]interface{})
 			for _, key := range keys {
 				val, _ := redis.Client.Get(ctx, key).Result()
@@ -56,7 +60,7 @@ func RegisterDebugRoutes(
 				"totalKeys": len(keys),
 				"keys":      keys,
 				"data":      details,
-				"server":    "Production Redis (7-alpine)",
+				"server":    "Development Redis",
 				"timestamp": time.Now().Format(time.RFC3339),
 			})
 		})

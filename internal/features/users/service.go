@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"mime/multipart"
+	"strings"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
@@ -161,6 +162,17 @@ func (s *Service) PostProfilePicture(
 	userID string,
 	fileID string,
 ) error {
+	file, err := s.filesSvc.GetFileByID(ctx, fileID)
+	if err != nil || file == nil {
+		return fmt.Errorf("profile picture file not found")
+	}
+
+	// Security: Prevent associating non-profile documents (e.g. CORs, slips)
+	if !strings.Contains(file.FileURL, "/profiles/") ||
+		!strings.HasPrefix(file.MimeType, "image/") {
+		return fmt.Errorf("security: invalid profile picture file")
+	}
+
 	return s.repo.WithTransaction(
 		ctx,
 		func(tx datastore.DB) error {

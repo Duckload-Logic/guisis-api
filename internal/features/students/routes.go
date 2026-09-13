@@ -6,6 +6,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/middleware"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
+	"golang.org/x/time/rate"
 )
 
 func RegisterRoutes(
@@ -178,9 +179,18 @@ func RegisterRoutes(
 
 		studentRoutes.POST("/records/iir", h.PostStudentIIR)
 
-		// COR management
-		studentRoutes.POST("/records/iir/:iirID/cor", h.PostStudentCORByIIRID)
-		studentRoutes.POST("/cors", h.PostStudentCOR)
+		// COR management (Protected by 5 req/min rate limiter against OCR starvation)
+		corUploadLimiter := middleware.NewIPRateLimiter(rate.Limit(5.0/60.0), 3)
+		studentRoutes.POST(
+			"/records/iir/:iirID/cor",
+			middleware.RateLimitMiddleware(corUploadLimiter),
+			h.PostStudentCORByIIRID,
+		)
+		studentRoutes.POST(
+			"/cors",
+			middleware.RateLimitMiddleware(corUploadLimiter),
+			h.PostStudentCOR,
+		)
 		studentRoutes.GET(
 			"/cors/user/:userID",
 			userResourceLookup,

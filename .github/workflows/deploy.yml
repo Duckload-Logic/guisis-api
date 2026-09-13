@@ -89,8 +89,18 @@ jobs:
                         -u ${{ github.repository_owner }} \
                         --password-stdin
 
-                      # Pull the newly pushed images
-                      docker compose -f docker-compose.yml pull api
+                      # Pull the newly pushed images with retry
+                      for i in 1 2 3; do
+                        if docker compose -f docker-compose.yml pull api; then
+                          break
+                        fi
+                        if [ "$i" -eq 3 ]; then
+                          echo "Failed to pull image after 3 attempts."
+                          exit 1
+                        fi
+                        echo "Pull failed, retrying ($i/3)..."
+                        sleep 5
+                      done
 
                       # Recreate containers
                       docker compose -f docker-compose.yml \

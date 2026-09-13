@@ -28,6 +28,7 @@ const (
 		u.middle_name AS user_middle_name,
 		u.last_name AS user_last_name,
 		u.email AS user_email,
+		COALESCE(pf.file_url, '') AS user_profile_picture,
 		spi.student_number AS student_number,
 		COALESCE(spi.mobile_number, '') AS contact_number,
 		slp.reason AS reason,
@@ -49,6 +50,8 @@ const (
 	JOIN iir_records ir ON slp.iir_id = ir.id
 	JOIN student_personal_info spi ON ir.id = spi.iir_id
 	JOIN users u ON ir.user_id = u.id
+	LEFT JOIN profile_pictures pp ON pp.user_id = u.id
+	LEFT JOIN files pf ON pf.id = pp.file_id
 	JOIN admission_slip_categories c ON slp.category_id = c.id
 	JOIN statuses s ON slp.status_id = s.id
 	LEFT JOIN admission_tickets t ON slp.id = t.admission_slip_id

@@ -55,29 +55,41 @@ func RegisterRoutes(
 	sharedRoutes.Use(middleware.RoleMiddleware(
 		constants.AdminRoleID,
 		constants.StudentRoleID,
-		constants.SuperAdminRoleID,
-		constants.DeveloperRoleID,
 	))
 	{
 		sharedRoutes.GET("/id/:slipID", slipLookup, h.GetSlipByID)
 		sharedRoutes.GET("/stats", h.GetSlipStats)
-		sharedRoutes.GET(
+	}
+
+	lookupRoutes := routes.Group("/lookups")
+	lookupRoutes.Use(middleware.RoleMiddleware(
+		constants.AdminRoleID,
+		constants.StudentRoleID,
+		constants.SuperAdminRoleID,
+		constants.DeveloperRoleID,
+	))
+	{
+		lookupRoutes.GET("/statuses", h.GetSlipStatuses)
+		lookupRoutes.GET("/categories", h.GetSlipCategories)
+	}
+
+	// Attachment routes: Counselors (Admin) and Student owner only.
+	// SuperAdmin is excluded from confidential guidance attachments.
+	attachmentRoutes := routes.Group("")
+	attachmentRoutes.Use(middleware.RoleMiddleware(
+		constants.AdminRoleID,
+		constants.StudentRoleID,
+	))
+	{
+		attachmentRoutes.GET(
 			"/id/:slipID/attachments",
 			slipLookup,
 			h.GetSlipAttachments,
 		)
-		sharedRoutes.GET(
+		attachmentRoutes.GET(
 			"/id/:slipID/attachments/:attachmentId",
 			slipLookup,
 			h.GetSlipAttachmentContent,
-		)
-		sharedRoutes.GET(
-			"/lookups/statuses",
-			h.GetSlipStatuses,
-		)
-		sharedRoutes.GET(
-			"/lookups/categories",
-			h.GetSlipCategories,
 		)
 	}
 }

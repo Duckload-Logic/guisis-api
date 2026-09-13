@@ -30,6 +30,10 @@ func RegisterRoutes(
 
 		userRoutes.PATCH("/me/read", h.PatchNotificationsRead)
 		userRoutes.PATCH("/me/touched", h.PatchNotificationsTouched)
+		userRoutes.PATCH(
+			"/target/:targetId/read",
+			h.PatchTargetNotificationRead,
+		)
 		userRoutes.PATCH("/:id/read", h.PatchNotificationRead)
 
 		userRoutes.POST("/push/subscribe", h.PostPushSubscription)
