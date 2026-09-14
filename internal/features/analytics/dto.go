@@ -46,11 +46,11 @@ type IIRAnalyticsReportResponse struct {
 }
 
 type MonthlyVisitorStatDTO struct {
-	Period   string `json:"period"`   // Labels (Daily, Weekly, Monthly, Yearly)
-	Month    string `json:"month"`    // BC for react-web (Monthly only)
-	Logins   int    `json:"logins"`   // System Traffic specific
-	Activity int    `json:"activity"` // System Traffic specific
-	Count    int    `json:"count"`    // Generic count (Appointments or Logins)
+	Period   string `db:"period"   json:"period"`
+	Month    string `db:"month"    json:"month"`
+	Logins   int    `db:"logins"   json:"logins"`
+	Activity int    `db:"activity" json:"activity"`
+	Count    int    `db:"count"    json:"count"`
 }
 
 type AdminDashboardResponse struct {

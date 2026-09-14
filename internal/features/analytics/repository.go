@@ -172,12 +172,18 @@ func (r *Repository) GetMonthlyVisitorStats(
 				DATE_ADD(created_at, INTERVAL 8 HOUR),
 				'` + format + `'
 			) as month,
-			SUM(
-				CASE WHEN action = 'LOGIN_SUCCESS' THEN 1 ELSE 0 END
+			COALESCE(
+				CAST(
+					SUM(CASE WHEN action = 'LOGIN_SUCCESS' THEN 1 ELSE 0 END)
+					AS SIGNED
+				), 0
 			) as logins,
 			COUNT(*) as activity,
-			SUM(
-				CASE WHEN action = 'LOGIN_SUCCESS' THEN 1 ELSE 0 END
+			COALESCE(
+				CAST(
+					SUM(CASE WHEN action = 'LOGIN_SUCCESS' THEN 1 ELSE 0 END)
+					AS SIGNED
+				), 0
 			) as count
 		FROM system_logs
 		WHERE created_at >= DATE_SUB(` + baseDate + `,
