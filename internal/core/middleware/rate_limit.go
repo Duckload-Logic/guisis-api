@@ -4,47 +4,78 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
 
+const (
+	rateLimiterCleanupInterval = 10 * time.Minute
+	rateLimiterIdleTimeout     = 15 * time.Minute
+)
+
+type clientLimiter struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
+
 type IPRateLimiter struct {
-	ips map[string]*rate.Limiter
-	mu  *sync.RWMutex
-	r   rate.Limit
-	b   int
+	clients map[string]*clientLimiter
+	mu      *sync.RWMutex
+	r       rate.Limit
+	b       int
 }
 
 func NewIPRateLimiter(r rate.Limit, b int) *IPRateLimiter {
-	return &IPRateLimiter{
-		ips: make(map[string]*rate.Limiter),
-		mu:  &sync.RWMutex{},
-		r:   r,
-		b:   b,
+	limiter := &IPRateLimiter{
+		clients: make(map[string]*clientLimiter),
+		mu:      &sync.RWMutex{},
+		r:       r,
+		b:       b,
 	}
+
+	go limiter.cleanupRoutine(
+		rateLimiterCleanupInterval,
+		rateLimiterIdleTimeout,
+	)
+
+	return limiter
 }
 
 func (i *IPRateLimiter) GetLimiter(key string) *rate.Limiter {
-	i.mu.RLock()
-	limiter, exists := i.ips[key]
-	i.mu.RUnlock()
-
-	if exists {
-		return limiter
-	}
-
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	// Double-check after acquiring write lock
-	limiter, exists = i.ips[key]
+	client, exists := i.clients[key]
 	if !exists {
-		limiter = rate.NewLimiter(i.r, i.b)
-		i.ips[key] = limiter
+		limiter := rate.NewLimiter(i.r, i.b)
+		i.clients[key] = &clientLimiter{
+			limiter:  limiter,
+			lastSeen: time.Now(),
+		}
+		return limiter
 	}
 
-	return limiter
+	client.lastSeen = time.Now()
+	return client.limiter
+}
+
+func (i *IPRateLimiter) cleanupRoutine(
+	interval time.Duration,
+	idleTimeout time.Duration,
+) {
+	ticker := time.NewTicker(interval)
+	for range ticker.C {
+		i.mu.Lock()
+		now := time.Now()
+		for key, client := range i.clients {
+			if now.Sub(client.lastSeen) > idleTimeout {
+				delete(i.clients, key)
+			}
+		}
+		i.mu.Unlock()
+	}
 }
 
 func RateLimitMiddleware(limiter *IPRateLimiter) gin.HandlerFunc {
