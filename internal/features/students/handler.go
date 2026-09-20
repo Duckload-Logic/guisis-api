@@ -990,6 +990,10 @@ func (h *Handler) GetStudentIIRPDF(c *gin.Context) {
 	)
 	if err != nil {
 		log.Printf("[GetStudentIIRPDF] {Service Call}: %v", err)
+		if errors.Is(err, ErrIncompleteIIR) {
+			response.SendFail(c, gin.H{"error": err.Error()})
+			return
+		}
 		c.Error(fmt.Errorf(
 			"[GetStudentIIRPDF] {Service Call}: %v",
 			err,
