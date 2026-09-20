@@ -93,6 +93,9 @@ var (
 		"This Certificate of Registration does not match your student record",
 	)
 	ErrInvalidCOR = errors.New("invalid COR")
+	ErrIncompleteIIR = errors.New(
+		"cannot generate IIR: required fields are missing",
+	)
 )
 
 type ValidationError struct {
@@ -1770,6 +1773,74 @@ func (s *Service) saveComprehensiveProfile(
 	return iirID, nil
 }
 
+func (s *Service) validateIIRCompleteness(
+	profile *ComprehensiveProfileDTO,
+) error {
+	var hasElementary bool
+	for _, school := range profile.Education.School {
+		if strings.EqualFold(school.EducationalLevel.Name, "Elementary") {
+			hasElementary = true
+			break
+		}
+	}
+
+	var hasFather bool
+	var hasMother bool
+	for _, person := range profile.Family.RelatedPersons {
+		relName := strings.ToLower(strings.TrimSpace(person.Relationship.Name))
+		hasName := strings.TrimSpace(person.FirstName) != "" &&
+			strings.TrimSpace(person.LastName) != ""
+		if !hasName {
+			continue
+		}
+
+		if relName == "father" ||
+			person.Relationship.ID == 1 ||
+			strings.Contains(relName, "father") {
+			hasFather = true
+		} else if relName == "mother" ||
+			person.Relationship.ID == 2 ||
+			strings.Contains(relName, "mother") {
+			hasMother = true
+		}
+	}
+
+	if !hasElementary || !hasFather || !hasMother {
+		var missing []string
+		if !hasElementary {
+			missing = append(
+				missing,
+				"Elementary School under Educational Background",
+			)
+		}
+		if !hasFather && !hasMother {
+			missing = append(
+				missing,
+				"Father and Mother information under Family Background",
+			)
+		} else if !hasFather {
+			missing = append(
+				missing,
+				"Father's information under Family Background",
+			)
+		} else if !hasMother {
+			missing = append(
+				missing,
+				"Mother's information under Family Background",
+			)
+		}
+
+		return fmt.Errorf(
+			"%w: missing %s. "+
+				"Please complete these fields before printing.",
+			ErrIncompleteIIR,
+			strings.Join(missing, " and "),
+		)
+	}
+
+	return nil
+}
+
 func (s *Service) GenerateIIR(
 	ctx context.Context,
 	iirID string,
@@ -1778,6 +1849,10 @@ func (s *Service) GenerateIIR(
 	profile, err := s.GetStudentProfile(ctx, iirID)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get student profile: %w", err)
+	}
+
+	if err := s.validateIIRCompleteness(profile); err != nil {
+		return nil, "", err
 	}
 
 	iir, err := s.repo.GetStudentIIR(ctx, iirID)
