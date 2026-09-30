@@ -44,6 +44,7 @@ func RegisterRoutes(
 		adminRoutes.Use(middleware.RoleMiddleware(
 			constants.AdminRoleID,
 			constants.SuperAdminRoleID,
+			constants.DeveloperRoleID,
 		))
 		{
 			adminRoutes.GET("/tickets", h.GetSupportTickets)

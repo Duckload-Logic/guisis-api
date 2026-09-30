@@ -194,14 +194,26 @@ func (s *Service) notifyUserOfNewMessage(
 	userID string,
 	ticketID string,
 	senderName string,
+	senderRole string,
 ) {
+	var notifMsg string
+	if senderRole != "" {
+		notifMsg = fmt.Sprintf(
+			"%s (%s) replied to your support ticket",
+			senderName,
+			senderRole,
+		)
+	} else {
+		notifMsg = fmt.Sprintf(
+			"%s replied to your support ticket",
+			senderName,
+		)
+	}
+
 	notif := audit.NotificationEntry{
 		ReceiverID: structs.StringToNullableString(userID),
 		Title:      "Support Message",
-		Message: fmt.Sprintf(
-			"%s replied to your support ticket",
-			senderName,
-		),
+		Message:    notifMsg,
 		Type:       "System",
 		TargetID:   structs.StringToNullableString(ticketID),
 		TargetType: structs.StringToNullableString("SupportTicket"),
@@ -271,12 +283,15 @@ func (s *Service) AddMessage(
 			ticket.UserID.String,
 			ticketID,
 			senderName,
+			senderRole,
 		)
 		go s.sendReplyEmailToUser(
 			context.Background(),
 			ticket.UserID.String,
 			ticketID,
 			req.Message,
+			senderName,
+			senderRole,
 		)
 	} else if !ticket.UserID.Valid && senderID != "" {
 		if ticket.GuestEmail.Valid && ticket.GuestEmail.String != "" {
@@ -291,6 +306,8 @@ func (s *Service) AddMessage(
 				recipientName,
 				ticketID,
 				req.Message,
+				senderName,
+				senderRole,
 			)
 		}
 	} else if isStudentReply || isGuestReply {
@@ -540,6 +557,8 @@ func (s *Service) sendReplyEmailToUser(
 	userID string,
 	ticketID string,
 	message string,
+	senderName string,
+	senderRole string,
 ) {
 	user, err := s.usersSvc.GetUserByID(ctx, userID)
 	if err != nil || user == nil {
@@ -551,7 +570,15 @@ func (s *Service) sendReplyEmailToUser(
 	}
 
 	name := fmt.Sprintf("%s %s", user.FirstName, user.LastName)
-	s.sendReplyEmail(ctx, user.Email, name, ticketID, message)
+	s.sendReplyEmail(
+		ctx,
+		user.Email,
+		name,
+		ticketID,
+		message,
+		senderName,
+		senderRole,
+	)
 }
 
 func (s *Service) sendReplyEmail(
@@ -560,10 +587,19 @@ func (s *Service) sendReplyEmail(
 	name string,
 	ticketID string,
 	message string,
+	senderName string,
+	senderRole string,
 ) {
 	ticketShort := ticketID
 	if len(ticketShort) > 8 {
 		ticketShort = ticketShort[:8]
+	}
+
+	senderInfo := "Guidance Office personnel"
+	if senderName != "" && senderRole != "" {
+		senderInfo = fmt.Sprintf("%s (%s)", senderName, senderRole)
+	} else if senderName != "" {
+		senderInfo = senderName
 	}
 
 	body := fmt.Sprintf(`
@@ -571,9 +607,9 @@ func (s *Service) sendReplyEmail(
 		`max-width: 600px; margin: 0 auto; border: 1px solid #eee; `+
 		`border-radius: 8px;">
 	<h2 style="color: #800000; border-bottom: 2px solid #800000; `+
-		`padding-bottom: 10px; margin-top: 0;">GuiSIS Support</h2>
+		`padding-bottom: 10px; margin-top: 0;">Guidance Office Support</h2>
 	<p>Hi %s,</p>
-	<p>A support representative has replied to your ticket `+
+	<p><strong>%s</strong> has replied to your support ticket `+
 		`(<strong>#%s</strong>):</p>
 	<div style="background-color: #f9f9f9; border-left: 4px solid `+
 		`#800000; padding: 12px 15px; margin: 15px 0; `+
@@ -585,12 +621,12 @@ func (s *Service) sendReplyEmail(
 		`margin-bottom: 0;">This is an automated notification. `+
 		`Please do not reply directly to this email.</p>
 </div>
-`, name, ticketShort, message)
+`, name, senderInfo, ticketShort, message)
 
 	emailEntry := audit.EmailEntry{
 		To: []string{email},
 		Subject: fmt.Sprintf(
-			"GuiSIS Support - Ticket #%s Reply",
+			"Guidance Office Support - Ticket #%s Reply",
 			ticketShort,
 		),
 		Body: body,
