@@ -46,6 +46,7 @@ type MessageResponse struct {
 	TicketID   string    `json:"ticketId"`
 	SenderID   *string   `json:"senderId"`
 	SenderName string    `json:"senderName"`
+	SenderRole *string   `json:"senderRole,omitempty"`
 	Message    string    `json:"message"`
 	CreatedAt  time.Time `json:"createdAt"`
 }

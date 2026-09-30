@@ -52,13 +52,16 @@ func (s *Service) OpenTicket(
 	}
 
 	var senderName string
+	var senderRole string
 	if authUserID != "" {
 		ticket.UserID = structs.StringToNullableString(authUserID)
 		user, err := s.usersSvc.GetUserByID(ctx, authUserID)
 		if err == nil && user != nil {
 			senderName = fmt.Sprintf("%s %s", user.FirstName, user.LastName)
+			senderRole = s.resolveSenderRole(user.Roles)
 		} else {
 			senderName = "Student"
+			senderRole = "Student"
 		}
 	} else {
 		if req.GuestName != nil {
@@ -67,6 +70,7 @@ func (s *Service) OpenTicket(
 		} else {
 			senderName = "Guest"
 		}
+		senderRole = "Guest"
 		if req.GuestEmail != nil {
 			ticket.GuestEmail = structs.PointerToNullableString(req.GuestEmail)
 		}
@@ -83,6 +87,7 @@ func (s *Service) OpenTicket(
 		ID:         messageID,
 		TicketID:   ticketID,
 		SenderName: senderName,
+		SenderRole: structs.StringToNullableString(senderRole),
 		Message:    req.Message,
 	}
 	if authUserID != "" {
@@ -218,12 +223,15 @@ func (s *Service) AddMessage(
 	}
 
 	var senderName string
+	var senderRole string
 	if senderID != "" {
 		user, err := s.usersSvc.GetUserByID(ctx, senderID)
 		if err == nil && user != nil {
 			senderName = fmt.Sprintf("%s %s", user.FirstName, user.LastName)
+			senderRole = s.resolveSenderRole(user.Roles)
 		} else {
-			senderName = "Admin"
+			senderName = "System Admin"
+			senderRole = "System Admin"
 		}
 	} else {
 		if ticket.GuestName.Valid && ticket.GuestName.String != "" {
@@ -231,6 +239,7 @@ func (s *Service) AddMessage(
 		} else {
 			senderName = "Guest"
 		}
+		senderRole = "Guest"
 	}
 
 	msgID := uuid.New().String()
@@ -238,6 +247,7 @@ func (s *Service) AddMessage(
 		ID:         msgID,
 		TicketID:   ticketID,
 		SenderName: senderName,
+		SenderRole: structs.StringToNullableString(senderRole),
 		Message:    req.Message,
 	}
 	if senderID != "" {
@@ -487,10 +497,31 @@ func (s *Service) MarkTicketAsRead(
 	return s.repo.MarkTicketAsRead(ctx, ticketID, userID)
 }
 
+func (s *Service) resolveSenderRole(roles []users.Role) string {
+	for _, r := range roles {
+		if r.ID == int(constants.SuperAdminRoleID) ||
+			r.ID == int(constants.DeveloperRoleID) {
+			return "System Admin"
+		}
+		if r.ID == int(constants.AdminRoleID) {
+			return "Guidance Counselor"
+		}
+		if r.ID == int(constants.StudentAssistantRoleID) {
+			return "Student Assistant"
+		}
+	}
+	return "Student"
+}
+
 func (s *Service) mapMessageToResponse(m *SupportMessage) *MessageResponse {
 	var senderID *string
 	if m.SenderID.Valid && m.SenderID.String != "" {
 		senderID = &m.SenderID.String
+	}
+
+	var senderRole *string
+	if m.SenderRole.Valid && m.SenderRole.String != "" {
+		senderRole = &m.SenderRole.String
 	}
 
 	return &MessageResponse{
@@ -498,6 +529,7 @@ func (s *Service) mapMessageToResponse(m *SupportMessage) *MessageResponse {
 		TicketID:   m.TicketID,
 		SenderID:   senderID,
 		SenderName: m.SenderName,
+		SenderRole: senderRole,
 		Message:    m.Message,
 		CreatedAt:  m.CreatedAt,
 	}

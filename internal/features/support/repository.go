@@ -42,9 +42,9 @@ func (r *Repository) CreateMessage(
 ) error {
 	query := `
 		INSERT INTO support_messages (
-			id, ticket_id, sender_id, sender_name, message
+			id, ticket_id, sender_id, sender_name, sender_role, message
 		) VALUES (
-			:id, :ticket_id, :sender_id, :sender_name, :message
+			:id, :ticket_id, :sender_id, :sender_name, :sender_role, :message
 		)
 	`
 	_, err := r.db.NamedExecContext(ctx, query, msg)

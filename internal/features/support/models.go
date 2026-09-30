@@ -21,6 +21,7 @@ type SupportMessage struct {
 	TicketID   string                 `db:"ticket_id"   json:"ticketId"`
 	SenderID   structs.NullableString `db:"sender_id"   json:"senderId"`
 	SenderName string                 `db:"sender_name" json:"senderName"`
+	SenderRole structs.NullableString `db:"sender_role" json:"senderRole"`
 	Message    string                 `db:"message"     json:"message"`
 	CreatedAt  time.Time              `db:"created_at"  json:"createdAt"`
 }
