@@ -83,25 +83,32 @@ func (h *Handler) PostSlip(c *gin.Context) {
 		return
 	}
 
-	var files []*multipart.FileHeader
+	var excuseLetterFiles []*multipart.FileHeader
 	var parentIdFiles []*multipart.FileHeader
+	var medicalCertFiles []*multipart.FileHeader
 
-	for _, field := range []string{"files", "excuseLetter", "medicalCert"} {
+	// "files" is retained as a legacy alias for excuse-letter/supporting files.
+	for _, field := range []string{"files", "excuseLetter"} {
 		if f := form.File[field]; len(f) > 0 {
-			files = append(files, f...)
+			excuseLetterFiles = append(excuseLetterFiles, f...)
 		}
 	}
 	if f := form.File["parentId"]; len(f) > 0 {
 		parentIdFiles = append(parentIdFiles, f...)
 	}
+	if f := form.File["medicalCert"]; len(f) > 0 {
+		medicalCertFiles = append(medicalCertFiles, f...)
+	}
 
-	if len(files) == 0 && len(parentIdFiles) == 0 {
+	if len(excuseLetterFiles) == 0 && len(parentIdFiles) == 0 &&
+		len(medicalCertFiles) == 0 {
 		response.SendFail(c, gin.H{"error": "At least one file required"})
 		return
 	}
 
 	slip, err := h.service.SubmitExcuseSlip(
-		c.Request.Context(), iirID, req, files, parentIdFiles,
+		c.Request.Context(), iirID, req,
+		excuseLetterFiles, parentIdFiles, medicalCertFiles,
 	)
 	if err != nil {
 		fmt.Printf("[PostSlip] {Submit Excuse Slip}: %v\n", err)
@@ -520,26 +527,33 @@ func (h *Handler) PatchSlip(c *gin.Context) {
 		return
 	}
 
-	var files []*multipart.FileHeader
+	var excuseLetterFiles []*multipart.FileHeader
 	var parentIdFiles []*multipart.FileHeader
+	var medicalCertFiles []*multipart.FileHeader
 
-	for _, field := range []string{"files", "excuseLetter", "medicalCert"} {
+	// "files" is retained as a legacy alias for excuse-letter/supporting files.
+	for _, field := range []string{"files", "excuseLetter"} {
 		if f := form.File[field]; len(f) > 0 {
-			files = append(files, f...)
+			excuseLetterFiles = append(excuseLetterFiles, f...)
 		}
 	}
 	if f := form.File["parentId"]; len(f) > 0 {
 		parentIdFiles = append(parentIdFiles, f...)
 	}
+	if f := form.File["medicalCert"]; len(f) > 0 {
+		medicalCertFiles = append(medicalCertFiles, f...)
+	}
 
-	if len(files) == 0 && len(parentIdFiles) == 0 &&
+	if len(excuseLetterFiles) == 0 && len(parentIdFiles) == 0 &&
+		len(medicalCertFiles) == 0 &&
 		len(req.KeepFileIDs) == 0 {
 		response.SendFail(c, gin.H{"error": "At least one file required"})
 		return
 	}
 
 	slip, err := h.service.UpdateExcuseSlip(
-		c.Request.Context(), iirID, idParam, req, files, parentIdFiles,
+		c.Request.Context(), iirID, idParam, req,
+		excuseLetterFiles, parentIdFiles, medicalCertFiles,
 	)
 	if err != nil {
 		fmt.Printf("[PatchSlip] {Update Excuse Slip}: %v\n", err)
