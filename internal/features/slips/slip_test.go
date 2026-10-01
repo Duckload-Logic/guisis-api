@@ -268,6 +268,7 @@ func TestSlipLifecycle(t *testing.T) {
 		req,
 		[]*multipart.FileHeader{excuseFile},
 		[]*multipart.FileHeader{parentIDFile},
+		nil,
 	)
 	if err != nil {
 		t.Fatalf("SubmitExcuseSlip failed: %v", err)
