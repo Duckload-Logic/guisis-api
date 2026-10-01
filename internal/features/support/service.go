@@ -405,8 +405,17 @@ func (s *Service) GetTicketsByUserID(
 func (s *Service) CloseTicket(
 	ctx context.Context,
 	ticketID string,
-) error {
-	return s.repo.UpdateTicketStatus(ctx, ticketID, "CLOSED")
+) (*TicketResponse, error) {
+	if err := s.repo.UpdateTicketStatus(ctx, ticketID, "CLOSED"); err != nil {
+		return nil, err
+	}
+
+	ticket, err := s.repo.GetTicket(ctx, ticketID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load resolved ticket: %w", err)
+	}
+
+	return s.mapTicketToResponse(ticket), nil
 }
 
 func (s *Service) GetTicket(

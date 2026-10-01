@@ -318,7 +318,7 @@ func (h *Handler) PatchSupportTicketStatus(c *gin.Context) {
 		return
 	}
 
-	err := h.service.CloseTicket(c.Request.Context(), ticketID)
+	res, err := h.service.CloseTicket(c.Request.Context(), ticketID)
 	if err != nil {
 		fmt.Printf(
 			"[PatchSupportTicketStatus] {CloseTicket}: %v\n",
@@ -333,7 +333,7 @@ func (h *Handler) PatchSupportTicketStatus(c *gin.Context) {
 		return
 	}
 
-	response.SendSuccess(c, gin.H{"message": "Ticket marked as resolved"})
+	response.SendSuccess(c, res)
 }
 
 func (h *Handler) getOptionalClaims(
