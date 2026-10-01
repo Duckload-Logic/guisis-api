@@ -30,6 +30,13 @@ import (
 )
 
 const MaxFileSize = 5 * 1024 * 1024 // 5MB limit
+const MaxFilesPerDocumentType = 3
+
+const (
+	attachmentTypeExcuseLetter = "EXCUSE LETTER"
+	attachmentTypeParentID     = "PARENT VALID ID"
+	attachmentTypeMedicalCert  = "MEDICAL"
+)
 
 const (
 	statusPending     = 1
@@ -397,6 +404,197 @@ func (s *Service) validateFiles(files []*multipart.FileHeader) error {
 	return nil
 }
 
+func validateDocumentFileCount(
+	documentLabel string,
+	files []*multipart.FileHeader,
+) error {
+	if len(files) > MaxFilesPerDocumentType {
+		return fmt.Errorf(
+			"%s file limit exceeded: maximum %d files allowed",
+			documentLabel,
+			MaxFilesPerDocumentType,
+		)
+	}
+	return nil
+}
+
+func validateDocumentTotalSize(
+	documentLabel string,
+	files []*multipart.FileHeader,
+	keptFileSize int64,
+) error {
+	totalSize := keptFileSize
+	for _, file := range files {
+		totalSize += file.Size
+	}
+
+	if totalSize > MaxFileSize {
+		return fmt.Errorf(
+			"%s total file size limit exceeded: maximum 5MB allowed",
+			documentLabel,
+		)
+	}
+	return nil
+}
+
+func validateDocumentFileCounts(
+	excuseLetterFiles []*multipart.FileHeader,
+	parentIDFiles []*multipart.FileHeader,
+	medicalCertFiles []*multipart.FileHeader,
+) error {
+	if err := validateDocumentFileCount("Excuse Letter", excuseLetterFiles); err != nil {
+		return err
+	}
+	if err := validateDocumentFileCount("Parent's ID", parentIDFiles); err != nil {
+		return err
+	}
+	if err := validateDocumentFileCount("Medical Certificate", medicalCertFiles); err != nil {
+		return err
+	}
+	if err := validateDocumentTotalSize("Excuse Letter", excuseLetterFiles, 0); err != nil {
+		return err
+	}
+	if err := validateDocumentTotalSize("Parent's ID", parentIDFiles, 0); err != nil {
+		return err
+	}
+	if err := validateDocumentTotalSize("Medical Certificate", medicalCertFiles, 0); err != nil {
+		return err
+	}
+	return nil
+}
+
+func buildSlipUploadBatch(
+	excuseLetterFiles []*multipart.FileHeader,
+	parentIDFiles []*multipart.FileHeader,
+	medicalCertFiles []*multipart.FileHeader,
+) ([]*multipart.FileHeader, []string) {
+	allFiles := make(
+		[]*multipart.FileHeader,
+		0,
+		len(excuseLetterFiles)+len(parentIDFiles)+len(medicalCertFiles),
+	)
+	attachmentTypes := make([]string, 0, cap(allFiles))
+
+	for _, file := range excuseLetterFiles {
+		allFiles = append(allFiles, file)
+		attachmentTypes = append(attachmentTypes, attachmentTypeExcuseLetter)
+	}
+	for _, file := range parentIDFiles {
+		allFiles = append(allFiles, file)
+		attachmentTypes = append(attachmentTypes, attachmentTypeParentID)
+	}
+	for _, file := range medicalCertFiles {
+		allFiles = append(allFiles, file)
+		attachmentTypes = append(attachmentTypes, attachmentTypeMedicalCert)
+	}
+
+	return allFiles, attachmentTypes
+}
+
+func normalizedAttachmentType(attachment SlipAttachment) string {
+	switch strings.ToUpper(attachment.AttachmentType) {
+	case attachmentTypeExcuseLetter:
+		return attachmentTypeExcuseLetter
+	case attachmentTypeParentID:
+		return attachmentTypeParentID
+	case attachmentTypeMedicalCert:
+		return attachmentTypeMedicalCert
+	}
+
+	fileName := strings.ToLower(attachment.FileName)
+	switch {
+	case strings.HasPrefix(fileName, "excuseletter-"):
+		return attachmentTypeExcuseLetter
+	case strings.HasPrefix(fileName, "parentid-"):
+		return attachmentTypeParentID
+	case strings.HasPrefix(fileName, "medicalcert-"):
+		return attachmentTypeMedicalCert
+	default:
+		return attachment.AttachmentType
+	}
+}
+
+func validateUpdatedDocumentFileCounts(
+	oldAttachments []SlipAttachment,
+	keepFileIDs []string,
+	excuseLetterFiles []*multipart.FileHeader,
+	parentIDFiles []*multipart.FileHeader,
+	medicalCertFiles []*multipart.FileHeader,
+) error {
+	keptIDs := make(map[string]struct{}, len(keepFileIDs))
+	for _, fileID := range keepFileIDs {
+		keptIDs[fileID] = struct{}{}
+	}
+
+	excuseCount := len(excuseLetterFiles)
+	parentIDCount := len(parentIDFiles)
+	medicalCount := len(medicalCertFiles)
+	var keptExcuseSize int64
+	var keptParentIDSize int64
+	var keptMedicalSize int64
+
+	for _, attachment := range oldAttachments {
+		if _, keep := keptIDs[attachment.FileID]; !keep {
+			continue
+		}
+
+		switch normalizedAttachmentType(attachment) {
+		case attachmentTypeExcuseLetter:
+			excuseCount++
+			keptExcuseSize += attachment.FileSize
+		case attachmentTypeParentID:
+			parentIDCount++
+			keptParentIDSize += attachment.FileSize
+		case attachmentTypeMedicalCert:
+			medicalCount++
+			keptMedicalSize += attachment.FileSize
+		}
+	}
+
+	if excuseCount > MaxFilesPerDocumentType {
+		return fmt.Errorf(
+			"Excuse Letter file limit exceeded: maximum %d files allowed",
+			MaxFilesPerDocumentType,
+		)
+	}
+	if parentIDCount > MaxFilesPerDocumentType {
+		return fmt.Errorf(
+			"Parent's ID file limit exceeded: maximum %d files allowed",
+			MaxFilesPerDocumentType,
+		)
+	}
+	if medicalCount > MaxFilesPerDocumentType {
+		return fmt.Errorf(
+			"Medical Certificate file limit exceeded: maximum %d files allowed",
+			MaxFilesPerDocumentType,
+		)
+	}
+
+	if err := validateDocumentTotalSize(
+		"Excuse Letter",
+		excuseLetterFiles,
+		keptExcuseSize,
+	); err != nil {
+		return err
+	}
+	if err := validateDocumentTotalSize(
+		"Parent's ID",
+		parentIDFiles,
+		keptParentIDSize,
+	); err != nil {
+		return err
+	}
+	if err := validateDocumentTotalSize(
+		"Medical Certificate",
+		medicalCertFiles,
+		keptMedicalSize,
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Service) validateFilesOCR(
 	ctx context.Context,
 	files []*multipart.FileHeader,
@@ -432,11 +630,23 @@ func (s *Service) SubmitExcuseSlip(
 	ctx context.Context,
 	iirID string,
 	req CreateSlipRequest,
-	files []*multipart.FileHeader,
-	parentIdFiles []*multipart.FileHeader,
+	excuseLetterFiles []*multipart.FileHeader,
+	parentIDFiles []*multipart.FileHeader,
+	medicalCertFiles []*multipart.FileHeader,
 ) (*SlipDTO, error) {
-	allFiles := append([]*multipart.FileHeader{}, files...)
-	allFiles = append(allFiles, parentIdFiles...)
+	if err := validateDocumentFileCounts(
+		excuseLetterFiles,
+		parentIDFiles,
+		medicalCertFiles,
+	); err != nil {
+		return nil, err
+	}
+
+	allFiles, attachmentTypes := buildSlipUploadBatch(
+		excuseLetterFiles,
+		parentIDFiles,
+		medicalCertFiles,
+	)
 
 	// Validate all files
 	if err := s.validateFiles(allFiles); err != nil {
@@ -444,7 +654,11 @@ func (s *Service) SubmitExcuseSlip(
 	}
 
 	// OCR check on non-ID files
-	if err := s.validateFilesOCR(ctx, files); err != nil {
+	nonIDFiles := append(
+		append([]*multipart.FileHeader{}, excuseLetterFiles...),
+		medicalCertFiles...,
+	)
+	if err := s.validateFilesOCR(ctx, nonIDFiles); err != nil {
 		return nil, err
 	}
 
@@ -515,11 +729,11 @@ func (s *Service) SubmitExcuseSlip(
 			}
 
 			// Loop to create attachment records linked to files table
-			for _, f := range uploadedFiles {
+			for i, f := range uploadedFiles {
 				attachment := &SlipAttachment{
 					FileID:         f.ID,
 					SlipID:         structs.StringToNullableString(slip.ID),
-					AttachmentType: "OTHER",
+					AttachmentType: attachmentTypes[i],
 				}
 				if err := s.repo.SaveSlipAttachment(
 					ctx,
@@ -669,8 +883,9 @@ func (s *Service) UpdateExcuseSlip(
 	iirID string,
 	slipID string,
 	req CreateSlipRequest,
-	files []*multipart.FileHeader,
-	parentIdFiles []*multipart.FileHeader,
+	excuseLetterFiles []*multipart.FileHeader,
+	parentIDFiles []*multipart.FileHeader,
+	medicalCertFiles []*multipart.FileHeader,
 ) (*SlipDTO, error) {
 	// Fetch existing slip and validate ownership/status
 	existingSlip, err := s.repo.GetSlipByID(ctx, slipID)
@@ -690,8 +905,11 @@ func (s *Service) UpdateExcuseSlip(
 		return nil, fmt.Errorf("cannot edit slip in current status")
 	}
 
-	allFiles := append([]*multipart.FileHeader{}, files...)
-	allFiles = append(allFiles, parentIdFiles...)
+	allFiles, attachmentTypes := buildSlipUploadBatch(
+		excuseLetterFiles,
+		parentIDFiles,
+		medicalCertFiles,
+	)
 
 	// Validate all files
 	if err := s.validateFiles(allFiles); err != nil {
@@ -699,7 +917,11 @@ func (s *Service) UpdateExcuseSlip(
 	}
 
 	// OCR check on non-ID files
-	if err := s.validateFilesOCR(ctx, files); err != nil {
+	nonIDFiles := append(
+		append([]*multipart.FileHeader{}, excuseLetterFiles...),
+		medicalCertFiles...,
+	)
+	if err := s.validateFilesOCR(ctx, nonIDFiles); err != nil {
 		return nil, err
 	}
 
@@ -745,20 +967,33 @@ func (s *Service) UpdateExcuseSlip(
 		)
 	}
 
-	// Delete old attachments NOT in KeepFileIDs
+	// Load existing attachments so kept files count toward each document limit.
 	oldAttachments, err := s.repo.GetSlipAttachments(ctx, slipID)
-	if err == nil {
-		for _, att := range oldAttachments {
-			keep := false
-			for _, keepID := range req.KeepFileIDs {
-				if att.FileID == keepID {
-					keep = true
-					break
-				}
+	if err != nil {
+		return nil, err
+	}
+
+	if err := validateUpdatedDocumentFileCounts(
+		oldAttachments,
+		req.KeepFileIDs,
+		excuseLetterFiles,
+		parentIDFiles,
+		medicalCertFiles,
+	); err != nil {
+		return nil, err
+	}
+
+	// Delete old attachments NOT in KeepFileIDs.
+	for _, att := range oldAttachments {
+		keep := false
+		for _, keepID := range req.KeepFileIDs {
+			if att.FileID == keepID {
+				keep = true
+				break
 			}
-			if !keep {
-				_ = s.filesService.DeleteFile(ctx, att.FileID)
-			}
+		}
+		if !keep {
+			_ = s.filesService.DeleteFile(ctx, att.FileID)
 		}
 	}
 
@@ -816,11 +1051,11 @@ func (s *Service) UpdateExcuseSlip(
 				return err
 			}
 			// Save new attachments
-			for _, f := range uploadedFiles {
+			for i, f := range uploadedFiles {
 				attachment := &SlipAttachment{
 					FileID:         f.ID,
 					SlipID:         structs.StringToNullableString(slipID),
-					AttachmentType: "OTHER",
+					AttachmentType: attachmentTypes[i],
 				}
 				if err := s.repo.SaveSlipAttachment(
 					ctx, tx, attachment,
@@ -830,10 +1065,17 @@ func (s *Service) UpdateExcuseSlip(
 			}
 			// Save kept attachments
 			for _, keepID := range req.KeepFileIDs {
+				attachmentType := "OTHER"
+				for _, oldAttachment := range oldAttachments {
+					if oldAttachment.FileID == keepID {
+						attachmentType = normalizedAttachmentType(oldAttachment)
+						break
+					}
+				}
 				attachment := &SlipAttachment{
 					FileID:         keepID,
 					SlipID:         structs.StringToNullableString(slipID),
-					AttachmentType: "OTHER",
+					AttachmentType: attachmentType,
 				}
 				if err := s.repo.SaveSlipAttachment(
 					ctx, tx, attachment,
