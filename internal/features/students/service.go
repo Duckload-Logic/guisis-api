@@ -138,15 +138,44 @@ func (s *Service) SubmitCOR(
 		cor.ValidUntil = structs.TimeToNullableTime(
 			time.Now().AddDate(0, 5, 0),
 		)
-	} else {
 		// Fetch OCR result to set validity
 		ocrResult, err := s.filesSvc.GetOCRResult(ctx, file.ID)
 		if err != nil {
-			// Non-fatal, but we'll use fallback dates
-			fmt.Printf("%v\n", err)
+			fmt.Printf("[SubmitCOR] {GetOCRResult}: %v\n", err)
 		}
 
-		if ocrResult != nil && ocrResult.StructuredData != "" {
+		if ocrResult == nil || ocrResult.StructuredData == "" {
+			// OCR microservice offline fallback: grant 7-day grace period
+			setting, _ := s.repo.GetAcademicSetting(ctx)
+			if setting != nil {
+				cor.YearStart = setting.CurrentYearStart
+				cor.YearEnd = setting.CurrentYearEnd
+				cor.Term = setting.CurrentTerm
+			}
+			cor.ValidFrom = structs.TimeToNullableTime(time.Now())
+			cor.ValidUntil = structs.TimeToNullableTime(
+				time.Now().AddDate(0, 0, 7),
+			)
+
+			if s.logService != nil {
+				id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+				s.logService.Record(ctx, nil, audit.LogEntry{
+					Level:    audit.LevelWarning,
+					Category: audit.CategorySystem,
+					Action:   audit.ActionOCRServiceFallback,
+					Message: fmt.Sprintf(
+						"OCR offline for file #%s uploaded by %s; "+
+							"granted 7-day temporary grace period",
+						file.ID, email,
+					),
+					UserID:    structs.StringToNullableString(id),
+					UserEmail: structs.StringToNullableString(email),
+					IPAddress: structs.StringToNullableString(ip),
+					UserAgent: structs.StringToNullableString(ua),
+					TraceID:   structs.StringToNullableString(trace),
+				})
+			}
+		} else {
 			var corData struct {
 				StudentNumber     string `json:"student_number"`
 				ProgramCode       string `json:"program_code"`

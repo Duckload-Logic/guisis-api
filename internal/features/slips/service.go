@@ -1409,6 +1409,35 @@ func (s *Service) UpdateExcuseSlipStatus(
 			emails := []audit.EmailParams{}
 			ticketCode := ""
 
+			// Invalidate ticket if revoked, rejected, or sent for revision
+			if newStatus == "Rejected" ||
+				newStatus == "For Revision" ||
+				newStatus == "Cancelled" {
+				existingTicket, _ := s.repo.GetTicketBySlipID(ctx, id)
+				if existingTicket != nil {
+					if err := s.repo.InvalidateTicketBySlipID(
+						ctx, tx, id,
+					); err != nil {
+						return err
+					}
+
+					s.logService.Record(ctx, tx, audit.LogEntry{
+						Level:    audit.LevelWarning,
+						Category: audit.CategoryAudit,
+						Action:   audit.ActionSlipTicketRevoked,
+						Message: fmt.Sprintf(
+							"Admission ticket #%s revoked due to status change to %s",
+							existingTicket.TicketCode,
+							newStatus,
+						),
+						Metadata: &audit.LogMetadata{
+							EntityType: "AdmissionTicket",
+							EntityID:   existingTicket.ID,
+						},
+					})
+				}
+			}
+
 			// Handle ticket and email for Approved status
 			if newStatus == "Approved" {
 				ticket, err := s.repo.GetTicketBySlipID(ctx, id)
@@ -1420,12 +1449,13 @@ func (s *Service) UpdateExcuseSlipStatus(
 				}
 
 				if ticket == nil {
-					// Generate new ticket
+					// Generate new ticket with 12-char cryptographically strong token
+					cleanUUID := strings.ReplaceAll(
+						uuid.New().String(), "-", "",
+					)
 					ticketCode = fmt.Sprintf(
 						"SLIP-%s",
-						strings.ToUpper(
-							uuid.New().String()[:6],
-						),
+						strings.ToUpper(cleanUUID[:12]),
 					)
 					newTicket := &AdmissionTicket{
 						ID:              uuid.New().String(),

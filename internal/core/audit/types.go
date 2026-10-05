@@ -56,9 +56,11 @@ const (
 	ActionSlipDeleted       = "SLIP_DELETED"
 	ActionSlipDeleteFailed  = "SLIP_DELETE_FAILED"
 	ActionSlipFailed        = "SLIP_FAILED"
+	ActionSlipTicketRevoked = "SLIP_TICKET_REVOKED"
 
 	ActionNoteCreated      = "NOTE_CREATED"
 	ActionNoteCreateFailed = "NOTE_CREATE_FAILED"
+	ActionNoteViewed       = "NOTE_VIEWED"
 	ActionNoteUpdated      = "NOTE_UPDATED"
 	ActionNoteUpdateFailed = "NOTE_UPDATE_FAILED"
 	ActionNoteDeleted      = "NOTE_DELETED"
@@ -93,6 +95,7 @@ const (
 	ActionOCRProcessingSuccess        = "OCR_PROCESSING_SUCCESS"
 	ActionOCRProcessingFailed         = "OCR_PROCESSING_FAILED"
 	ActionOCRValidationFailed         = "OCR_VALIDATION_FAILED"
+	ActionOCRServiceFallback          = "OCR_SERVICE_FALLBACK"
 	ActionCORSubmitted                = "COR_SUBMITTED"
 	ActionCORSubmitFailed             = "COR_SUBMIT_FAILED"
 )

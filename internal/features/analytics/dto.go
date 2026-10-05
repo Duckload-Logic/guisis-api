@@ -14,6 +14,7 @@ type DemographicStatDTO struct {
 
 type IIRAnalyticsReportResponse struct {
 	TotalStudents      int                  `json:"totalStudents"`
+	SuppressionNotice  string               `json:"suppressionNotice,omitempty"`
 	GenderDistribution []DemographicStatDTO `json:"genderDistribution"`
 
 	// Personal Information

@@ -717,13 +717,15 @@ func (s *Service) UpdateAppointment(
 	}
 
 	appt := Appointment{
-		ID:         id,
-		StatusID:   req.Status.ID,
-		Reason:     req.Reason,
-		AdminNotes: structs.StringToNullableString(updatedNotes),
-		WhenDate:   reqDateOnly,
-		TimeSlotID: req.TimeSlot.ID,
-		CategoryID: req.AppointmentCategory.ID,
+		ID:           id,
+		StatusID:     req.Status.ID,
+		Reason:       req.Reason,
+		AdminNotes:   structs.StringToNullableString(updatedNotes),
+		WhenDate:     reqDateOnly,
+		TimeSlotID:   req.TimeSlot.ID,
+		CategoryID:   req.AppointmentCategory.ID,
+		UrgencyLevel: req.UrgencyLevel,
+		UrgencyScore: req.UrgencyScore,
 	}
 
 	err = s.repo.WithTransaction(
