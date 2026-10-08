@@ -2,6 +2,7 @@ package appointments
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -158,6 +159,19 @@ func (h *Handler) PostAppointment(c *gin.Context) {
 		c.Request.Context(), iirID, req, h.cfg,
 	)
 	if err != nil {
+		if errors.Is(err, ErrAppointmentNonWorkingDay) {
+			response.SendFail(c, gin.H{
+				"error": "Appointments cannot be scheduled on non-working days.",
+			})
+			return
+		}
+		if errors.Is(err, ErrInvalidAppointmentDate) {
+			response.SendFail(c, gin.H{
+				"error": "Invalid appointment date.",
+			})
+			return
+		}
+
 		log.Printf(
 			"[PostAppointment] {Create Appointment}: %v",
 			err,
@@ -296,6 +310,13 @@ func (h *Handler) GetAppointmentSlots(c *gin.Context) {
 
 	slots, err := h.service.GetAvailableTimeSlots(c.Request.Context(), date)
 	if err != nil {
+		if errors.Is(err, ErrInvalidAppointmentDate) {
+			response.SendFail(c, gin.H{
+				"error": "Invalid appointment date.",
+			})
+			return
+		}
+
 		log.Printf("[GetAppointmentSlots] {Fetch Slots}: %v", err)
 		response.SendError(
 			c,
@@ -637,6 +658,19 @@ func (h *Handler) PatchAppointment(c *gin.Context) {
 			)
 			return
 		}
+		if errors.Is(err, ErrAppointmentNonWorkingDay) {
+			response.SendFail(c, gin.H{
+				"error": "Appointments cannot be scheduled on non-working days.",
+			})
+			return
+		}
+		if errors.Is(err, ErrInvalidAppointmentDate) {
+			response.SendFail(c, gin.H{
+				"error": "Invalid appointment date.",
+			})
+			return
+		}
+
 		log.Printf(
 			"[PatchAppointment] {Update Appointment}: %v",
 			err,
