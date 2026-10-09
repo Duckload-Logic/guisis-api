@@ -106,6 +106,8 @@ type StudentBasicInfoViewDTO struct {
 type StudentPersonalInfoDTO struct {
 	ID                    int                    `json:"id,omitempty"`
 	IIRID                 string                 `json:"iirId,omitempty"`
+	SuffixName            structs.NullableString `json:"suffixName,omitempty"`
+	Suffix                structs.NullableString `json:"suffix,omitempty"`
 	StudentNumber         string                 `json:"studentNumber"                   binding:"required"`
 	Gender                Gender                 `json:"gender"                          binding:"required"`
 	CivilStatus           CivilStatusType        `json:"civilStatus"                     binding:"required"`

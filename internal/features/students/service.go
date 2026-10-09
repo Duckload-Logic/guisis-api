@@ -748,6 +748,7 @@ func (s *Service) GetStudentBasicInfo(
 		FirstName:  info.FirstName,
 		MiddleName: info.MiddleName,
 		LastName:   info.LastName,
+		SuffixName: info.SuffixName,
 	}, nil
 }
 
@@ -1362,6 +1363,23 @@ func (s *Service) saveComprehensiveProfile(
 		)
 	}
 
+	var suffixStr string
+	if req.Student.BasicInfo.SuffixName.Valid {
+		suffixStr = strings.TrimSpace(req.Student.BasicInfo.SuffixName.String)
+	} else if req.Student.SuffixName.Valid {
+		suffixStr = strings.TrimSpace(req.Student.SuffixName.String)
+	} else if req.Student.Suffix.Valid {
+		suffixStr = strings.TrimSpace(req.Student.Suffix.String)
+	}
+
+	suffix := structs.StringToNullableString(suffixStr)
+	if err := s.repo.UpdateUserSuffix(ctx, tx, userID, suffix); err != nil {
+		return "", fmt.Errorf(
+			"[StudentService] {saveComprehensiveProfile UserSuffix}: %w",
+			err,
+		)
+	}
+
 	// 2. Personal Info
 	err = s.repo.UpsertStudentPersonalInfo(ctx, tx, &StudentPersonalInfo{
 		IIRID:         iirID,
@@ -1426,6 +1444,7 @@ func (s *Service) saveComprehensiveProfile(
 		FirstName:      req.Student.EmergencyContact.FirstName,
 		MiddleName:     req.Student.EmergencyContact.MiddleName,
 		LastName:       req.Student.EmergencyContact.LastName,
+		SuffixName:     req.Student.EmergencyContact.SuffixName,
 		ContactNumber:  req.Student.EmergencyContact.ContactNumber,
 		RelationshipID: req.Student.EmergencyContact.Relationship.ID,
 		AddressID:      ecAddrID,
