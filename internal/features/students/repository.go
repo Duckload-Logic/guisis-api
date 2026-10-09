@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
 
@@ -1124,6 +1125,24 @@ func (r *Repository) UpsertStudentPersonalInfo(
 
 	_, err := tx.NamedExecContext(ctx, query, info)
 	return err
+}
+
+func (r *Repository) UpdateUserSuffix(
+	ctx context.Context,
+	tx datastore.DB,
+	userID string,
+	suffix structs.NullableString,
+) error {
+	query := `
+		UPDATE users
+		SET suffix_name = ?, updated_at = NOW()
+		WHERE id = ?
+	`
+	_, err := tx.ExecContext(ctx, query, suffix, userID)
+	if err != nil {
+		return fmt.Errorf("[Repository] {UpdateUserSuffix}: %w", err)
+	}
+	return nil
 }
 
 func (r *Repository) UpdateStudentYearAndSection(

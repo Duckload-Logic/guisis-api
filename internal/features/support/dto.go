@@ -27,13 +27,13 @@ type CreateMessageRequest struct {
 }
 
 type TicketResponse struct {
-	ID           string    `json:"id"`
-	UserID       *string   `json:"userId"`
-	GuestName    *string   `json:"guestName"`
-	GuestEmail   *string   `json:"guestEmail"`
-	Status       string    `json:"status"`
-	CreatedAt    time.Time `json:"createdAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
+	ID             string    `json:"id"`
+	UserID         *string   `json:"userId"`
+	GuestName      *string   `json:"guestName"`
+	GuestEmail     *string   `json:"guestEmail"`
+	Status         string    `json:"status"`
+	CreatedAt      time.Time `json:"createdAt"`
+	UpdatedAt      time.Time `json:"updatedAt"`
 	StudentName    *string   `json:"studentName,omitempty"`
 	StudentEmail   *string   `json:"studentEmail,omitempty"`
 	ProfilePicture *string   `json:"profilePicture,omitempty"`
@@ -46,6 +46,7 @@ type MessageResponse struct {
 	TicketID   string    `json:"ticketId"`
 	SenderID   *string   `json:"senderId"`
 	SenderName string    `json:"senderName"`
+	SenderRole *string   `json:"senderRole,omitempty"`
 	Message    string    `json:"message"`
 	CreatedAt  time.Time `json:"createdAt"`
 }

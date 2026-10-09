@@ -42,9 +42,9 @@ func (r *Repository) CreateMessage(
 ) error {
 	query := `
 		INSERT INTO support_messages (
-			id, ticket_id, sender_id, sender_name, message
+			id, ticket_id, sender_id, sender_name, sender_role, message
 		) VALUES (
-			:id, :ticket_id, :sender_id, :sender_name, :message
+			:id, :ticket_id, :sender_id, :sender_name, :sender_role, :message
 		)
 	`
 	_, err := r.db.NamedExecContext(ctx, query, msg)
@@ -106,25 +106,25 @@ func (r *Repository) GetTickets(
 	args = append(args, limit, offset)
 
 	query := fmt.Sprintf(`
-		SELECT 
-			t.id, t.user_id, t.guest_name, t.guest_email, t.status, 
+		SELECT
+			t.id, t.user_id, t.guest_name, t.guest_email, t.status,
 			t.created_at, t.updated_at,
-			u.first_name AS user_first_name, u.last_name AS user_last_name, 
+			u.first_name AS user_first_name, u.last_name AS user_last_name,
 			u.email AS user_email,
 			f.file_url AS user_profile_picture,
-			m.sender_id AS last_sender_id, m.sender_name AS last_sender_name, 
+			m.sender_id AS last_sender_id, m.sender_name AS last_sender_name,
 			m.message AS last_message,
 			COALESCE(tr.read_at >= t.updated_at, FALSE) AS is_read
 		FROM support_tickets t
 		LEFT JOIN users u ON t.user_id = u.id
 		LEFT JOIN profile_pictures pp ON pp.user_id = u.id
 		LEFT JOIN files f ON f.id = pp.file_id
-		LEFT JOIN support_ticket_reads tr 
+		LEFT JOIN support_ticket_reads tr
 			ON t.id = tr.ticket_id AND tr.user_id = ?
 		LEFT JOIN support_messages m ON m.id = (
-			SELECT id FROM support_messages 
-			WHERE ticket_id = t.id 
-			ORDER BY created_at DESC 
+			SELECT id FROM support_messages
+			WHERE ticket_id = t.id
+			ORDER BY created_at DESC
 			LIMIT 1
 		)
 		%s

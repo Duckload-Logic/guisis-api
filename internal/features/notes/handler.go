@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/audit"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/response"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 )
 
 type Handler struct {
@@ -40,6 +41,28 @@ func (h *Handler) GetSignificantNotes(c *gin.Context) {
 			nil,
 		)
 		return
+	}
+
+	if h.logger != nil {
+		id, ip, ua, email, _, trace := audit.ExtractMeta(c.Request.Context())
+		h.logger.Record(c.Request.Context(), nil, audit.LogEntry{
+			Level:    audit.LevelInfo,
+			Category: audit.CategoryAudit,
+			Action:   audit.ActionNoteViewed,
+			Message: fmt.Sprintf(
+				"Confidential counseling notes viewed for IIR #%s",
+				iirID,
+			),
+			UserID:    structs.StringToNullableString(id),
+			UserEmail: structs.StringToNullableString(email),
+			IPAddress: structs.StringToNullableString(ip),
+			UserAgent: structs.StringToNullableString(ua),
+			TraceID:   structs.StringToNullableString(trace),
+			Metadata: &audit.LogMetadata{
+				EntityType: "SignificantNotes",
+				EntityID:   iirID,
+			},
+		})
 	}
 
 	response.SendSuccess(c, significantNotes)

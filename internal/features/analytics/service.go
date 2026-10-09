@@ -67,7 +67,18 @@ func (s *Service) GetIIRAnalyticsReport(
 		GenderDistribution:   []DemographicStatDTO{},
 	}
 
-	if total > 0 {
+	// k-anonymity threshold: protect small cohorts from deductive disclosure
+	const minCohortThreshold = 5
+	if total > 0 && total < minCohortThreshold {
+		report.SuppressionNotice = fmt.Sprintf(
+			"Demographic distribution suppressed to protect student "+
+				"privacy (cohort sample size %d is below k=5 threshold).",
+			total,
+		)
+		return report, nil
+	}
+
+	if total >= minCohortThreshold {
 		// Demographic data
 		rawGender, _ := s.repo.GetGenderStats(ctx, year, programID)
 		report.GenderDistribution = s.mapToDTO(rawGender, total)

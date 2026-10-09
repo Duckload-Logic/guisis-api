@@ -700,6 +700,19 @@ func (r *Repository) GetTicketBySlipID(
 	return &ticket, nil
 }
 
+func (r *Repository) InvalidateTicketBySlipID(
+	ctx context.Context,
+	tx datastore.DB,
+	slipID string,
+) error {
+	query := `DELETE FROM admission_tickets WHERE admission_slip_id = ?`
+	_, err := tx.ExecContext(ctx, query, slipID)
+	if err != nil {
+		return fmt.Errorf("failed to invalidate ticket: %w", err)
+	}
+	return nil
+}
+
 func (r *Repository) GetSlipByTicketCode(
 	ctx context.Context,
 	code string,

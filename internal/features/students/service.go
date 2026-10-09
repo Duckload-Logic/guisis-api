@@ -138,15 +138,44 @@ func (s *Service) SubmitCOR(
 		cor.ValidUntil = structs.TimeToNullableTime(
 			time.Now().AddDate(0, 5, 0),
 		)
-	} else {
 		// Fetch OCR result to set validity
 		ocrResult, err := s.filesSvc.GetOCRResult(ctx, file.ID)
 		if err != nil {
-			// Non-fatal, but we'll use fallback dates
-			fmt.Printf("%v\n", err)
+			fmt.Printf("[SubmitCOR] {GetOCRResult}: %v\n", err)
 		}
 
-		if ocrResult != nil && ocrResult.StructuredData != "" {
+		if ocrResult == nil || ocrResult.StructuredData == "" {
+			// OCR microservice offline fallback: grant 7-day grace period
+			setting, _ := s.repo.GetAcademicSetting(ctx)
+			if setting != nil {
+				cor.YearStart = setting.CurrentYearStart
+				cor.YearEnd = setting.CurrentYearEnd
+				cor.Term = setting.CurrentTerm
+			}
+			cor.ValidFrom = structs.TimeToNullableTime(time.Now())
+			cor.ValidUntil = structs.TimeToNullableTime(
+				time.Now().AddDate(0, 0, 7),
+			)
+
+			if s.logService != nil {
+				id, ip, ua, email, _, trace := audit.ExtractMeta(ctx)
+				s.logService.Record(ctx, nil, audit.LogEntry{
+					Level:    audit.LevelWarning,
+					Category: audit.CategorySystem,
+					Action:   audit.ActionOCRServiceFallback,
+					Message: fmt.Sprintf(
+						"OCR offline for file #%s uploaded by %s; "+
+							"granted 7-day temporary grace period",
+						file.ID, email,
+					),
+					UserID:    structs.StringToNullableString(id),
+					UserEmail: structs.StringToNullableString(email),
+					IPAddress: structs.StringToNullableString(ip),
+					UserAgent: structs.StringToNullableString(ua),
+					TraceID:   structs.StringToNullableString(trace),
+				})
+			}
+		} else {
 			var corData struct {
 				StudentNumber     string `json:"student_number"`
 				ProgramCode       string `json:"program_code"`
@@ -719,6 +748,7 @@ func (s *Service) GetStudentBasicInfo(
 		FirstName:  info.FirstName,
 		MiddleName: info.MiddleName,
 		LastName:   info.LastName,
+		SuffixName: info.SuffixName,
 	}, nil
 }
 
@@ -1333,6 +1363,23 @@ func (s *Service) saveComprehensiveProfile(
 		)
 	}
 
+	var suffixStr string
+	if req.Student.BasicInfo.SuffixName.Valid {
+		suffixStr = strings.TrimSpace(req.Student.BasicInfo.SuffixName.String)
+	} else if req.Student.SuffixName.Valid {
+		suffixStr = strings.TrimSpace(req.Student.SuffixName.String)
+	} else if req.Student.Suffix.Valid {
+		suffixStr = strings.TrimSpace(req.Student.Suffix.String)
+	}
+
+	suffix := structs.StringToNullableString(suffixStr)
+	if err := s.repo.UpdateUserSuffix(ctx, tx, userID, suffix); err != nil {
+		return "", fmt.Errorf(
+			"[StudentService] {saveComprehensiveProfile UserSuffix}: %w",
+			err,
+		)
+	}
+
 	// 2. Personal Info
 	err = s.repo.UpsertStudentPersonalInfo(ctx, tx, &StudentPersonalInfo{
 		IIRID:         iirID,
@@ -1397,6 +1444,7 @@ func (s *Service) saveComprehensiveProfile(
 		FirstName:      req.Student.EmergencyContact.FirstName,
 		MiddleName:     req.Student.EmergencyContact.MiddleName,
 		LastName:       req.Student.EmergencyContact.LastName,
+		SuffixName:     req.Student.EmergencyContact.SuffixName,
 		ContactNumber:  req.Student.EmergencyContact.ContactNumber,
 		RelationshipID: req.Student.EmergencyContact.Relationship.ID,
 		AddressID:      ecAddrID,

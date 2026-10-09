@@ -649,6 +649,14 @@ func (r *Repository) UpdateAppointment(
 			setQuery = append(setQuery, "started_at = COALESCE(started_at, NOW())")
 		}
 	}
+	if appt.UrgencyLevel != "" {
+		setQuery = append(setQuery, "urgency_level = ?")
+		args = append(args, appt.UrgencyLevel)
+	}
+	if appt.UrgencyScore > 0 {
+		setQuery = append(setQuery, "urgency_score = ?")
+		args = append(args, appt.UrgencyScore)
+	}
 
 	if len(setQuery) == 0 {
 		return nil

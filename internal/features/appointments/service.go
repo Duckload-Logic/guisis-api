@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -25,6 +26,63 @@ import (
 )
 
 const statusPending = 1
+
+var (
+	ErrAppointmentNonWorkingDay = errors.New(
+		"appointments cannot be scheduled on non-working days",
+	)
+	ErrInvalidAppointmentDate = errors.New("invalid appointment date")
+)
+
+var fixedPHNonWorkingDays = map[string]struct{}{
+	"01-01": {},
+	"02-25": {},
+	"04-09": {},
+	"05-01": {},
+	"06-12": {},
+	"08-21": {},
+	"11-01": {},
+	"11-02": {},
+	"11-30": {},
+	"12-08": {},
+	"12-24": {},
+	"12-25": {},
+	"12-30": {},
+	"12-31": {},
+}
+
+var datedPHNonWorkingDays = map[string]struct{}{
+	"2026-04-02": {},
+	"2026-04-03": {},
+	"2026-04-04": {},
+	"2026-08-31": {},
+	"2027-03-25": {},
+	"2027-03-26": {},
+	"2027-03-27": {},
+	"2027-08-30": {},
+}
+
+func validateAppointmentWorkingDate(value string) error {
+	dateOnly := datetime.ExtractDateOnly(strings.TrimSpace(value))
+	parsed, err := time.Parse(constants.LayoutDateOnly, dateOnly)
+	if err != nil {
+		return ErrInvalidAppointmentDate
+	}
+
+	if parsed.Weekday() == time.Saturday || parsed.Weekday() == time.Sunday {
+		return ErrAppointmentNonWorkingDay
+	}
+
+	if _, ok := datedPHNonWorkingDays[dateOnly]; ok {
+		return ErrAppointmentNonWorkingDay
+	}
+
+	if _, ok := fixedPHNonWorkingDays[parsed.Format("01-02")]; ok {
+		return ErrAppointmentNonWorkingDay
+	}
+
+	return nil
+}
 
 type Service struct {
 	repo           *Repository
@@ -75,6 +133,23 @@ func (s *Service) CreateAppointment(
 	req AppointmentDTO,
 	cfg *config.Config,
 ) (*AppointmentDTO, error) {
+	if err := validateAppointmentWorkingDate(req.WhenDate); err != nil {
+		return nil, err
+	}
+
+	for _, preferredDate := range []string{
+		req.PreferredDate1,
+		req.PreferredDate2,
+		req.PreferredDate3,
+	} {
+		if strings.TrimSpace(preferredDate) == "" {
+			continue
+		}
+		if err := validateAppointmentWorkingDate(preferredDate); err != nil {
+			return nil, err
+		}
+	}
+
 	appt := &Appointment{
 		ID:         uuid.New().String(),
 		IIRID:      iirID,
@@ -601,6 +676,13 @@ func (s *Service) GetAvailableTimeSlots(
 	ctx context.Context,
 	date string,
 ) ([]AvailableTimeSlotView, error) {
+	if err := validateAppointmentWorkingDate(date); err != nil {
+		if errors.Is(err, ErrAppointmentNonWorkingDay) {
+			return []AvailableTimeSlotView{}, nil
+		}
+		return nil, err
+	}
+
 	availableSlots, err := s.repo.GetAvailableTimeSlots(ctx, date)
 	if err != nil {
 		return nil, err
@@ -638,6 +720,12 @@ func (s *Service) UpdateAppointment(
 	statusChanged := req.Status.ID != oldAppt.StatusID
 	scheduleChanged := (reqDateOnly != oldAppt.WhenDate) ||
 		(req.TimeSlot.ID != oldAppt.TimeSlotID)
+
+	if scheduleChanged {
+		if err := validateAppointmentWorkingDate(reqDateOnly); err != nil {
+			return err
+		}
+	}
 
 	// Enforce remarks for reschedule
 	if scheduleChanged &&
@@ -717,13 +805,15 @@ func (s *Service) UpdateAppointment(
 	}
 
 	appt := Appointment{
-		ID:         id,
-		StatusID:   req.Status.ID,
-		Reason:     req.Reason,
-		AdminNotes: structs.StringToNullableString(updatedNotes),
-		WhenDate:   reqDateOnly,
-		TimeSlotID: req.TimeSlot.ID,
-		CategoryID: req.AppointmentCategory.ID,
+		ID:           id,
+		StatusID:     req.Status.ID,
+		Reason:       req.Reason,
+		AdminNotes:   structs.StringToNullableString(updatedNotes),
+		WhenDate:     reqDateOnly,
+		TimeSlotID:   req.TimeSlot.ID,
+		CategoryID:   req.AppointmentCategory.ID,
+		UrgencyLevel: req.UrgencyLevel,
+		UrgencyScore: req.UrgencyScore,
 	}
 
 	err = s.repo.WithTransaction(
