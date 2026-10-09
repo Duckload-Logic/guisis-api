@@ -18,6 +18,9 @@ const (
 	// IDPRequestTimeout is the timeout duration for IDP HTTP requests
 	// (10 seconds)
 	IDPRequestTimeout = 30 * time.Second
+
+	// SessionL1CacheTTL is the duration for in-memory L1 session caching
+	SessionL1CacheTTL = 30 * time.Second
 )
 
 // Cookie configuration constants
