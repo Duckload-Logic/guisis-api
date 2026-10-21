@@ -72,10 +72,10 @@ func TestParseKey(t *testing.T) {
 	assert.Equal(t, rawKey, parsedB64)
 
 	// Raw 32 bytes string
-	rawStr := string(rawKey)
+	rawStr := "0123456789abcdef0123456789abcdef"
 	parsedRaw, err := storage.ParseKey(rawStr)
 	require.NoError(t, err)
-	assert.Equal(t, rawKey, parsedRaw)
+	assert.Equal(t, []byte(rawStr), parsedRaw)
 
 	// Invalid length
 	_, err = storage.ParseKey("short-key")

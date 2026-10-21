@@ -40,6 +40,12 @@ func ParseKey(keyStr string) ([]byte, error) {
 	if keyBytes, err := base64.StdEncoding.DecodeString(keyStr); err == nil && len(keyBytes) == 32 {
 		return keyBytes, nil
 	}
+	if keyBytes, err := base64.URLEncoding.DecodeString(keyStr); err == nil && len(keyBytes) == 32 {
+		return keyBytes, nil
+	}
+	if keyBytes, err := base64.RawStdEncoding.DecodeString(keyStr); err == nil && len(keyBytes) == 32 {
+		return keyBytes, nil
+	}
 
 	// 3. Try Raw 32 bytes
 	if len(keyStr) == 32 {
