@@ -38,6 +38,23 @@ func Initialize(db *sqlx.DB, cfg *config.Config) (*Application, error) {
 		fileStorage = storage.NewDiskStorage(uploadDir)
 	}
 
+	encryptionKeyStr := cfg.StorageEncryptionKey
+	if encryptionKeyStr == "" && !cfg.IsProduction && !cfg.IsStaging {
+		encryptionKeyStr = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	}
+
+	if encryptionKeyStr != "" {
+		keyBytes, err := storage.ParseKey(encryptionKeyStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse storage encryption key: %w", err)
+		}
+		var errEnc error
+		fileStorage, errEnc = storage.NewEncryptedStorage(fileStorage, keyBytes)
+		if errEnc != nil {
+			return nil, fmt.Errorf("failed to initialize encrypted storage: %w", errEnc)
+		}
+	}
+
 	if cfg.IsProduction || cfg.IsStaging {
 		emailer = email.NewSMTPMailer(
 			cfg.SMTPHost,
