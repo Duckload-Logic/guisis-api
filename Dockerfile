@@ -49,7 +49,8 @@ RUN swag init -g main.go --parseDependency --parseInternal \
 # Implement build cache to speed up successive builds
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api
+    CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/api && \
+    CGO_ENABLED=0 GOOS=linux go build -o encrypt_files ./cmd/encrypt_files
 
 ################################################################################
 # Production stage
@@ -58,6 +59,7 @@ RUN apk --no-cache add ca-certificates tzdata
 ENV TZ=Asia/Manila
 WORKDIR /root/
 COPY --from=builder /app/main .
+COPY --from=builder /app/encrypt_files .
 COPY --from=builder /app/scripts/migrations ./scripts/migrations/
 # COPY --from=builder /app/.env.example ./.env
 # Note: You should ideally provide a real .env or use environment variables in compose

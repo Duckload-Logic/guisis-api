@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
+	"github.com/olazo-johnalbert/duckload-api/internal/core/sessions"
 	"github.com/olazo-johnalbert/duckload-api/internal/core/tokens"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
@@ -70,6 +71,18 @@ func validateSession(
 		return true
 	}
 
+	// 1. Fast path: check in-memory L1 cache (30s TTL, 0 network hops)
+	if cachedJTI, ok := sessions.GetL1Session(claims.UserID); ok {
+		if cachedJTI == claims.ID {
+			return true
+		}
+		c.AbortWithStatusJSON(
+			http.StatusUnauthorized,
+			gin.H{"error": "Session has been revoked or logged out"},
+		)
+		return false
+	}
+
 	key := fmt.Sprintf(
 		"%s%s",
 		constants.RedisUserSessionKeyPrefix,
@@ -111,6 +124,9 @@ func validateSession(
 		)
 		return false
 	}
+
+	// 2. Populate L1 in-memory cache
+	sessions.SetL1Session(claims.UserID, whitelistedJTI)
 
 	return true
 }

@@ -6,9 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 )
+
+const defaultClassifierTimeout = 3 * time.Second
 
 type ClassifierClient struct {
 	httpClient *http.Client
@@ -16,7 +20,7 @@ type ClassifierClient struct {
 	apiKey     string
 }
 
-// NewIDPClient creates a new IDP client with configured timeout
+// NewClient creates a new classifier client
 func NewClient(
 	httpClient *http.Client,
 	baseUrl string,
@@ -34,6 +38,12 @@ func (c *ClassifierClient) Classify(
 	text string,
 	cfg *config.Config,
 ) (*ClassifyResponse, error) {
+	if strings.TrimSpace(c.baseUrl) == "" {
+		return nil, fmt.Errorf(
+			"[ClassifierClient] {Validate}: baseUrl is empty",
+		)
+	}
+
 	payload := ClassifyRequest{
 		Text: text,
 	}
@@ -42,7 +52,11 @@ func (c *ClassifierClient) Classify(
 		return nil, fmt.Errorf("[ClassifierClient] {Marshal JSON}: %w", err)
 	}
 
-	req, err := http.NewRequest(
+	timeoutCtx, cancel := context.WithTimeout(ctx, defaultClassifierTimeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(
+		timeoutCtx,
 		http.MethodPost,
 		fmt.Sprintf("%s/classify", c.baseUrl),
 		bytes.NewBuffer(body),

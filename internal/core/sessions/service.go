@@ -4,11 +4,47 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/olazo-johnalbert/duckload-api/internal/core/constants"
 	"github.com/olazo-johnalbert/duckload-api/internal/infrastructure/datastore"
 )
+
+// L1 cache to guard Redis against high-throughput session validation reads
+var l1SessionCache sync.Map
+
+type L1SessionEntry struct {
+	AccessJTI string
+	ExpiresAt time.Time
+}
+
+// InvalidateL1Session evicts the user's L1 cache entry immediately.
+func InvalidateL1Session(userID string) {
+	l1SessionCache.Delete(userID)
+}
+
+// GetL1Session retrieves valid session JTI from in-memory cache if not expired.
+func GetL1Session(userID string) (string, bool) {
+	val, ok := l1SessionCache.Load(userID)
+	if !ok {
+		return "", false
+	}
+	entry, ok := val.(L1SessionEntry)
+	if !ok || time.Now().After(entry.ExpiresAt) {
+		l1SessionCache.Delete(userID)
+		return "", false
+	}
+	return entry.AccessJTI, true
+}
+
+// SetL1Session stores the whitelisted access JTI with SessionL1CacheTTL.
+func SetL1Session(userID, accessJTI string) {
+	l1SessionCache.Store(userID, L1SessionEntry{
+		AccessJTI: accessJTI,
+		ExpiresAt: time.Now().Add(constants.SessionL1CacheTTL),
+	})
+}
 
 type Service struct {
 	redis *datastore.RedisClient
@@ -119,14 +155,16 @@ func (s *Service) WhitelistSession(
 		return fmt.Errorf("failed to set whitelist expiration: %w", err)
 	}
 
+	SetL1Session(userID, accessJTI)
 	return nil
 }
 
-// RevokeUserSession deletes the whitelist key for a user.
+// RevokeUserSession deletes the whitelist key for a user and clears L1 cache.
 func (s *Service) RevokeUserSession(
 	ctx context.Context,
 	userID string,
 ) error {
+	InvalidateL1Session(userID)
 	key := fmt.Sprintf("%s%s", constants.RedisUserSessionKeyPrefix, userID)
 	return s.redis.Del(ctx, key)
 }

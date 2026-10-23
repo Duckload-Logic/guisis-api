@@ -20,8 +20,9 @@ type Config struct {
 
 	WebsitesPort string
 
-	LocalUploadDIR string
-	StorageDriver  string
+	LocalUploadDIR       string
+	StorageDriver        string
+	StorageEncryptionKey string
 
 	IsProduction bool
 	IsStaging    bool
@@ -72,8 +73,9 @@ func LoadConfig() *Config {
 
 		WebsitesPort: os.Getenv("WEBSITES_PORT"),
 
-		LocalUploadDIR: os.Getenv("UPLOAD_DIR"),
-		StorageDriver:  os.Getenv("STORAGE_DRIVER"),
+		LocalUploadDIR:       os.Getenv("UPLOAD_DIR"),
+		StorageDriver:        os.Getenv("STORAGE_DRIVER"),
+		StorageEncryptionKey: os.Getenv("STORAGE_ENCRYPTION_KEY"),
 
 		IsProduction: os.Getenv("IS_PRODUCTION") == "true",
 		IsStaging:    os.Getenv("IS_STAGING") == "true",
@@ -192,6 +194,12 @@ func validateStorageConfig(config *Config) {
 	} else {
 		if config.LocalUploadDIR == "" {
 			panic("UPLOAD_DIR is required for local storage")
+		}
+	}
+
+	if config.IsProduction || config.IsStaging {
+		if config.StorageEncryptionKey == "" {
+			panic("STORAGE_ENCRYPTION_KEY is required for production/staging")
 		}
 	}
 }

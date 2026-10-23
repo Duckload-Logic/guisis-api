@@ -3,6 +3,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -84,6 +85,12 @@ func RateLimitMiddleware(limiter *IPRateLimiter) gin.HandlerFunc {
 		limitKey := clientIP
 		if authHeader := c.GetHeader("Authorization"); authHeader != "" {
 			limitKey = authHeader
+		}
+
+		if os.Getenv("ENABLE_LOADTEST_VU_HEADER") == "true" {
+			if vuID := c.GetHeader("X-VU-ID"); vuID != "" {
+				limitKey = fmt.Sprintf("%s:vu:%s", limitKey, vuID)
+			}
 		}
 
 		if !limiter.GetLimiter(limitKey).Allow() {

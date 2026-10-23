@@ -197,9 +197,10 @@ func NewRouter(
 		defer cancel()
 
 		type ServiceHealth struct {
-			Name      string `json:"name"`
-			Status    string `json:"status"`
-			IsHealthy bool   `json:"isHealthy"`
+			Name      string  `json:"name"`
+			Status    string  `json:"status"`
+			IsHealthy bool    `json:"isHealthy"`
+			LatencyMs float64 `json:"latencyMs"`
 		}
 
 		results := make([]ServiceHealth, 0)
@@ -209,35 +210,47 @@ func NewRouter(
 			Name:      "API Gateway Server",
 			Status:    "Operational",
 			IsHealthy: true,
+			LatencyMs: 0.1,
 		})
 
 		// 2. MySQL Database
+		dbStart := time.Now()
 		dbHealthy := true
 		dbStatus := "Connected"
 		if err := db.PingContext(ctx); err != nil {
 			dbHealthy = false
 			dbStatus = "Offline"
+			log.Printf("[GetSystemHealth] {MySQL Ping}: %v", err)
 		}
+		dbLatency := float64(time.Since(dbStart).Microseconds()) / 1000.0
 		results = append(results, ServiceHealth{
 			Name:      "MySQL Database",
 			Status:    dbStatus,
 			IsHealthy: dbHealthy,
+			LatencyMs: dbLatency,
 		})
 
 		// 3. Redis Cache Store
+		redisStart := time.Now()
 		redisHealthy := true
 		redisStatus := "Connected"
 		if err := handlers.Redis.Client.Ping(ctx).Err(); err != nil {
 			redisHealthy = false
 			redisStatus = "Offline"
+			log.Printf("[GetSystemHealth] {Redis Ping}: %v", err)
 		}
+		redisLatency := float64(
+			time.Since(redisStart).Microseconds(),
+		) / 1000.0
 		results = append(results, ServiceHealth{
 			Name:      "Redis Cache Store",
 			Status:    redisStatus,
 			IsHealthy: redisHealthy,
+			LatencyMs: redisLatency,
 		})
 
 		// 4. AI FastAPI Service
+		aiStart := time.Now()
 		aiHealthy := true
 		aiStatus := "Operational"
 		aiClient := &http.Client{Timeout: 2 * time.Second}
@@ -252,22 +265,27 @@ func NewRouter(
 		if err != nil {
 			aiHealthy = false
 			aiStatus = "Offline"
+			log.Printf("[GetSystemHealth] {AI Request Init}: %v", err)
 		} else {
 			aiResp, err := aiClient.Do(aiReq)
 			if err != nil || aiResp.StatusCode != http.StatusOK {
 				aiHealthy = false
 				aiStatus = "Offline"
+				log.Printf("[GetSystemHealth] {AI Ping}: %v", err)
 			} else {
 				aiResp.Body.Close()
 			}
 		}
+		aiLatency := float64(time.Since(aiStart).Microseconds()) / 1000.0
 		results = append(results, ServiceHealth{
 			Name:      "AI FastAPI Service",
 			Status:    aiStatus,
 			IsHealthy: aiHealthy,
+			LatencyMs: aiLatency,
 		})
 
 		// 5. Notification SMTP
+		smtpStart := time.Now()
 		smtpHealthy := true
 		smtpStatus := "Active"
 		var dialAddr string
@@ -283,25 +301,38 @@ func NewRouter(
 		if err != nil {
 			smtpHealthy = false
 			smtpStatus = "Degraded"
+			log.Printf("[GetSystemHealth] {SMTP Dial}: %v", err)
 		} else {
 			conn.Close()
 		}
+		smtpLatency := float64(
+			time.Since(smtpStart).Microseconds(),
+		) / 1000.0
 		results = append(results, ServiceHealth{
 			Name:      "Notification SMTP",
 			Status:    smtpStatus,
 			IsHealthy: smtpHealthy,
+			LatencyMs: smtpLatency,
 		})
 
 		// 6. Identity Provider (IDP)
+		idpStart := time.Now()
 		idpHealthy := handlers.AuthHandler.IsIDPUp(ctx)
 		idpStatus := "Operational"
 		if !idpHealthy {
 			idpStatus = "Offline"
+			log.Printf(
+				"[GetSystemHealth] {IDP Ping}: identity provider down",
+			)
 		}
+		idpLatency := float64(
+			time.Since(idpStart).Microseconds(),
+		) / 1000.0
 		results = append(results, ServiceHealth{
 			Name:      "Identity Provider (IDP)",
 			Status:    idpStatus,
 			IsHealthy: idpHealthy,
+			LatencyMs: idpLatency,
 		})
 
 		c.JSON(http.StatusOK, results)
