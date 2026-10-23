@@ -114,7 +114,7 @@ func NewService(
 		noteService:    noteService,
 		studentService: studentService,
 		classifier: classifier.NewClient(
-			&http.Client{Timeout: 5 * time.Second},
+			&http.Client{Timeout: 30 * time.Second},
 			cfg.AIBaseUrl,
 			cfg.AIAPIKey,
 		),

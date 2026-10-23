@@ -12,7 +12,7 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/config"
 )
 
-const defaultClassifierTimeout = 3 * time.Second
+const defaultClassifierTimeout = 30 * time.Second
 
 type ClassifierClient struct {
 	httpClient *http.Client
@@ -52,7 +52,12 @@ func (c *ClassifierClient) Classify(
 		return nil, fmt.Errorf("[ClassifierClient] {Marshal JSON}: %w", err)
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, defaultClassifierTimeout)
+	timeout := defaultClassifierTimeout
+	if c.httpClient != nil && c.httpClient.Timeout > 0 {
+		timeout = c.httpClient.Timeout
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(
