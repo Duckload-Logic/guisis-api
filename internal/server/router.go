@@ -197,20 +197,25 @@ func NewRouter(
 		defer cancel()
 
 		type ServiceHealth struct {
-			Name      string  `json:"name"`
-			Status    string  `json:"status"`
-			IsHealthy bool    `json:"isHealthy"`
-			LatencyMs float64 `json:"latencyMs"`
+			Name             string    `json:"name"`
+			Status           string    `json:"status"`
+			IsHealthy        bool      `json:"isHealthy"`
+			LatencyMs        float64   `json:"latencyMs"`
+			MeasurementScope string    `json:"measurementScope"`
+			MeasuredAt       time.Time `json:"measuredAt"`
 		}
 
+		measuredAt := time.Now().UTC()
 		results := make([]ServiceHealth, 0)
 
 		// 1. API gateway
 		results = append(results, ServiceHealth{
-			Name:      "API Gateway Server",
-			Status:    "Operational",
-			IsHealthy: true,
-			LatencyMs: 0.1,
+			Name:             "API Gateway Server",
+			Status:           "Operational",
+			IsHealthy:        true,
+			LatencyMs:        0.1,
+			MeasurementScope: "api_internal_baseline",
+			MeasuredAt:       measuredAt,
 		})
 
 		// 2. MySQL Database
@@ -224,10 +229,12 @@ func NewRouter(
 		}
 		dbLatency := float64(time.Since(dbStart).Microseconds()) / 1000.0
 		results = append(results, ServiceHealth{
-			Name:      "MySQL Database",
-			Status:    dbStatus,
-			IsHealthy: dbHealthy,
-			LatencyMs: dbLatency,
+			Name:             "MySQL Database",
+			Status:           dbStatus,
+			IsHealthy:        dbHealthy,
+			LatencyMs:        dbLatency,
+			MeasurementScope: "api_to_dependency",
+			MeasuredAt:       measuredAt,
 		})
 
 		// 3. Redis Cache Store
@@ -243,10 +250,12 @@ func NewRouter(
 			time.Since(redisStart).Microseconds(),
 		) / 1000.0
 		results = append(results, ServiceHealth{
-			Name:      "Redis Cache Store",
-			Status:    redisStatus,
-			IsHealthy: redisHealthy,
-			LatencyMs: redisLatency,
+			Name:             "Redis Cache Store",
+			Status:           redisStatus,
+			IsHealthy:        redisHealthy,
+			LatencyMs:        redisLatency,
+			MeasurementScope: "api_to_dependency",
+			MeasuredAt:       measuredAt,
 		})
 
 		// 4. AI FastAPI Service
@@ -278,10 +287,12 @@ func NewRouter(
 		}
 		aiLatency := float64(time.Since(aiStart).Microseconds()) / 1000.0
 		results = append(results, ServiceHealth{
-			Name:      "AI FastAPI Service",
-			Status:    aiStatus,
-			IsHealthy: aiHealthy,
-			LatencyMs: aiLatency,
+			Name:             "AI FastAPI Service",
+			Status:           aiStatus,
+			IsHealthy:        aiHealthy,
+			LatencyMs:        aiLatency,
+			MeasurementScope: "api_to_dependency",
+			MeasuredAt:       measuredAt,
 		})
 
 		// 5. Notification SMTP
@@ -309,10 +320,12 @@ func NewRouter(
 			time.Since(smtpStart).Microseconds(),
 		) / 1000.0
 		results = append(results, ServiceHealth{
-			Name:      "Notification SMTP",
-			Status:    smtpStatus,
-			IsHealthy: smtpHealthy,
-			LatencyMs: smtpLatency,
+			Name:             "Notification SMTP",
+			Status:           smtpStatus,
+			IsHealthy:        smtpHealthy,
+			LatencyMs:        smtpLatency,
+			MeasurementScope: "api_to_dependency",
+			MeasuredAt:       measuredAt,
 		})
 
 		// 6. Identity Provider (IDP)
@@ -329,10 +342,12 @@ func NewRouter(
 			time.Since(idpStart).Microseconds(),
 		) / 1000.0
 		results = append(results, ServiceHealth{
-			Name:      "Identity Provider (IDP)",
-			Status:    idpStatus,
-			IsHealthy: idpHealthy,
-			LatencyMs: idpLatency,
+			Name:             "Identity Provider (IDP)",
+			Status:           idpStatus,
+			IsHealthy:        idpHealthy,
+			LatencyMs:        idpLatency,
+			MeasurementScope: "api_to_dependency",
+			MeasuredAt:       measuredAt,
 		})
 
 		c.JSON(http.StatusOK, results)
