@@ -848,9 +848,13 @@ func (s *Service) UpdateAppointment(
 	if req.AppointmentCategory.ID != 0 {
 		finalCategoryID = req.AppointmentCategory.ID
 	}
-	finalUrgencyLevel := oldAppt.UrgencyLevel
-	if normalizedUrgency != "" {
+	finalUrgencyLevel := ""
+	finalUrgencyScore := oldAppt.UrgencyScore
+	if urgencyChanged {
 		finalUrgencyLevel = normalizedUrgency
+		finalUrgencyScore = 0.0
+	} else if req.UrgencyScore > 0 {
+		finalUrgencyScore = req.UrgencyScore
 	}
 
 	appt := Appointment{
@@ -862,7 +866,7 @@ func (s *Service) UpdateAppointment(
 		TimeSlotID:   finalTimeSlotID,
 		CategoryID:   finalCategoryID,
 		UrgencyLevel: finalUrgencyLevel,
-		UrgencyScore: req.UrgencyScore,
+		UrgencyScore: finalUrgencyScore,
 	}
 
 	err = s.repo.WithTransaction(

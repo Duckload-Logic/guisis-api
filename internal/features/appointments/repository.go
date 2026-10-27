@@ -652,8 +652,9 @@ func (r *Repository) UpdateAppointment(
 	if appt.UrgencyLevel != "" {
 		setQuery = append(setQuery, "urgency_level = ?")
 		args = append(args, appt.UrgencyLevel)
-	}
-	if appt.UrgencyScore > 0 {
+		setQuery = append(setQuery, "urgency_score = ?")
+		args = append(args, appt.UrgencyScore)
+	} else if appt.UrgencyScore > 0 {
 		setQuery = append(setQuery, "urgency_score = ?")
 		args = append(args, appt.UrgencyScore)
 	}
