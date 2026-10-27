@@ -793,6 +793,34 @@ func (s *Service) UpdateAppointment(
 		}
 	}
 
+	if urgencyChanged {
+		oldUrgency := oldAppt.UrgencyLevel
+		if oldUrgency == "" {
+			oldUrgency = UrgencyMedium
+		}
+		remarks := fmt.Sprintf(
+			"Priority manually adjusted from %s to %s.",
+			strings.ToUpper(oldUrgency),
+			normalizedUrgency,
+		)
+		trimmedNotes := strings.TrimSpace(req.AdminNotes.String)
+		if trimmedNotes != "" && !statusChanged && !scheduleChanged {
+			remarks = fmt.Sprintf("%s %s", remarks, trimmedNotes)
+		}
+		urgencyLogEntry := fmt.Sprintf(
+			"[%s] STATUS: PRIORITY OVERRIDDEN\nRemarks: %s",
+			formattedTime,
+			remarks,
+		)
+		if newLogEntry != "" {
+			newLogEntry = urgencyLogEntry +
+				"\n\n------------------------------\n\n" +
+				newLogEntry
+		} else {
+			newLogEntry = urgencyLogEntry
+		}
+	}
+
 	updatedNotes := existingNotes
 	if newLogEntry != "" {
 		if existingNotes != "" {
@@ -804,15 +832,36 @@ func (s *Service) UpdateAppointment(
 		}
 	}
 
+	finalWhenDate := oldAppt.WhenDate
+	if reqDateOnly != "" {
+		finalWhenDate = reqDateOnly
+	}
+	finalTimeSlotID := oldAppt.TimeSlotID
+	if req.TimeSlot.ID != 0 {
+		finalTimeSlotID = req.TimeSlot.ID
+	}
+	finalStatusID := oldAppt.StatusID
+	if req.Status.ID != 0 {
+		finalStatusID = req.Status.ID
+	}
+	finalCategoryID := oldAppt.CategoryID
+	if req.AppointmentCategory.ID != 0 {
+		finalCategoryID = req.AppointmentCategory.ID
+	}
+	finalUrgencyLevel := oldAppt.UrgencyLevel
+	if normalizedUrgency != "" {
+		finalUrgencyLevel = normalizedUrgency
+	}
+
 	appt := Appointment{
 		ID:           id,
-		StatusID:     req.Status.ID,
+		StatusID:     finalStatusID,
 		Reason:       req.Reason,
 		AdminNotes:   structs.StringToNullableString(updatedNotes),
-		WhenDate:     reqDateOnly,
-		TimeSlotID:   req.TimeSlot.ID,
-		CategoryID:   req.AppointmentCategory.ID,
-		UrgencyLevel: req.UrgencyLevel,
+		WhenDate:     finalWhenDate,
+		TimeSlotID:   finalTimeSlotID,
+		CategoryID:   finalCategoryID,
+		UrgencyLevel: finalUrgencyLevel,
 		UrgencyScore: req.UrgencyScore,
 	}
 
@@ -897,20 +946,21 @@ func (s *Service) UpdateAppointment(
 			Type: constants.AppointmentEntityType,
 		})
 	} else {
-		notifications = []audit.NotificationParams{
-			{
-				ReceiverID: structs.StringToNullableString(studentUserID),
-				TargetID:   structs.StringToNullableString(newAppt.ID),
-				TargetType: structs.StringToNullableString(
-					constants.AppointmentEntityType,
-				),
-				Title: fmt.Sprintf(
-					"Appointment Status Updated By %s",
-					adminEmail,
-				),
-				Message: fmt.Sprintf(
-					"Appointment scheduled on %s at %s has "+
-						"been updated to '%s'",
+		if statusChanged || scheduleChanged {
+			notifications = []audit.NotificationParams{
+				{
+					ReceiverID: structs.StringToNullableString(studentUserID),
+					TargetID:   structs.StringToNullableString(newAppt.ID),
+					TargetType: structs.StringToNullableString(
+						constants.AppointmentEntityType,
+					),
+					Title: fmt.Sprintf(
+						"Appointment Status Updated By %s",
+						adminEmail,
+					),
+					Message: fmt.Sprintf(
+						"Appointment scheduled on %s at %s has "+
+							"been updated to '%s'",
 					datetime.FormatDate(newAppt.WhenDate),
 					datetime.FormatTime(newAppt.TimeSlotTime),
 					newAppt.StatusName,
@@ -934,6 +984,47 @@ func (s *Service) UpdateAppointment(
 				Type: constants.AppointmentEntityType,
 			},
 		}
+		} else if urgencyChanged {
+			notifications = []audit.NotificationParams{
+				{
+					TargetID: structs.StringToNullableString(oldAppt.ID),
+					TargetType: structs.StringToNullableString(
+						constants.AppointmentEntityType,
+					),
+					Title: "Priority Adjusted Successfully",
+					Message: fmt.Sprintf(
+						"You have successfully adjusted priority of "+
+							"appointment #%s to '%s'.",
+						structs.TruncateString(oldAppt.ID, 7),
+					normalizedUrgency,
+					),
+					Type: constants.AppointmentEntityType,
+				},
+			}
+		}
+	}
+
+	var emails []audit.EmailParams
+	if statusChanged || scheduleChanged {
+		emails = []audit.EmailParams{
+			{
+				To:           []string{newAppt.UserEmail},
+				Subject:      "Appointment Status Updated",
+				TemplatePath: "appointment.html",
+				TemplateData: map[string]interface{}{
+					"StudentName": fmt.Sprintf(
+						"%s %s",
+						newAppt.UserFirstName,
+						newAppt.UserLastName,
+					),
+					"Date":       datetime.FormatDate(newAppt.WhenDate),
+					"Time":       datetime.FormatTime(newAppt.TimeSlotTime),
+					"Category":   newAppt.CategoryName,
+					"Status":     newAppt.StatusName,
+					"AdminNotes": newAppt.AdminNotes.String,
+					},
+			},
+		}
 	}
 
 	audit.Dispatch(
@@ -953,25 +1044,7 @@ func (s *Service) UpdateAppointment(
 				},
 			},
 			Notifications: notifications,
-			Email: []audit.EmailParams{
-				{
-					To:           []string{newAppt.UserEmail},
-					Subject:      "Appointment Status Updated",
-					TemplatePath: "appointment.html",
-					TemplateData: map[string]interface{}{
-						"StudentName": fmt.Sprintf(
-							"%s %s",
-							newAppt.UserFirstName,
-							newAppt.UserLastName,
-						),
-						"Date":       datetime.FormatDate(newAppt.WhenDate),
-						"Time":       datetime.FormatTime(newAppt.TimeSlotTime),
-						"Category":   newAppt.CategoryName,
-						"Status":     newAppt.StatusName,
-						"AdminNotes": newAppt.AdminNotes.String,
-					},
-				},
-			},
+			Email:         emails,
 		})
 
 	// Add special prompt for counselors if appointment is completed

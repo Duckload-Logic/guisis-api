@@ -6,6 +6,14 @@ import (
 	"github.com/olazo-johnalbert/duckload-api/internal/core/structs"
 )
 
+// Urgency triage level constants.
+const (
+	UrgencyLow      = "LOW"
+	UrgencyMedium   = "MEDIUM"
+	UrgencyHigh     = "HIGH"
+	UrgencyCritical = "CRITICAL"
+)
+
 // TimeSlot represents a predefined appointment window.
 type TimeSlot struct {
 	ID   int    `db:"id"   json:"id"`
