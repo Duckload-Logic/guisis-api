@@ -39,16 +39,19 @@
 
         .page {
             width: 100%;
-            height: 282mm;
+            min-height: 260mm;
+            height: auto;
             padding: 10mm 10mm 0 10mm;
             margin: 0 auto;
             position: relative;
             box-sizing: border-box;
+            break-after: page;
             page-break-after: always;
 
         }
 
         .page:last-of-type {
+            break-after: auto;
             page-break-after: auto;
         }
 
@@ -150,6 +153,8 @@
             margin-bottom: 4px;
             display: block;
             border-bottom: none;
+            break-after: avoid;
+            page-break-after: avoid;
         }
 
         .row {
@@ -199,17 +204,38 @@
 
         table {
             width: 100%;
+            table-layout: fixed;
             border-collapse: collapse;
             margin-top: 5px;
-            font-size: 10pt;
+            font-size: 8.5pt;
             border: 1px solid black;
+            break-inside: auto;
+            page-break-inside: auto;
         }
 
         th,
         td {
             border: 1px solid black;
-            padding: 2px 4px;
-            height: 15pt;
+            padding: 2px 3px;
+            height: 14pt;
+            word-break: break-all;
+            overflow-wrap: anywhere;
+        }
+
+        .awards-wrapper {
+            width: 100%;
+            max-width: 100%;
+            font-size: 7.5pt;
+            line-height: 1.15;
+            word-break: break-all;
+            overflow-wrap: anywhere;
+            overflow: hidden;
+            white-space: pre-wrap;
+        }
+
+        tr {
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
 
         th {
@@ -223,6 +249,8 @@
         .signature-block {
             margin-top: 20px;
             text-align: right;
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
 
         .signature-line {
@@ -562,13 +590,21 @@
         <div class="section-header">II. EDUCATIONAL BACKGROUND</div>
         {{with .Education}}
         <table>
+            <colgroup>
+                <col style="width: 15%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 10%;">
+                <col style="width: 10%;">
+                <col style="width: 15%;">
+            </colgroup>
             <tr>
-                <th style="width: 15%;">LEVEL</th>
-                <th style="width: 25%;">SCHOOL GRADUATED</th>
-                <th style="width: 25%;">SCHOOL ADDRESS</th>
-                <th style="width: 10%;">PUBLIC /PRIVATE</th>
-                <th style="width: 10%;">DATES OF ATTENDANCE</th>
-                <th style="width: 15%;">HONORS RECEIVED/ SPECIAL AWARDS</th>
+                <th>LEVEL</th>
+                <th>SCHOOL GRADUATED</th>
+                <th>SCHOOL ADDRESS</th>
+                <th>PUBLIC /PRIVATE</th>
+                <th>DATES OF ATTENDANCE</th>
+                <th>HONORS RECEIVED/ SPECIAL AWARDS</th>
             </tr>
             {{$levels := iterate 5}}
             {{$levelNames := makeSlice
@@ -594,7 +630,7 @@
                     <td class="text-center">
                         {{$school.YearStarted}} - {{$school.YearCompleted}}
                     </td>
-                    <td>{{$school.Awards.String}}</td>
+                    <td><div class="awards-wrapper">{{$school.Awards.String}}</div></td>
                 </tr>
                 {{end}}
             {{else}}
