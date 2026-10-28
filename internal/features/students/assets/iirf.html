@@ -218,8 +218,19 @@
             border: 1px solid black;
             padding: 2px 3px;
             height: 14pt;
-            word-break: break-word;
-            overflow-wrap: break-word;
+            word-break: break-all;
+            overflow-wrap: anywhere;
+        }
+
+        .awards-wrapper {
+            width: 100%;
+            max-width: 100%;
+            font-size: 7.5pt;
+            line-height: 1.15;
+            word-break: break-all;
+            overflow-wrap: anywhere;
+            overflow: hidden;
+            white-space: pre-wrap;
         }
 
         tr {
@@ -579,13 +590,21 @@
         <div class="section-header">II. EDUCATIONAL BACKGROUND</div>
         {{with .Education}}
         <table>
+            <colgroup>
+                <col style="width: 15%;">
+                <col style="width: 25%;">
+                <col style="width: 25%;">
+                <col style="width: 10%;">
+                <col style="width: 10%;">
+                <col style="width: 15%;">
+            </colgroup>
             <tr>
-                <th style="width: 15%;">LEVEL</th>
-                <th style="width: 25%;">SCHOOL GRADUATED</th>
-                <th style="width: 25%;">SCHOOL ADDRESS</th>
-                <th style="width: 10%;">PUBLIC /PRIVATE</th>
-                <th style="width: 10%;">DATES OF ATTENDANCE</th>
-                <th style="width: 15%;">HONORS RECEIVED/ SPECIAL AWARDS</th>
+                <th>LEVEL</th>
+                <th>SCHOOL GRADUATED</th>
+                <th>SCHOOL ADDRESS</th>
+                <th>PUBLIC /PRIVATE</th>
+                <th>DATES OF ATTENDANCE</th>
+                <th>HONORS RECEIVED/ SPECIAL AWARDS</th>
             </tr>
             {{$levels := iterate 5}}
             {{$levelNames := makeSlice
@@ -611,7 +630,7 @@
                     <td class="text-center">
                         {{$school.YearStarted}} - {{$school.YearCompleted}}
                     </td>
-                    <td style="font-size: 7.5pt; line-height: 1.15; white-space: pre-wrap;">{{$school.Awards.String}}</td>
+                    <td><div class="awards-wrapper">{{$school.Awards.String}}</div></td>
                 </tr>
                 {{end}}
             {{else}}
