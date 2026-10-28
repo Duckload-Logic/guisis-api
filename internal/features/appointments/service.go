@@ -720,6 +720,9 @@ func (s *Service) UpdateAppointment(
 	statusChanged := req.Status.ID != oldAppt.StatusID
 	scheduleChanged := (reqDateOnly != oldAppt.WhenDate) ||
 		(req.TimeSlot.ID != oldAppt.TimeSlotID)
+	normalizedUrgency := strings.ToUpper(strings.TrimSpace(req.UrgencyLevel))
+	urgencyChanged := normalizedUrgency != "" &&
+		normalizedUrgency != strings.ToUpper(oldAppt.UrgencyLevel)
 
 	if scheduleChanged {
 		if err := validateAppointmentWorkingDate(reqDateOnly); err != nil {
