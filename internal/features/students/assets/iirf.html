@@ -39,16 +39,19 @@
 
         .page {
             width: 100%;
-            height: 282mm;
+            min-height: 260mm;
+            height: auto;
             padding: 10mm 10mm 0 10mm;
             margin: 0 auto;
             position: relative;
             box-sizing: border-box;
+            break-after: page;
             page-break-after: always;
 
         }
 
         .page:last-of-type {
+            break-after: auto;
             page-break-after: auto;
         }
 
@@ -150,6 +153,8 @@
             margin-bottom: 4px;
             display: block;
             border-bottom: none;
+            break-after: avoid;
+            page-break-after: avoid;
         }
 
         .row {
@@ -199,17 +204,27 @@
 
         table {
             width: 100%;
+            table-layout: fixed;
             border-collapse: collapse;
             margin-top: 5px;
-            font-size: 10pt;
+            font-size: 8.5pt;
             border: 1px solid black;
+            break-inside: auto;
+            page-break-inside: auto;
         }
 
         th,
         td {
             border: 1px solid black;
-            padding: 2px 4px;
-            height: 15pt;
+            padding: 2px 3px;
+            height: 14pt;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+
+        tr {
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
 
         th {
@@ -223,6 +238,8 @@
         .signature-block {
             margin-top: 20px;
             text-align: right;
+            break-inside: avoid;
+            page-break-inside: avoid;
         }
 
         .signature-line {
@@ -594,7 +611,7 @@
                     <td class="text-center">
                         {{$school.YearStarted}} - {{$school.YearCompleted}}
                     </td>
-                    <td>{{$school.Awards.String}}</td>
+                    <td style="font-size: 7.5pt; line-height: 1.15; white-space: pre-wrap;">{{$school.Awards.String}}</td>
                 </tr>
                 {{end}}
             {{else}}
