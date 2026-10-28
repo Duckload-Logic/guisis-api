@@ -116,18 +116,19 @@ func IIRLoggerMiddleware() gin.HandlerFunc {
 			)
 		}
 
-		userIDVal, _ := c.Get("userID")
-		userIDStr, _ := userIDVal.(string)
-		userEmailVal, _ := c.Get("userEmail")
-		userEmailStr, _ := userEmailVal.(string)
+		userID, ipAddress, userAgent, userEmail, _, traceID :=
+			audit.ExtractMeta(c.Request.Context())
 
 		logSvc.RecordEntry(c.Request.Context(), audit.LogEntry{
 			Level:     level,
 			Category:  audit.CategoryAudit,
 			Action:    action,
 			Message:   message,
-			UserID:    structs.StringToNullableString(userIDStr),
-			UserEmail: structs.StringToNullableString(userEmailStr),
+			UserID:    structs.StringToNullableString(userID),
+			UserEmail: structs.StringToNullableString(userEmail),
+			IPAddress: structs.StringToNullableString(ipAddress),
+			UserAgent: structs.StringToNullableString(userAgent),
+			TraceID:   structs.StringToNullableString(traceID),
 		})
 	}
 }
