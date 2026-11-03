@@ -86,7 +86,13 @@ func (h *Handler) PostM2MToken(c *gin.Context) {
 		req.ClientSecret,
 	)
 	if err != nil {
-		response.SendError(c, err.Error(), http.StatusUnauthorized, nil)
+		log.Printf("[PostM2MToken] {Authenticate}: %v", err)
+		response.SendError(
+			c,
+			"Invalid client credentials",
+			http.StatusUnauthorized,
+			nil,
+		)
 		return
 	}
 
@@ -115,7 +121,13 @@ func (h *Handler) PostM2MTokenRefresh(c *gin.Context) {
 		req.RefreshToken,
 	)
 	if err != nil {
-		response.SendError(c, err.Error(), http.StatusUnauthorized, nil)
+		log.Printf("[PostM2MTokenRefresh] {RefreshM2MToken}: %v", err)
+		response.SendError(
+			c,
+			"Invalid client credentials",
+			http.StatusUnauthorized,
+			nil,
+		)
 		return
 	}
 
