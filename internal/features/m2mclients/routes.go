@@ -13,8 +13,10 @@ func RegisterRoutes(
 	h *Handler,
 	redis *datastore.RedisClient,
 ) {
-	// Public M2M Auth Routes
+	// Public M2M Auth Routes with brute-force rate limiting (1 rps, 5 burst)
+	m2mAuthLimiter := middleware.NewIPRateLimiter(1, 5)
 	m2mAuth := rg.Group("/auth/m2m")
+	m2mAuth.Use(middleware.RateLimitMiddleware(m2mAuthLimiter))
 	{
 		m2mAuth.POST("/token", h.PostM2MToken)
 		m2mAuth.POST("/refresh", h.PostM2MTokenRefresh)
