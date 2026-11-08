@@ -185,6 +185,7 @@ CREATE TABLE `appointments` (
   `appointment_category_id` int NOT NULL,
   `urgency_level` enum('LOW','MEDIUM','HIGH','CRITICAL') NOT NULL DEFAULT 'MEDIUM',
   `urgency_score` float NOT NULL,
+  `urgency_rationale` text,
   `status_id` int NOT NULL DEFAULT '1',
   `started_at` timestamp NULL DEFAULT NULL,
   `completed_at` timestamp NULL DEFAULT NULL,

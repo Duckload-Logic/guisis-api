@@ -37,6 +37,7 @@ type AppointmentDTO struct {
 	Status              AppointmentStatus      `json:"status,omitempty"`
 	UrgencyLevel        string                 `json:"urgencyLevel,omitempty"`
 	UrgencyScore        float64                `json:"urgencyScore,omitempty"`
+	UrgencyRationale    string                 `json:"urgencyRationale,omitempty"`
 	PreferredDate1      string                 `json:"preferredDate1,omitempty"`
 	PreferredTimeSlot1  *TimeSlot              `json:"preferredTimeSlot1,omitempty"`
 	PreferredDate2      string                 `json:"preferredDate2,omitempty"`

@@ -199,6 +199,13 @@ func (s *Service) CreateAppointment(
 	if err == nil {
 		appt.UrgencyLevel = classification.Level
 		appt.UrgencyScore = classification.Confidence
+
+		rationale, ok := classification.Metadata["rationale"].(string)
+		if ok && rationale != "" {
+			appt.UrgencyRationale = structs.StringToNullableString(
+				rationale,
+			)
+		}
 	} else {
 		s.logService.Record(ctx, nil, audit.LogEntry{
 			Level:    audit.LevelError,
@@ -794,33 +801,15 @@ func (s *Service) UpdateAppointment(
 				trimmedNotes,
 			)
 		}
-	}
-
-	if urgencyChanged {
-		oldUrgency := oldAppt.UrgencyLevel
-		if oldUrgency == "" {
-			oldUrgency = UrgencyMedium
-		}
-		remarks := fmt.Sprintf(
-			"Priority manually adjusted from %s to %s.",
-			strings.ToUpper(oldUrgency),
-			normalizedUrgency,
-		)
+	} else {
+		// Pure Counselor Note or Remarks without status/schedule mutation
 		trimmedNotes := strings.TrimSpace(req.AdminNotes.String)
-		if trimmedNotes != "" && !statusChanged && !scheduleChanged {
-			remarks = fmt.Sprintf("%s %s", remarks, trimmedNotes)
-		}
-		urgencyLogEntry := fmt.Sprintf(
-			"[%s] STATUS: PRIORITY OVERRIDDEN\nRemarks: %s",
-			formattedTime,
-			remarks,
-		)
-		if newLogEntry != "" {
-			newLogEntry = urgencyLogEntry +
-				"\n\n------------------------------\n\n" +
-				newLogEntry
-		} else {
-			newLogEntry = urgencyLogEntry
+		if trimmedNotes != "" {
+			newLogEntry = fmt.Sprintf(
+				"[%s] STATUS: COUNSELOR NOTE\nRemarks: %s",
+				formattedTime,
+				trimmedNotes,
+			)
 		}
 	}
 
@@ -851,14 +840,9 @@ func (s *Service) UpdateAppointment(
 	if req.AppointmentCategory.ID != 0 {
 		finalCategoryID = req.AppointmentCategory.ID
 	}
-	finalUrgencyLevel := ""
+	// Retain immutable AI triage classification per panel guardrails
+	finalUrgencyLevel := oldAppt.UrgencyLevel
 	finalUrgencyScore := oldAppt.UrgencyScore
-	if urgencyChanged {
-		finalUrgencyLevel = normalizedUrgency
-		finalUrgencyScore = 0.0
-	} else if req.UrgencyScore > 0 {
-		finalUrgencyScore = req.UrgencyScore
-	}
 
 	appt := Appointment{
 		ID:           id,
@@ -1132,9 +1116,10 @@ func (s *Service) mapToDTO(
 			ID:   appt.StatusID,
 			Name: appt.StatusName,
 		},
-		UrgencyLevel: appt.UrgencyLevel,
-		UrgencyScore: appt.UrgencyScore,
-		StartedAt:    appt.StartedAt,
+		UrgencyLevel:     appt.UrgencyLevel,
+		UrgencyScore:     appt.UrgencyScore,
+		UrgencyRationale: appt.UrgencyRationale.String,
+		StartedAt:        appt.StartedAt,
 		CompletedAt:  appt.CompletedAt,
 		CreatedAt:    appt.CreatedAt,
 		UpdatedAt:    appt.UpdatedAt,

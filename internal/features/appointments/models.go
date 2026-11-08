@@ -56,8 +56,9 @@ type Appointment struct {
 	TimeSlotID      int                    `db:"time_slot_id" json:"timeSlotId"`
 	CategoryID      int                    `db:"appointment_category_id" json:"appointmentCategoryId"`
 	StatusID        int                    `db:"status_id" json:"statusId"`
-	UrgencyLevel    string                 `db:"urgency_level" json:"urgencyLevel"`
-	UrgencyScore    float64                `db:"urgency_score" json:"urgencyScore"`
+	UrgencyLevel     string                 `db:"urgency_level" json:"urgencyLevel"`
+	UrgencyScore     float64                `db:"urgency_score" json:"urgencyScore"`
+	UrgencyRationale structs.NullableString `db:"urgency_rationale" json:"urgencyRationale"`
 	PrefDate1       structs.NullableString `db:"preferred_date_1"`
 	PrefTimeSlotID1 structs.NullableInt64  `db:"preferred_time_slot_id_1"`
 	PrefDate2       structs.NullableString `db:"preferred_date_2"`
@@ -97,6 +98,7 @@ type AppointmentWithDetailsView struct {
 	StatusName         string                 `db:"status_name"`
 	UrgencyLevel       string                 `db:"urgency_level"`
 	UrgencyScore       float64                `db:"urgency_score"`
+	UrgencyRationale   structs.NullableString `db:"urgency_rationale"`
 	PrefDate1          structs.NullableString `db:"preferred_date_1"`
 	PrefTimeSlotID1    structs.NullableInt64  `db:"preferred_time_slot_id_1"`
 	PrefTimeSlotTime1  structs.NullableString `db:"preferred_time_slot_time_1"`

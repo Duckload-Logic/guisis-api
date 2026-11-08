@@ -46,6 +46,7 @@ const appointmentsBaseQuery = `
 		as2.name AS status_name,
 		a.urgency_level AS urgency_level,
 		a.urgency_score AS urgency_score,
+		a.urgency_rationale AS urgency_rationale,
 		DATE_FORMAT(a.preferred_date_1, '%Y-%m-%d') AS preferred_date_1,
 		a.preferred_time_slot_id_1 AS preferred_time_slot_id_1,
 		ts1.time AS preferred_time_slot_time_1,
@@ -584,7 +585,7 @@ func (r *Repository) CreateAppointment(
 		INSERT INTO appointments (
 			id, iir_id, reason, admin_notes, when_date,
 			time_slot_id, appointment_category_id, status_id,
-			urgency_level, urgency_score,
+			urgency_level, urgency_score, urgency_rationale,
 			preferred_date_1, preferred_time_slot_id_1,
 			preferred_date_2, preferred_time_slot_id_2,
 			preferred_date_3, preferred_time_slot_id_3,
@@ -592,7 +593,7 @@ func (r *Repository) CreateAppointment(
 		) VALUES (
 			:id, :iir_id, :reason, :admin_notes, :when_date,
 			:time_slot_id, :appointment_category_id, :status_id,
-			:urgency_level, :urgency_score,
+			:urgency_level, :urgency_score, :urgency_rationale,
 			:preferred_date_1, :preferred_time_slot_id_1,
 			:preferred_date_2, :preferred_time_slot_id_2,
 			:preferred_date_3, :preferred_time_slot_id_3,
