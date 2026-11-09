@@ -764,7 +764,7 @@ func (r *Repository) ListActiveCounselorProfiles(
 		WHERE cp.is_active = 1 AND u.is_active = 1
 		ORDER BY u.last_name ASC
 	`
-	var profiles []CounselorProfileView
+	profiles := make([]CounselorProfileView, 0)
 	err := r.db.SelectContext(ctx, &profiles, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list counselor profiles: %w", err)
