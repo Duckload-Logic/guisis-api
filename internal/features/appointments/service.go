@@ -1202,16 +1202,11 @@ func (s *Service) UpdateCounselorProfile(
 	userID string,
 	req UpdateCounselorProfileRequest,
 ) error {
-	isActive := true
-	if req.IsActive != nil {
-		isActive = *req.IsActive
-	}
 	profile := CounselorProfile{
 		UserID:   userID,
 		Title:    req.Title,
 		Gender:   req.Gender,
 		Position: req.Position,
-		IsActive: isActive,
 	}
 	return s.repo.UpsertCounselorProfile(ctx, profile)
 }

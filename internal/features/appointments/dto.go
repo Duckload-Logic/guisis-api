@@ -58,7 +58,6 @@ type UpdateCounselorProfileRequest struct {
 	Title    string `json:"title" binding:"required"`
 	Gender   string `json:"gender" binding:"required,oneof=FEMALE MALE OTHER"`
 	Position string `json:"position" binding:"required"`
-	IsActive *bool  `json:"isActive"`
 }
 
 type StartAppointmentRequest struct {

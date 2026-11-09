@@ -129,7 +129,6 @@ type CounselorProfile struct {
 	Title     string    `db:"title"      json:"title"`
 	Gender    string    `db:"gender"     json:"gender"`
 	Position  string    `db:"position"   json:"position"`
-	IsActive  bool      `db:"is_active"  json:"isActive"`
 	CreatedAt time.Time `db:"created_at" json:"createdAt"`
 	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
 }

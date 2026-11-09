@@ -757,7 +757,7 @@ func (r *Repository) ListActiveCounselorProfiles(
 			COALESCE(cp.gender, 'OTHER') AS gender,
 			COALESCE(cp.position, 'Guidance Counselor') AS position,
 			COALESCE(pf.file_url, '') AS profile_picture,
-			COALESCE(cp.is_active, 1) AS is_active
+			u.is_active
 		FROM user_roles ur
 		JOIN roles r ON r.id = ur.role_id
 		JOIN users u ON u.id = ur.user_id
@@ -766,7 +766,6 @@ func (r *Repository) ListActiveCounselorProfiles(
 		LEFT JOIN files pf ON pf.id = pp.file_id
 		WHERE (r.name = 'ADMIN' OR r.name = 'COUNSELOR' OR ur.role_id = 2)
 			AND u.is_active = 1
-			AND COALESCE(cp.is_active, 1) = 1
 		ORDER BY u.last_name ASC, u.first_name ASC
 	`
 	profiles := make([]CounselorProfileView, 0)
@@ -793,7 +792,7 @@ func (r *Repository) GetCounselorProfileByUserID(
 			COALESCE(cp.gender, 'OTHER') AS gender,
 			COALESCE(cp.position, 'Guidance Counselor') AS position,
 			COALESCE(pf.file_url, '') AS profile_picture,
-			COALESCE(cp.is_active, 1) AS is_active
+			u.is_active
 		FROM users u
 		LEFT JOIN counselor_profiles cp ON cp.user_id = u.id
 		LEFT JOIN profile_pictures pp ON pp.user_id = u.id
@@ -819,14 +818,13 @@ func (r *Repository) UpsertCounselorProfile(
 ) error {
 	query := `
 		INSERT INTO counselor_profiles (
-			user_id, title, gender, position, is_active
+			user_id, title, gender, position
 		) VALUES (
-			?, ?, ?, ?, ?
+			?, ?, ?, ?
 		) ON DUPLICATE KEY UPDATE
 			title = VALUES(title),
 			gender = VALUES(gender),
-			position = VALUES(position),
-			is_active = VALUES(is_active)
+			position = VALUES(position)
 	`
 	_, err := r.db.ExecContext(
 		ctx,
@@ -835,7 +833,6 @@ func (r *Repository) UpsertCounselorProfile(
 		profile.Title,
 		profile.Gender,
 		profile.Position,
-		profile.IsActive,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to upsert counselor profile: %w", err)

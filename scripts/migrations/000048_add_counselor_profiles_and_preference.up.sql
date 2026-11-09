@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS `counselor_profiles` (
   `title` VARCHAR(20) NOT NULL DEFAULT '',
   `gender` ENUM('FEMALE', 'MALE', 'OTHER') NOT NULL DEFAULT 'FEMALE',
   `position` VARCHAR(100) NOT NULL DEFAULT 'Guidance Counselor',
-  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT `fk_counselor_profiles_user` 
