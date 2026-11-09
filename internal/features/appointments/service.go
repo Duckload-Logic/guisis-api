@@ -963,29 +963,29 @@ func (s *Service) UpdateAppointment(
 					Message: fmt.Sprintf(
 						"Appointment scheduled on %s at %s has "+
 							"been updated to '%s'",
-					datetime.FormatDate(newAppt.WhenDate),
-					datetime.FormatTime(newAppt.TimeSlotTime),
-					newAppt.StatusName,
-				),
-				Type: constants.AppointmentEntityType,
-			},
-			{
-				TargetID: structs.StringToNullableString(oldAppt.ID),
-				TargetType: structs.StringToNullableString(
-					constants.AppointmentEntityType,
-				),
-				Title: "Appointment Updated Successfully",
-				Message: fmt.Sprintf(
-					"You have successfully updated the status of "+
-						"appointment #%s scheduled on %s at %s to '%s'.",
-					structs.TruncateString(oldAppt.ID, 7),
-					datetime.FormatDate(newAppt.WhenDate),
-					datetime.FormatTime(newAppt.TimeSlotTime),
-					newAppt.StatusName,
-				),
-				Type: constants.AppointmentEntityType,
-			},
-		}
+						datetime.FormatDate(newAppt.WhenDate),
+						datetime.FormatTime(newAppt.TimeSlotTime),
+						newAppt.StatusName,
+					),
+					Type: constants.AppointmentEntityType,
+				},
+				{
+					TargetID: structs.StringToNullableString(oldAppt.ID),
+					TargetType: structs.StringToNullableString(
+						constants.AppointmentEntityType,
+					),
+					Title: "Appointment Updated Successfully",
+					Message: fmt.Sprintf(
+						"You have successfully updated the status of "+
+							"appointment #%s scheduled on %s at %s to '%s'.",
+						structs.TruncateString(oldAppt.ID, 7),
+						datetime.FormatDate(newAppt.WhenDate),
+						datetime.FormatTime(newAppt.TimeSlotTime),
+						newAppt.StatusName,
+					),
+					Type: constants.AppointmentEntityType,
+				},
+			}
 		} else if urgencyChanged {
 			notifications = []audit.NotificationParams{
 				{
@@ -998,7 +998,7 @@ func (s *Service) UpdateAppointment(
 						"You have successfully adjusted priority of "+
 							"appointment #%s to '%s'.",
 						structs.TruncateString(oldAppt.ID, 7),
-					normalizedUrgency,
+						normalizedUrgency,
 					),
 					Type: constants.AppointmentEntityType,
 				},
@@ -1024,7 +1024,7 @@ func (s *Service) UpdateAppointment(
 					"Category":   newAppt.CategoryName,
 					"Status":     newAppt.StatusName,
 					"AdminNotes": newAppt.AdminNotes.String,
-					},
+				},
 			},
 		}
 	}

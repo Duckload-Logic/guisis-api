@@ -1385,7 +1385,7 @@ DROP TABLE IF EXISTS `v_related_persons`;
 /*!50001 DROP VIEW IF EXISTS `v_related_persons`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_related_persons` AS SELECT 
+/*!50001 CREATE VIEW `v_related_persons` AS SELECT
  1 AS `id`,
  1 AS `last_name`,
  1 AS `first_name`,
@@ -1413,7 +1413,7 @@ DROP TABLE IF EXISTS `v_student_basic_info`;
 /*!50001 DROP VIEW IF EXISTS `v_student_basic_info`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_student_basic_info` AS SELECT 
+/*!50001 CREATE VIEW `v_student_basic_info` AS SELECT
  1 AS `iir_id`,
  1 AS `user_id`,
  1 AS `email`,
@@ -1431,7 +1431,7 @@ DROP TABLE IF EXISTS `v_student_cors_files`;
 /*!50001 DROP VIEW IF EXISTS `v_student_cors_files`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_student_cors_files` AS SELECT 
+/*!50001 CREATE VIEW `v_student_cors_files` AS SELECT
  1 AS `student_id`,
  1 AS `file_url`*/;
 SET character_set_client = @saved_cs_client;
@@ -1444,7 +1444,7 @@ DROP TABLE IF EXISTS `v_student_current_cors`;
 /*!50001 DROP VIEW IF EXISTS `v_student_current_cors`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_student_current_cors` AS SELECT 
+/*!50001 CREATE VIEW `v_student_current_cors` AS SELECT
  1 AS `file_id`,
  1 AS `student_id`,
  1 AS `student_number`,
@@ -1468,7 +1468,7 @@ DROP TABLE IF EXISTS `v_student_finances`;
 /*!50001 DROP VIEW IF EXISTS `v_student_finances`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_student_finances` AS SELECT 
+/*!50001 CREATE VIEW `v_student_finances` AS SELECT
  1 AS `id`,
  1 AS `iir_id`,
  1 AS `income_range_id`,
@@ -1485,7 +1485,7 @@ DROP TABLE IF EXISTS `v_student_financial_supports`;
 /*!50001 DROP VIEW IF EXISTS `v_student_financial_supports`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_student_financial_supports` AS SELECT 
+/*!50001 CREATE VIEW `v_student_financial_supports` AS SELECT
  1 AS `sf_id`,
  1 AS `id`,
  1 AS `support_type_name`*/;
@@ -1499,7 +1499,7 @@ DROP TABLE IF EXISTS `v_student_personal_info`;
 /*!50001 DROP VIEW IF EXISTS `v_student_personal_info`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_student_personal_info` AS SELECT 
+/*!50001 CREATE VIEW `v_student_personal_info` AS SELECT
  1 AS `id`,
  1 AS `iir_id`,
  1 AS `student_number`,
@@ -1549,7 +1549,7 @@ DROP TABLE IF EXISTS `v_student_profiles`;
 /*!50001 DROP VIEW IF EXISTS `v_student_profiles`*/;
 SET @saved_cs_client     = @@character_set_client;
 /*!50503 SET character_set_client = utf8mb4 */;
-/*!50001 CREATE VIEW `v_student_profiles` AS SELECT 
+/*!50001 CREATE VIEW `v_student_profiles` AS SELECT
  1 AS `iir_id`,
  1 AS `user_id`,
  1 AS `first_name`,

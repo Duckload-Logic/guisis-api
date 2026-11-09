@@ -741,28 +741,33 @@ func buildAppointmentOrderClause(orderBy, sortOrder string) string {
 	}
 }
 
-// ListActiveCounselorProfiles retrieves all active counselor profiles.
+// ListActiveCounselorProfiles retrieves all active counselor profiles dynamically
+// from users assigned to the counselor/admin role in user_roles.
 func (r *Repository) ListActiveCounselorProfiles(
 	ctx context.Context,
 ) ([]CounselorProfileView, error) {
 	query := `
-		SELECT
-			cp.user_id,
-			cp.title,
+		SELECT DISTINCT
+			u.id AS user_id,
+			COALESCE(cp.title, '') AS title,
 			u.first_name,
 			u.middle_name,
 			u.last_name,
 			u.suffix_name,
-			cp.gender,
-			cp.position,
+			COALESCE(cp.gender, 'OTHER') AS gender,
+			COALESCE(cp.position, 'Guidance Counselor') AS position,
 			COALESCE(pf.file_url, '') AS profile_picture,
-			cp.is_active
-		FROM counselor_profiles cp
-		JOIN users u ON u.id = cp.user_id
+			COALESCE(cp.is_active, 1) AS is_active
+		FROM user_roles ur
+		JOIN roles r ON r.id = ur.role_id
+		JOIN users u ON u.id = ur.user_id
+		LEFT JOIN counselor_profiles cp ON cp.user_id = u.id
 		LEFT JOIN profile_pictures pp ON pp.user_id = u.id
 		LEFT JOIN files pf ON pf.id = pp.file_id
-		WHERE cp.is_active = 1 AND u.is_active = 1
-		ORDER BY u.last_name ASC
+		WHERE (r.name = 'ADMIN' OR r.name = 'COUNSELOR' OR ur.role_id = 2)
+			AND u.is_active = 1
+			AND COALESCE(cp.is_active, 1) = 1
+		ORDER BY u.last_name ASC, u.first_name ASC
 	`
 	profiles := make([]CounselorProfileView, 0)
 	err := r.db.SelectContext(ctx, &profiles, query)
@@ -779,21 +784,21 @@ func (r *Repository) GetCounselorProfileByUserID(
 ) (*CounselorProfileView, error) {
 	query := `
 		SELECT
-			cp.user_id,
-			cp.title,
+			u.id AS user_id,
+			COALESCE(cp.title, '') AS title,
 			u.first_name,
 			u.middle_name,
 			u.last_name,
 			u.suffix_name,
-			cp.gender,
-			cp.position,
+			COALESCE(cp.gender, 'OTHER') AS gender,
+			COALESCE(cp.position, 'Guidance Counselor') AS position,
 			COALESCE(pf.file_url, '') AS profile_picture,
-			cp.is_active
-		FROM counselor_profiles cp
-		JOIN users u ON u.id = cp.user_id
+			COALESCE(cp.is_active, 1) AS is_active
+		FROM users u
+		LEFT JOIN counselor_profiles cp ON cp.user_id = u.id
 		LEFT JOIN profile_pictures pp ON pp.user_id = u.id
 		LEFT JOIN files pf ON pf.id = pp.file_id
-		WHERE cp.user_id = ?
+		WHERE u.id = ?
 		LIMIT 1
 	`
 	var profile CounselorProfileView
