@@ -804,3 +804,81 @@ func (h *Handler) PostAppointmentStart(c *gin.Context) {
 		"message": "Appointment started successfully",
 	})
 }
+
+// GetAppointmentCounselors retrieves active counselors for selection.
+func (h *Handler) GetAppointmentCounselors(c *gin.Context) {
+	counselors, err := h.service.GetActiveCounselors(c.Request.Context())
+	if err != nil {
+		log.Printf(
+			"[GetAppointmentCounselors] {Fetch Counselors}: %v",
+			err,
+		)
+		response.SendError(
+			c,
+			"Failed to retrieve counselors",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, counselors)
+}
+
+// GetCounselorProfileMe retrieves the logged-in counselor's profile.
+func (h *Handler) GetCounselorProfileMe(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+
+	profile, err := h.service.GetCounselorProfile(
+		c.Request.Context(),
+		userID,
+	)
+	if err != nil {
+		log.Printf(
+			"[GetCounselorProfileMe] {Fetch Profile}: %v",
+			err,
+		)
+		response.SendError(
+			c,
+			"Failed to retrieve counselor profile",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, profile)
+}
+
+// PutCounselorProfileMe updates the logged-in counselor's profile.
+func (h *Handler) PutCounselorProfileMe(c *gin.Context) {
+	userID := c.MustGet("userID").(string)
+
+	var req UpdateCounselorProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.SendFail(c, gin.H{"error": "Invalid profile data"})
+		return
+	}
+
+	if err := h.service.UpdateCounselorProfile(
+		c.Request.Context(),
+		userID,
+		req,
+	); err != nil {
+		log.Printf(
+			"[PutCounselorProfileMe] {Update Profile}: %v",
+			err,
+		)
+		response.SendError(
+			c,
+			"Failed to update counselor profile",
+			http.StatusInternalServerError,
+			nil,
+		)
+		return
+	}
+
+	response.SendSuccess(c, gin.H{
+		"message": "Counselor profile updated successfully",
+	})
+}

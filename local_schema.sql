@@ -186,6 +186,8 @@ CREATE TABLE `appointments` (
   `urgency_level` enum('LOW','MEDIUM','HIGH','CRITICAL') NOT NULL DEFAULT 'MEDIUM',
   `urgency_score` float NOT NULL,
   `urgency_rationale` text,
+  `preferred_counselor_id` char(36) DEFAULT NULL,
+  `counselor_preference` varchar(100) NOT NULL DEFAULT 'NO PREFERENCE',
   `status_id` int NOT NULL DEFAULT '1',
   `started_at` timestamp NULL DEFAULT NULL,
   `completed_at` timestamp NULL DEFAULT NULL,
@@ -206,13 +208,15 @@ CREATE TABLE `appointments` (
   KEY `fk_appointments_pref_time_slot_1` (`preferred_time_slot_id_1`),
   KEY `fk_appointments_pref_time_slot_2` (`preferred_time_slot_id_2`),
   KEY `fk_appointments_pref_time_slot_3` (`preferred_time_slot_id_3`),
+  KEY `fk_appointments_preferred_counselor` (`preferred_counselor_id`),
   CONSTRAINT `appointments_ibfk_2` FOREIGN KEY (`time_slot_id`) REFERENCES `time_slots` (`id`),
   CONSTRAINT `appointments_ibfk_3` FOREIGN KEY (`status_id`) REFERENCES `statuses` (`id`),
   CONSTRAINT `appointments_ibfk_4` FOREIGN KEY (`appointment_category_id`) REFERENCES `appointment_categories` (`id`),
   CONSTRAINT `fk_appointments_iir` FOREIGN KEY (`iir_id`) REFERENCES `iir_records` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_appointments_pref_time_slot_1` FOREIGN KEY (`preferred_time_slot_id_1`) REFERENCES `time_slots` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_appointments_pref_time_slot_2` FOREIGN KEY (`preferred_time_slot_id_2`) REFERENCES `time_slots` (`id`) ON DELETE SET NULL,
-  CONSTRAINT `fk_appointments_pref_time_slot_3` FOREIGN KEY (`preferred_time_slot_id_3`) REFERENCES `time_slots` (`id`) ON DELETE SET NULL
+  CONSTRAINT `fk_appointments_pref_time_slot_3` FOREIGN KEY (`preferred_time_slot_id_3`) REFERENCES `time_slots` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_appointments_preferred_counselor` FOREIGN KEY (`preferred_counselor_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -277,6 +281,28 @@ CREATE TABLE `civil_status_types` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `status_name` (`status_name`),
   UNIQUE KEY `unique_idx_civil_status_name` (`status_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `counselor_profiles`
+--
+
+DROP TABLE IF EXISTS `counselor_profiles`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `counselor_profiles` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` char(36) NOT NULL,
+  `title` varchar(20) NOT NULL DEFAULT '',
+  `gender` enum('FEMALE','MALE','OTHER') NOT NULL DEFAULT 'FEMALE',
+  `position` varchar(100) NOT NULL DEFAULT 'Guidance Counselor',
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_counselor_user_id` (`user_id`),
+  CONSTRAINT `fk_counselor_profiles_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

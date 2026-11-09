@@ -3,6 +3,7 @@ package appointments
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -47,6 +48,8 @@ const appointmentsBaseQuery = `
 		a.urgency_level AS urgency_level,
 		a.urgency_score AS urgency_score,
 		a.urgency_rationale AS urgency_rationale,
+		a.preferred_counselor_id AS preferred_counselor_id,
+		COALESCE(a.counselor_preference, 'NO_PREFERENCE') AS counselor_preference,
 		DATE_FORMAT(a.preferred_date_1, '%Y-%m-%d') AS preferred_date_1,
 		a.preferred_time_slot_id_1 AS preferred_time_slot_id_1,
 		ts1.time AS preferred_time_slot_time_1,
@@ -586,6 +589,7 @@ func (r *Repository) CreateAppointment(
 			id, iir_id, reason, admin_notes, when_date,
 			time_slot_id, appointment_category_id, status_id,
 			urgency_level, urgency_score, urgency_rationale,
+			preferred_counselor_id, counselor_preference,
 			preferred_date_1, preferred_time_slot_id_1,
 			preferred_date_2, preferred_time_slot_id_2,
 			preferred_date_3, preferred_time_slot_id_3,
@@ -594,6 +598,7 @@ func (r *Repository) CreateAppointment(
 			:id, :iir_id, :reason, :admin_notes, :when_date,
 			:time_slot_id, :appointment_category_id, :status_id,
 			:urgency_level, :urgency_score, :urgency_rationale,
+			:preferred_counselor_id, :counselor_preference,
 			:preferred_date_1, :preferred_time_slot_id_1,
 			:preferred_date_2, :preferred_time_slot_id_2,
 			:preferred_date_3, :preferred_time_slot_id_3,
@@ -734,4 +739,101 @@ func buildAppointmentOrderClause(orderBy, sortOrder string) string {
 	default:
 		return "a.created_at DESC"
 	}
+}
+
+// ListActiveCounselorProfiles retrieves all active counselor profiles.
+func (r *Repository) ListActiveCounselorProfiles(
+	ctx context.Context,
+) ([]CounselorProfileView, error) {
+	query := `
+		SELECT
+			cp.user_id,
+			cp.title,
+			u.first_name,
+			u.middle_name,
+			u.last_name,
+			u.suffix_name,
+			cp.gender,
+			cp.position,
+			COALESCE(pf.file_url, '') AS profile_picture,
+			cp.is_active
+		FROM counselor_profiles cp
+		JOIN users u ON u.id = cp.user_id
+		LEFT JOIN profile_pictures pp ON pp.user_id = u.id
+		LEFT JOIN files pf ON pf.id = pp.file_id
+		WHERE cp.is_active = 1 AND u.is_active = 1
+		ORDER BY u.last_name ASC
+	`
+	var profiles []CounselorProfileView
+	err := r.db.SelectContext(ctx, &profiles, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list counselor profiles: %w", err)
+	}
+	return profiles, nil
+}
+
+// GetCounselorProfileByUserID retrieves a counselor profile by user id.
+func (r *Repository) GetCounselorProfileByUserID(
+	ctx context.Context,
+	userID string,
+) (*CounselorProfileView, error) {
+	query := `
+		SELECT
+			cp.user_id,
+			cp.title,
+			u.first_name,
+			u.middle_name,
+			u.last_name,
+			u.suffix_name,
+			cp.gender,
+			cp.position,
+			COALESCE(pf.file_url, '') AS profile_picture,
+			cp.is_active
+		FROM counselor_profiles cp
+		JOIN users u ON u.id = cp.user_id
+		LEFT JOIN profile_pictures pp ON pp.user_id = u.id
+		LEFT JOIN files pf ON pf.id = pp.file_id
+		WHERE cp.user_id = ?
+		LIMIT 1
+	`
+	var profile CounselorProfileView
+	err := r.db.GetContext(ctx, &profile, query, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get counselor profile: %w", err)
+	}
+	return &profile, nil
+}
+
+// UpsertCounselorProfile inserts or updates a counselor profile.
+func (r *Repository) UpsertCounselorProfile(
+	ctx context.Context,
+	profile CounselorProfile,
+) error {
+	query := `
+		INSERT INTO counselor_profiles (
+			user_id, title, gender, position, is_active
+		) VALUES (
+			?, ?, ?, ?, ?
+		) ON DUPLICATE KEY UPDATE
+			title = VALUES(title),
+			gender = VALUES(gender),
+			position = VALUES(position),
+			is_active = VALUES(is_active)
+	`
+	_, err := r.db.ExecContext(
+		ctx,
+		query,
+		profile.UserID,
+		profile.Title,
+		profile.Gender,
+		profile.Position,
+		profile.IsActive,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to upsert counselor profile: %w", err)
+	}
+	return nil
 }

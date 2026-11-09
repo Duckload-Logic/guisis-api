@@ -59,6 +59,8 @@ type Appointment struct {
 	UrgencyLevel     string                 `db:"urgency_level" json:"urgencyLevel"`
 	UrgencyScore     float64                `db:"urgency_score" json:"urgencyScore"`
 	UrgencyRationale structs.NullableString `db:"urgency_rationale" json:"urgencyRationale"`
+	PreferredCounselorID structs.NullableString `db:"preferred_counselor_id"`
+	CounselorPreference  string                 `db:"counselor_preference"`
 	PrefDate1       structs.NullableString `db:"preferred_date_1"`
 	PrefTimeSlotID1 structs.NullableInt64  `db:"preferred_time_slot_id_1"`
 	PrefDate2       structs.NullableString `db:"preferred_date_2"`
@@ -99,6 +101,8 @@ type AppointmentWithDetailsView struct {
 	UrgencyLevel       string                 `db:"urgency_level"`
 	UrgencyScore       float64                `db:"urgency_score"`
 	UrgencyRationale   structs.NullableString `db:"urgency_rationale"`
+	PreferredCounselorID structs.NullableString `db:"preferred_counselor_id"`
+	CounselorPreference  string                 `db:"counselor_preference"`
 	PrefDate1          structs.NullableString `db:"preferred_date_1"`
 	PrefTimeSlotID1    structs.NullableInt64  `db:"preferred_time_slot_id_1"`
 	PrefTimeSlotTime1  structs.NullableString `db:"preferred_time_slot_time_1"`
@@ -116,6 +120,32 @@ type DailyStatusCount struct {
 	PendingCount     int    `db:"pending_count"     json:"pendingCount"`
 	ScheduledCount   int    `db:"scheduled_count"   json:"scheduledCount"`
 	RescheduledCount int    `db:"rescheduled_count" json:"rescheduledCount"`
+}
+
+// CounselorProfile represents the counselor's clinical and professional info.
+type CounselorProfile struct {
+	ID        int       `db:"id"         json:"id"`
+	UserID    string    `db:"user_id"    json:"userId"`
+	Title     string    `db:"title"      json:"title"`
+	Gender    string    `db:"gender"     json:"gender"`
+	Position  string    `db:"position"   json:"position"`
+	IsActive  bool      `db:"is_active"  json:"isActive"`
+	CreatedAt time.Time `db:"created_at" json:"createdAt"`
+	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+}
+
+// CounselorProfileView represents active counselor lookup data for UI options.
+type CounselorProfileView struct {
+	UserID         string                 `db:"user_id"         json:"userId"`
+	Title          string                 `db:"title"           json:"title"`
+	FirstName      string                 `db:"first_name"      json:"firstName"`
+	MiddleName     structs.NullableString `db:"middle_name"     json:"middleName,omitempty"`
+	LastName       string                 `db:"last_name"       json:"lastName"`
+	SuffixName     structs.NullableString `db:"suffix_name"     json:"suffixName,omitempty"`
+	Gender         string                 `db:"gender"          json:"gender"`
+	Position       string                 `db:"position"        json:"position"`
+	ProfilePicture string                 `db:"profile_picture" json:"profilePicture"`
+	IsActive       bool                   `db:"is_active"       json:"isActive"`
 }
 
 // FullName returns the user's full name from the denormalized view.

@@ -160,6 +160,17 @@ func (s *Service) CreateAppointment(
 		StatusID:   statusPending,
 	}
 
+	if req.PreferredCounselorID != nil && *req.PreferredCounselorID != "" {
+		appt.PreferredCounselorID = structs.StringToNullableString(
+			*req.PreferredCounselorID,
+		)
+	}
+	if req.CounselorPreference != "" {
+		appt.CounselorPreference = req.CounselorPreference
+	} else {
+		appt.CounselorPreference = "NO_PREFERENCE"
+	}
+
 	if req.PreferredDate1 != "" {
 		appt.PrefDate1 = structs.StringToNullableString(
 			datetime.ExtractDateOnly(req.PreferredDate1),
@@ -1116,13 +1127,19 @@ func (s *Service) mapToDTO(
 			ID:   appt.StatusID,
 			Name: appt.StatusName,
 		},
-		UrgencyLevel:     appt.UrgencyLevel,
-		UrgencyScore:     appt.UrgencyScore,
-		UrgencyRationale: appt.UrgencyRationale.String,
-		StartedAt:        appt.StartedAt,
-		CompletedAt:  appt.CompletedAt,
-		CreatedAt:    appt.CreatedAt,
-		UpdatedAt:    appt.UpdatedAt,
+		UrgencyLevel:        appt.UrgencyLevel,
+		UrgencyScore:        appt.UrgencyScore,
+		UrgencyRationale:    appt.UrgencyRationale.String,
+		CounselorPreference: appt.CounselorPreference,
+		StartedAt:           appt.StartedAt,
+		CompletedAt:         appt.CompletedAt,
+		CreatedAt:           appt.CreatedAt,
+		UpdatedAt:           appt.UpdatedAt,
+	}
+
+	if appt.PreferredCounselorID.Valid && appt.PreferredCounselorID.String != "" {
+		cid := appt.PreferredCounselorID.String
+		dto.PreferredCounselorID = &cid
 	}
 
 	if appt.PrefDate1.Valid {
@@ -1162,4 +1179,39 @@ func (s *Service) StartAppointment(
 	offsetMinutes int,
 ) error {
 	return s.repo.StartProcessDuration(ctx, id, offsetMinutes)
+}
+
+// GetActiveCounselors fetches active counselors for appointment options.
+func (s *Service) GetActiveCounselors(
+	ctx context.Context,
+) ([]CounselorProfileView, error) {
+	return s.repo.ListActiveCounselorProfiles(ctx)
+}
+
+// GetCounselorProfile fetches a counselor's profile by user ID.
+func (s *Service) GetCounselorProfile(
+	ctx context.Context,
+	userID string,
+) (*CounselorProfileView, error) {
+	return s.repo.GetCounselorProfileByUserID(ctx, userID)
+}
+
+// UpdateCounselorProfile upserts a counselor's profile.
+func (s *Service) UpdateCounselorProfile(
+	ctx context.Context,
+	userID string,
+	req UpdateCounselorProfileRequest,
+) error {
+	isActive := true
+	if req.IsActive != nil {
+		isActive = *req.IsActive
+	}
+	profile := CounselorProfile{
+		UserID:   userID,
+		Title:    req.Title,
+		Gender:   req.Gender,
+		Position: req.Position,
+		IsActive: isActive,
+	}
+	return s.repo.UpsertCounselorProfile(ctx, profile)
 }

@@ -38,6 +38,8 @@ type AppointmentDTO struct {
 	UrgencyLevel        string                 `json:"urgencyLevel,omitempty"`
 	UrgencyScore        float64                `json:"urgencyScore,omitempty"`
 	UrgencyRationale    string                 `json:"urgencyRationale,omitempty"`
+	PreferredCounselorID *string               `json:"preferredCounselorId,omitempty"`
+	CounselorPreference  string                `json:"counselorPreference,omitempty"`
 	PreferredDate1      string                 `json:"preferredDate1,omitempty"`
 	PreferredTimeSlot1  *TimeSlot              `json:"preferredTimeSlot1,omitempty"`
 	PreferredDate2      string                 `json:"preferredDate2,omitempty"`
@@ -50,6 +52,13 @@ type AppointmentDTO struct {
 	CompletedAt         structs.NullableTime   `json:"completedAt,omitempty"`
 	CreatedAt           time.Time              `json:"createdAt,omitempty"`
 	UpdatedAt           time.Time              `json:"updatedAt,omitempty"`
+}
+
+type UpdateCounselorProfileRequest struct {
+	Title    string `json:"title" binding:"required"`
+	Gender   string `json:"gender" binding:"required,oneof=FEMALE MALE OTHER"`
+	Position string `json:"position" binding:"required"`
+	IsActive *bool  `json:"isActive"`
 }
 
 type StartAppointmentRequest struct {
