@@ -50,6 +50,74 @@ func getIIRIDFromContext(c *gin.Context) (string, bool) {
 	return iirID, true
 }
 
+// isStudentCaller checks if the caller is a student without admin rights.
+func isStudentCaller(c *gin.Context) bool {
+	roleIDsVal, exists := c.Get("roleIDs")
+	if !exists {
+		return false
+	}
+	var roleIDs []int
+	switch v := roleIDsVal.(type) {
+	case []int:
+		roleIDs = v
+	case []interface{}:
+		for _, item := range v {
+			if f, ok := item.(float64); ok {
+				roleIDs = append(roleIDs, int(f))
+			} else if i, ok := item.(int); ok {
+				roleIDs = append(roleIDs, i)
+			}
+		}
+	}
+	isStudent := false
+	isAdmin := false
+	for _, rid := range roleIDs {
+		if rid == int(constants.StudentRoleID) {
+			isStudent = true
+		}
+		if rid == int(constants.AdminRoleID) ||
+			rid == int(constants.SuperAdminRoleID) {
+			isAdmin = true
+		}
+	}
+	return isStudent && !isAdmin
+}
+
+// sanitizeAppointmentForStudent masks internal clinical remarks and AI metrics
+// to prevent disclosing privileged guidance work product to students.
+func sanitizeAppointmentForStudent(dto *AppointmentDTO) {
+	if dto == nil {
+		return
+	}
+	dto.UrgencyLevel = ""
+	dto.UrgencyScore = 0
+	dto.UrgencyRationale = ""
+
+	if dto.AdminNotes.Valid && dto.AdminNotes.String != "" {
+		blocks := strings.Split(
+			dto.AdminNotes.String,
+			"------------------------------",
+		)
+		var studentBlocks []string
+		for _, block := range blocks {
+			trimmed := strings.TrimSpace(block)
+			upper := strings.ToUpper(trimmed)
+			if strings.Contains(upper, "STATUS: COUNSELOR NOTE") ||
+				strings.Contains(upper, "STATUS: PRIORITY OVERRIDDEN") ||
+				strings.Contains(upper, "STATUS: AI TRIAGE") ||
+				strings.Contains(upper, "STATUS: TRIAGE") {
+				continue
+			}
+			if trimmed != "" {
+				studentBlocks = append(studentBlocks, trimmed)
+			}
+		}
+		dto.AdminNotes = structs.StringToNullableString(
+			strings.Join(studentBlocks, "\n\n------------------------------\n\n"),
+		)
+	}
+}
+
 // GetAppointmentCategoryList godoc
 // @Summary      Get appointment categories
 // @Description  Retrieves available appointment categories.
@@ -185,6 +253,10 @@ func (h *Handler) PostAppointment(c *gin.Context) {
 		return
 	}
 
+	if isStudentCaller(c) {
+		sanitizeAppointmentForStudent(appt)
+	}
+
 	response.SendSuccess(c, appt, http.StatusCreated)
 }
 
@@ -229,6 +301,10 @@ func (h *Handler) GetAppointmentByID(c *gin.Context) {
 			http.StatusNotFound,
 		)
 		return
+	}
+
+	if isStudentCaller(c) {
+		sanitizeAppointmentForStudent(appt)
 	}
 
 	response.SendSuccess(c, appt)
@@ -393,6 +469,12 @@ func (h *Handler) GetAppointmentsMe(c *gin.Context) {
 			nil,
 		)
 		return
+	}
+
+	if appointments != nil {
+		for i := range appointments.Appointments {
+			sanitizeAppointmentForStudent(&appointments.Appointments[i])
+		}
 	}
 
 	response.SendSuccess(c, appointments)
