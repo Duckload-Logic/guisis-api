@@ -271,7 +271,7 @@ paths:
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
         "500":
-          description: Internal server error
+          description: Failed to process request
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
       summary: Get new M2M access token using refresh token
@@ -302,7 +302,7 @@ paths:
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
         "500":
-          description: Internal server error
+          description: Failed to process request
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
       summary: Get M2M access token using client credentials
@@ -339,7 +339,7 @@ paths:
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Failed to process request
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
       security:
@@ -378,7 +378,7 @@ paths:
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Failed to process request
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
       security:
@@ -417,7 +417,7 @@ paths:
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Failed to process request
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
       security:
@@ -456,7 +456,7 @@ paths:
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Failed to process request
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
       security:
@@ -514,7 +514,7 @@ paths:
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
         "500":
-          description: Internal Server Error
+          description: Failed to process request
           schema:
             $ref: '#/definitions/response.CommonErrorResponse'
       security:

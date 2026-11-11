@@ -34,7 +34,7 @@ func NewHandler(service ServiceInterface) *Handler {
 // @Success 200 {object} ListStudentsSuccessResponse
 // @Failure 400 {object} response.CommonErrorResponse "Bad Request"
 // @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
-// @Failure 500 {object} response.CommonErrorResponse "Internal Server Error"
+// @Failure 500 {object} response.CommonErrorResponse "Failed to process request"
 // @Router /integrations/students/profiles [get]
 func (h *Handler) GetStudents(c *gin.Context) {
 	var req OGOSListStudentsRequest
@@ -71,7 +71,7 @@ func (h *Handler) GetStudents(c *gin.Context) {
 // @Failure 400 {object} response.CommonErrorResponse "Bad Request"
 // @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
 // @Failure 404 {object} response.CommonErrorResponse "Not Found"
-// @Failure 500 {object} response.CommonErrorResponse "Internal Server Error"
+// @Failure 500 {object} response.CommonErrorResponse "Failed to process request"
 // @Router /integrations/students/{studentNumber} [get]
 func (h *Handler) GetStudentByStudentNumber(c *gin.Context) {
 	studentNumber := c.Param("studentNumber")
@@ -122,7 +122,7 @@ func (h *Handler) GetStudentByStudentNumber(c *gin.Context) {
 // @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
 // @Failure 403 {object} response.CommonErrorResponse "Forbidden"
 // @Failure 404 {object} response.CommonErrorResponse "Not Found"
-// @Failure 500 {object} response.CommonErrorResponse "Internal Server Error"
+// @Failure 500 {object} response.CommonErrorResponse "Failed to process request"
 // @Router /integrations/students/profile [get]
 func (h *Handler) GetStudentByEmail(c *gin.Context) {
 	email := c.Query("email")
@@ -173,7 +173,7 @@ func (h *Handler) GetStudentByEmail(c *gin.Context) {
 // @Failure 400 {object} response.CommonErrorResponse "Bad Request"
 // @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
 // @Failure 404 {object} response.CommonErrorResponse "Not Found"
-// @Failure 500 {object} response.CommonErrorResponse "Internal Server Error"
+// @Failure 500 {object} response.CommonErrorResponse "Failed to process request"
 // @Router /integrations/students/{studentNumber}/personal-info [get]
 func (h *Handler) GetPersonalInfoByStudentNumber(c *gin.Context) {
 	studentNumber := c.Param("studentNumber")
@@ -224,7 +224,7 @@ func (h *Handler) GetPersonalInfoByStudentNumber(c *gin.Context) {
 // @Failure 400 {object} response.CommonErrorResponse "Bad Request"
 // @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
 // @Failure 404 {object} response.CommonErrorResponse "Not Found"
-// @Failure 500 {object} response.CommonErrorResponse "Internal Server Error"
+// @Failure 500 {object} response.CommonErrorResponse "Failed to process request"
 // @Router /integrations/students/{studentNumber}/addresses [get]
 func (h *Handler) GetAddressByStudentNumber(c *gin.Context) {
 	studentNumber := c.Param("studentNumber")
@@ -275,7 +275,7 @@ func (h *Handler) GetAddressByStudentNumber(c *gin.Context) {
 // @Failure 400 {object} response.CommonErrorResponse "Bad Request"
 // @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
 // @Failure 404 {object} response.CommonErrorResponse "Not Found"
-// @Failure 500 {object} response.CommonErrorResponse "Internal Server Error"
+// @Failure 500 {object} response.CommonErrorResponse "Failed to process request"
 // @Router /integrations/students/idp/{idpUuid} [get]
 func (h *Handler) GetStudentByIDPUUID(c *gin.Context) {
 	idpUuid := c.Param("idpUuid")
@@ -326,7 +326,7 @@ func (h *Handler) GetStudentByIDPUUID(c *gin.Context) {
 // @Failure 400 {object} response.CommonErrorResponse "Bad Request"
 // @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
 // @Failure 404 {object} response.CommonErrorResponse "Not Found"
-// @Failure 500 {object} response.CommonErrorResponse "Internal Server Error"
+// @Failure 500 {object} response.CommonErrorResponse "Failed to process request"
 // @Router /integrations/students/idp/{idpUuid}/personal-info [get]
 func (h *Handler) GetPersonalInfoByIDPUUID(c *gin.Context) {
 	idpUuid := c.Param("idpUuid")
@@ -377,7 +377,7 @@ func (h *Handler) GetPersonalInfoByIDPUUID(c *gin.Context) {
 // @Failure 400 {object} response.CommonErrorResponse "Bad Request"
 // @Failure 401 {object} response.CommonErrorResponse "Unauthorized"
 // @Failure 404 {object} response.CommonErrorResponse "Not Found"
-// @Failure 500 {object} response.CommonErrorResponse "Internal Server Error"
+// @Failure 500 {object} response.CommonErrorResponse "Failed to process request"
 // @Router /integrations/students/idp/{idpUuid}/addresses [get]
 func (h *Handler) GetAddressByIDPUUID(c *gin.Context) {
 	idpUuid := c.Param("idpUuid")
