@@ -60,15 +60,18 @@ func NewRouter(
 			if err != nil {
 				return false
 			}
+
 			host := parsed.Hostname()
 			if host == target ||
 				strings.HasSuffix(host, "."+target) {
 				return true
 			}
-			if !cfg.IsProduction {
+
+			if !cfg.IsProduction && !cfg.IsStaging {
 				return host == "localhost" ||
 					host == "127.0.0.1"
 			}
+
 			return false
 		},
 		AllowMethods: []string{
@@ -91,11 +94,11 @@ func NewRouter(
 		AllowCredentials: true,
 	}
 
-	// Register CORS first to ensure preflights are resolved cleanly
-	g.Use(cors.New(corsConfig))
-
-	// Security & DoS Protection
+	// Security & DoS Protection (applies to all requests including preflight)
 	g.Use(middleware.SecurityHeadersMiddleware())
+
+	// Register CORS to resolve preflights
+	g.Use(cors.New(corsConfig))
 	g.Use(
 		middleware.BodySizeLimitMiddleware(2 << 20),
 	) // 2MB limit for JSON payloads

@@ -29,6 +29,8 @@ func RegisterRoutes(
 		adminOnly.GET("", h.GetAppointments)
 		adminOnly.GET("/calendar/stats", h.GetAppointmentDailyStats)
 		adminOnly.POST("/id/:appointmentID/start", h.PostAppointmentStart)
+		adminOnly.GET("/counselor-profile/me", h.GetCounselorProfileMe)
+		adminOnly.PUT("/counselor-profile/me", h.PutCounselorProfileMe)
 	}
 
 	appointmentRoutes := routes.Group("")
@@ -76,6 +78,7 @@ func RegisterRoutes(
 	))
 	{
 		sharedLookups.GET("/categories", h.GetAppointmentCategories)
+		sharedLookups.GET("/counselors", h.GetAppointmentCounselors)
 		sharedLookups.GET("/slots", h.GetAppointmentSlots)
 		sharedLookups.GET("/statuses", h.GetAppointmentStatuses)
 	}

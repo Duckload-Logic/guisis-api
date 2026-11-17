@@ -53,7 +53,7 @@ const docTemplateintegrations = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Failed to process request",
                         "schema": {
                             "$ref": "#/definitions/response.CommonErrorResponse"
                         }
@@ -99,7 +99,7 @@ const docTemplateintegrations = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Failed to process request",
                         "schema": {
                             "$ref": "#/definitions/response.CommonErrorResponse"
                         }
@@ -160,7 +160,7 @@ const docTemplateintegrations = `{
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Failed to process request",
                         "schema": {
                             "$ref": "#/definitions/response.CommonErrorResponse"
                         }
@@ -250,7 +250,7 @@ const docTemplateintegrations = `{
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Failed to process request",
                         "schema": {
                             "$ref": "#/definitions/response.CommonErrorResponse"
                         }
@@ -311,7 +311,7 @@ const docTemplateintegrations = `{
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Failed to process request",
                         "schema": {
                             "$ref": "#/definitions/response.CommonErrorResponse"
                         }
@@ -372,7 +372,7 @@ const docTemplateintegrations = `{
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Failed to process request",
                         "schema": {
                             "$ref": "#/definitions/response.CommonErrorResponse"
                         }
@@ -433,7 +433,7 @@ const docTemplateintegrations = `{
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Failed to process request",
                         "schema": {
                             "$ref": "#/definitions/response.CommonErrorResponse"
                         }

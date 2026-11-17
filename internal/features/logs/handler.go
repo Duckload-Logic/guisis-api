@@ -43,7 +43,7 @@ func (h *Handler) GetService() *Service {
 // @Param        sort_order  query     string false "Direction to sort (asc or desc)"
 // @Success      200         {object}  ListSystemLogsDTO
 // @Failure      400         {object}  map[string]string "Bad request"
-// @Failure      500         {object}  map[string]string "Internal server error"
+// @Failure      500         {object}  map[string]string "Failed to process request"
 // @Router       /system-logs [get]
 func (h *Handler) GetLogs(c *gin.Context) {
 	var req audit.ListSystemLogsRequest
